@@ -1,0 +1,34 @@
+{
+  "name": "@indxsearch/pixl",
+  "version": "1.0.4",
+  "description": "7x5 pixel React icons by Indx Search.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "icons",
+    "react",
+    "components",
+    "svg",
+    "indxsearch"
+  ],
+  "author": "Your Name or Organization",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "@types/react": "^19.1.2",
+    "typescript": "^5.8.3"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
