@@ -11,7 +11,7 @@ npm i @indxsearch/pixl
 ## 🛠 Usage
 
 ```tsx
-import { Typing } from 'indx-pixl';
+import { Typing } from '@indxsearch/pixl';
 
 const Example = () => (
   <Typing size={48} color="blue" />
