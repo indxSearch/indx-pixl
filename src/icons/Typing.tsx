@@ -21,7 +21,7 @@ const Typing: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path fill-rule="evenodd" clip-rule="evenodd" d="M3 0H2V1H3V0ZM1 2H0V3H1V2ZM4 2H5V3H4V2ZM7 2H6V3H7V2ZM2 2H3V3H2V2ZM5 4H4V5H5V4Z" fill={color}/>
+    <path fillRule="evenodd" clipRule="evenodd" d="M3 0H2V1H3V0ZM1 2H0V3H1V2ZM4 2H5V3H4V2ZM7 2H6V3H7V2ZM2 2H3V3H2V2ZM5 4H4V5H5V4Z" fill={color}/>    
     </svg>
   );
 };

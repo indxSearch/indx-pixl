@@ -21,7 +21,7 @@ const Greater: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M3 5H2V4H3V5ZM4 3V4H3V3H4ZM5 3H4V2H5V3ZM4 2H3V1H4V2ZM3 1H2V0H3V1Z" fill={color}/>
+    <path d="M3 5H2V4H3V5ZM4 3V4H3V3H4ZM5 3H4V2H5V3ZM4 2H3V1H4V2ZM3 1H2V0H3V1Z" fill={color}/>    
     </svg>
   );
 };

@@ -21,7 +21,7 @@ const Filter_alt: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M5 3H4V5H3V3H2V2H5V3ZM7 0V1H6V2H5V1H2V2H1V1H0V0H7Z" fill={color}/>
+    <path d="M5 3H4V5H3V3H2V2H5V3ZM7 0V1H6V2H5V1H2V2H1V1H0V0H7Z" fill={color}/>    
     </svg>
   );
 };

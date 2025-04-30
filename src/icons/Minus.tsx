@@ -21,7 +21,7 @@ const Minus: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M6 2V3L1 3L1 2L6 2Z" fill={color}/>
+    <path d="M6 2V3L1 3L1 2L6 2Z" fill={color}/>    
     </svg>
   );
 };

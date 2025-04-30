@@ -21,7 +21,7 @@ const Spectrum: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path fill-rule="evenodd" clip-rule="evenodd" d="M3 0H2V5H3V0ZM1 1H0V4H1V1ZM4 2H5V3H4V2ZM7 1H6V4H7V1Z" fill={color}/>
+    <path fillRule="evenodd" clipRule="evenodd" d="M3 0H2V5H3V0ZM1 1H0V4H1V1ZM4 2H5V3H4V2ZM7 1H6V4H7V1Z" fill={color}/>    
     </svg>
   );
 };

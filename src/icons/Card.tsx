@@ -21,7 +21,7 @@ const Card: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M7 5H0V0H7V5ZM1 4H6V3H1V4ZM1 2H2V1H1V2Z" fill={color}/>
+    <path d="M7 5H0V0H7V5ZM1 4H6V3H1V4ZM1 2H2V1H1V2Z" fill={color}/>    
     </svg>
   );
 };

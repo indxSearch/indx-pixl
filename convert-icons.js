@@ -57,7 +57,10 @@ const ${componentName}: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      ${paths.replace(/fill="[^"]*"/g, 'fill={color}')}
+    ${paths
+      .replace(/fill="[^"]*"/g, 'fill={color}')
+      .replace(/fill-rule=/g, 'fillRule=')
+      .replace(/clip-rule=/g, 'clipRule=')}    
     </svg>
   );
 };

@@ -21,7 +21,7 @@ const Weight_medium: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M2 4H1V1H2V4ZM3 1H4V4H3V1ZM6 3H5V2H6V3Z" fill={color}/>
+    <path d="M2 4H1V1H2V4ZM3 1H4V4H3V1ZM6 3H5V2H6V3Z" fill={color}/>    
     </svg>
   );
 };

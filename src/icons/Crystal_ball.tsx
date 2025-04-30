@@ -21,7 +21,7 @@ const Crystal_ball: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M5 0V1H4V2H5V1H6V4H5V5H2V4H1V1H2V0H5Z" fill={color}/>
+    <path d="M5 0V1H4V2H5V1H6V4H5V5H2V4H1V1H2V0H5Z" fill={color}/>    
     </svg>
   );
 };

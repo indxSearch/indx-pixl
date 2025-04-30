@@ -21,7 +21,7 @@ const Save: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M5 0V1H6V5H1V0H5ZM3 2H2V3H3V4H4V3H5V2H4V1H3V2ZM4 3H3V2H4V3Z" fill={color}/>
+    <path d="M5 0V1H6V5H1V0H5ZM3 2H2V3H3V4H4V3H5V2H4V1H3V2ZM4 3H3V2H4V3Z" fill={color}/>    
     </svg>
   );
 };

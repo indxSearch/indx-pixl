@@ -21,7 +21,7 @@ const Fast_forward: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M1 1H2V2H3V3H2V4H1V5H0V0H1V1ZM5 1H6V2H7V3H6V4H5V5H4V0H5V1Z" fill={color}/>
+    <path d="M1 1H2V2H3V3H2V4H1V5H0V0H1V1ZM5 1H6V2H7V3H6V4H5V5H4V0H5V1Z" fill={color}/>    
     </svg>
   );
 };

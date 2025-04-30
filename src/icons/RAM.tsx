@@ -21,7 +21,7 @@ const RAM: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M1 4H4V5H0V3H1V4ZM7 5H5V4H6V3H7V5ZM3 3H2V2H3V3ZM5 3H4V2H5V3ZM7 2H6V1H1V2H0V0H7V2Z" fill={color}/>
+    <path d="M1 4H4V5H0V3H1V4ZM7 5H5V4H6V3H7V5ZM3 3H2V2H3V3ZM5 3H4V2H5V3ZM7 2H6V1H1V2H0V0H7V2Z" fill={color}/>    
     </svg>
   );
 };

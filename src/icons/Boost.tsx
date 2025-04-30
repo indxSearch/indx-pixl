@@ -21,7 +21,7 @@ const Boost: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M2 5H1V4H2V5ZM4 2H5V3H4V5H3V4H2V3H1V2H3V1H4V2ZM6 2H5V1H4V0H6V2Z" fill={color}/>
+    <path d="M2 5H1V4H2V5ZM4 2H5V3H4V5H3V4H2V3H1V2H3V1H4V2ZM6 2H5V1H4V0H6V2Z" fill={color}/>    
     </svg>
   );
 };

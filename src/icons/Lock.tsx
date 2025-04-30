@@ -21,7 +21,7 @@ const Lock: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path fill-rule="evenodd" clip-rule="evenodd" d="M3 0H4H5V1H4H3H2V0H3ZM4 2H3H2V1H1V2V3V4V5H2H3H4H5H6V4V3V2V1H5V2H4ZM3 3H4V4H3V3Z" fill={color}/>
+    <path fillRule="evenodd" clipRule="evenodd" d="M3 0H4H5V1H4H3H2V0H3ZM4 2H3H2V1H1V2V3V4V5H2H3H4H5H6V4V3V2V1H5V2H4ZM3 3H4V4H3V3Z" fill={color}/>    
     </svg>
   );
 };

@@ -21,7 +21,7 @@ const Thumbs_up: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M1 5H0L0 2L1 2L1 5ZM3 2L5 2L5 5L2 5L2 0L3 0L3 2Z" fill={color}/>
+    <path d="M1 5H0L0 2L1 2L1 5ZM3 2L5 2L5 5L2 5L2 0L3 0L3 2Z" fill={color}/>    
     </svg>
   );
 };

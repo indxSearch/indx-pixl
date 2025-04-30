@@ -21,7 +21,7 @@ const Puzzle_piece: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M6 5H4V4H3V5H1L1 3H0L0 2L1 2L1 0L3 0V1L4 1V0L6 0V2H5V3L6 3L6 5Z" fill={color}/>
+    <path d="M6 5H4V4H3V5H1L1 3H0L0 2L1 2L1 0L3 0V1L4 1V0L6 0V2H5V3L6 3L6 5Z" fill={color}/>    
     </svg>
   );
 };

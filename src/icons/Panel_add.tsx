@@ -21,7 +21,7 @@ const Panel_add: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M1 4H3V5H0V0H7V1H1V4ZM6 3H7V4H6V5H5V4H4V3H5V2H6V3Z" fill={color}/>
+    <path d="M1 4H3V5H0V0H7V1H1V4ZM6 3H7V4H6V5H5V4H4V3H5V2H6V3Z" fill={color}/>    
     </svg>
   );
 };

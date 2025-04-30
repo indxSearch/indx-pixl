@@ -21,7 +21,7 @@ const Layout_align_right: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M6 5H5V0H6V5ZM2 3H3V2H2V3ZM4 4H1V1H4V4Z" fill={color}/>
+    <path d="M6 5H5V0H6V5ZM2 3H3V2H2V3ZM4 4H1V1H4V4Z" fill={color}/>    
     </svg>
   );
 };

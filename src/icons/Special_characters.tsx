@@ -21,7 +21,7 @@ const Special_characters: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M6 1H4V2H5V3H4V4H6V5H3V3H2V5H1V1H2V2H3V1H2V0H6V1Z" fill={color}/>
+    <path d="M6 1H4V2H5V3H4V4H6V5H3V3H2V5H1V1H2V2H3V1H2V0H6V1Z" fill={color}/>    
     </svg>
   );
 };

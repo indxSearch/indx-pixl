@@ -21,7 +21,7 @@ const Search_query: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M7 5H6V4H7V5ZM2 3V4H0V3H2ZM6 4H3V1H6V4ZM4 3H5V2H4V3ZM2 2H0V1H2V2Z" fill={color}/>
+    <path d="M7 5H6V4H7V5ZM2 3V4H0V3H2ZM6 4H3V1H6V4ZM4 3H5V2H4V3ZM2 2H0V1H2V2Z" fill={color}/>    
     </svg>
   );
 };

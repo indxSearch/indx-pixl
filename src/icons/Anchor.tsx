@@ -21,7 +21,7 @@ const Anchor: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path fill-rule="evenodd" clip-rule="evenodd" d="M4 0H3V1H2V2H3V3V4H2V3H1V4H2V5H3H5V4H6V3H5V4H4V3V2H5V1H4V0ZM4 1V2H3V1H4Z" fill={color}/>
+    <path fillRule="evenodd" clipRule="evenodd" d="M4 0H3V1H2V2H3V3V4H2V3H1V4H2V5H3H5V4H6V3H5V4H4V3V2H5V1H4V0ZM4 1V2H3V1H4Z" fill={color}/>    
     </svg>
   );
 };

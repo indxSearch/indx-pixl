@@ -21,7 +21,7 @@ const Volume_medium: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M3 5H2V4H1V3H0V2H1V1H2V0H3V5ZM7 4H6V1H7V4ZM5 3H4V2H5V3Z" fill={color}/>
+    <path d="M3 5H2V4H1V3H0V2H1V1H2V0H3V5ZM7 4H6V1H7V4ZM5 3H4V2H5V3Z" fill={color}/>    
     </svg>
   );
 };

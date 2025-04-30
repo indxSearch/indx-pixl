@@ -21,7 +21,7 @@ const Weight_high: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M2 4H1V1H2V4ZM4 4H3V1H4V4ZM5 1H6V4H5V1Z" fill={color}/>
+    <path d="M2 4H1V1H2V4ZM4 4H3V1H4V4ZM5 1H6V4H5V1Z" fill={color}/>    
     </svg>
   );
 };

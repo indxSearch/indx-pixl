@@ -21,7 +21,7 @@ const GPS_pin: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M4 5H3V3H2V0H5V3H4V5ZM3 2H4V1H3V2Z" fill={color}/>
+    <path d="M4 5H3V3H2V0H5V3H4V5ZM3 2H4V1H3V2Z" fill={color}/>    
     </svg>
   );
 };

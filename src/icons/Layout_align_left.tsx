@@ -21,7 +21,7 @@ const Layout_align_left: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M2 5H1V0H2V5ZM4 3H5V2H4V3ZM6 4H3V1H6V4Z" fill={color}/>
+    <path d="M2 5H1V0H2V5ZM4 3H5V2H4V3ZM6 4H3V1H6V4Z" fill={color}/>    
     </svg>
   );
 };

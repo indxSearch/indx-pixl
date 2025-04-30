@@ -21,7 +21,7 @@ const Pause: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M3 5H2V0H3V5ZM5 5H4V0H5V5Z" fill={color}/>
+    <path d="M3 5H2V0H3V5ZM5 5H4V0H5V5Z" fill={color}/>    
     </svg>
   );
 };

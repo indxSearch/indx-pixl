@@ -1,0 +1,29 @@
+import React from "react";
+
+type IconProps = {
+  color?: string;
+  size?: number | string;
+};
+
+const ArrowUp: React.FC<IconProps> = ({
+  color = "black",
+  size = 21,
+}) => {
+  const aspectRatio = 0.7142857142857143;
+  const width = size;
+  const height = typeof size === "number" ? size * aspectRatio : `calc(${size} * 0.7142857142857143)`;
+
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox="0 0 7 5"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+    <path fillRule="evenodd" clipRule="evenodd" d="M4 5H3V4V3V2H2V3H1V2H2V1H3V0H4V1H5V2H6V3H5V2H4V3V4V5ZM4 2V1H3V2H4Z" fill={color}/>    
+    </svg>
+  );
+};
+
+export default ArrowUp;

@@ -21,7 +21,7 @@ const Options_menu: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M4 5H3V4H4L4 5ZM4 3H3V2L4 2V3ZM4 1L3 1V0L4 0V1Z" fill={color}/>
+    <path d="M4 5H3V4H4L4 5ZM4 3H3V2L4 2V3ZM4 1L3 1V0L4 0V1Z" fill={color}/>    
     </svg>
   );
 };

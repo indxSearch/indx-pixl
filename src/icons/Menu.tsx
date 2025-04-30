@@ -21,7 +21,7 @@ const Menu: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M6 4H1V3H6V4ZM6 2H1V1H6V2Z" fill={color}/>
+    <path d="M6 4H1V3H6V4ZM6 2H1V1H6V2Z" fill={color}/>    
     </svg>
   );
 };

@@ -21,7 +21,7 @@ const Align_center: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M5 5H2V4H5V5ZM6 3H1V2H6V3ZM5 1H2V0H5V1Z" fill={color}/>
+    <path d="M5 5H2V4H5V5ZM6 3H1V2H6V3ZM5 1H2V0H5V1Z" fill={color}/>    
     </svg>
   );
 };

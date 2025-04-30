@@ -21,7 +21,7 @@ const Loop: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path fill-rule="evenodd" clip-rule="evenodd" d="M4 0H3V1H2V2V3H3V4H2H1V3V2H0V3V4H1V5H2H3V4H4V5H5H6V4H7V3V2H6V3V4H5H4V3H5V2V1H4V0ZM4 1V2V3H3V2V1H4Z" fill={color}/>
+    <path fillRule="evenodd" clipRule="evenodd" d="M4 0H3V1H2V2V3H3V4H2H1V3V2H0V3V4H1V5H2H3V4H4V5H5H6V4H7V3V2H6V3V4H5H4V3H5V2V1H4V0ZM4 1V2V3H3V2V1H4Z" fill={color}/>    
     </svg>
   );
 };

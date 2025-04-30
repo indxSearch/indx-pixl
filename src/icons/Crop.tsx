@@ -21,7 +21,7 @@ const Crop: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path fill-rule="evenodd" clip-rule="evenodd" d="M3 0H2V1H1V2H2V3V4H3H4V5H5V4H6V3H5V2V1H4H3V0ZM3 2V3H4V2H3Z" fill={color}/>
+    <path fillRule="evenodd" clipRule="evenodd" d="M3 0H2V1H1V2H2V3V4H3H4V5H5V4H6V3H5V2V1H4H3V0ZM3 2V3H4V2H3Z" fill={color}/>    
     </svg>
   );
 };

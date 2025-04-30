@@ -21,7 +21,7 @@ const Greater_or_equal: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M1 5H0V4H1V5ZM2 4H1V3H2V4ZM7 3V4H4V3H7ZM3 3H2V2H3V3ZM2 2H1V1H2V2ZM7 2H4V1H7V2ZM1 1H0V0H1V1Z" fill={color}/>
+    <path d="M1 5H0V4H1V5ZM2 4H1V3H2V4ZM7 3V4H4V3H7ZM3 3H2V2H3V3ZM2 2H1V1H2V2ZM7 2H4V1H7V2ZM1 1H0V0H1V1Z" fill={color}/>    
     </svg>
   );
 };

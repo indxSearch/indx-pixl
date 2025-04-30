@@ -21,7 +21,7 @@ const Bar_code: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M1 5H0V0H1V5ZM3 5H2V4H3V5ZM5 5H4V4H5V5ZM7 5H6V0H7V5ZM3 3H2V0H3V3ZM5 3H4V0H5V3Z" fill={color}/>
+    <path d="M1 5H0V0H1V5ZM3 5H2V4H3V5ZM5 5H4V4H5V5ZM7 5H6V0H7V5ZM3 3H2V0H3V3ZM5 3H4V0H5V3Z" fill={color}/>    
     </svg>
   );
 };

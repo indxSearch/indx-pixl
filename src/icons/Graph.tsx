@@ -21,7 +21,7 @@ const Graph: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M4 5H3V4H4V5ZM1 4H0V3H1V4ZM3 4H2V3H3V4ZM5 4H4V3H5V4ZM2 3H1V2H2V3ZM6 3H5V2H6V3ZM7 2H6V1H7V2Z" fill={color}/>
+    <path d="M4 5H3V4H4V5ZM1 4H0V3H1V4ZM3 4H2V3H3V4ZM5 4H4V3H5V4ZM2 3H1V2H2V3ZM6 3H5V2H6V3ZM7 2H6V1H7V2Z" fill={color}/>    
     </svg>
   );
 };

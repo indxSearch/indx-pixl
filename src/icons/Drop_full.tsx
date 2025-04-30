@@ -21,7 +21,7 @@ const Drop_full: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M4 1L5 1V2L6 2L6 4H5V5L2 5L2 4H1L1 2L2 2V1L3 1V0L4 0V1Z" fill={color}/>
+    <path d="M4 1L5 1V2L6 2L6 4H5V5L2 5L2 4H1L1 2L2 2V1L3 1V0L4 0V1Z" fill={color}/>    
     </svg>
   );
 };

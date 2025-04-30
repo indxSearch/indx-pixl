@@ -21,7 +21,7 @@ const Delete: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path fill-rule="evenodd" clip-rule="evenodd" d="M3 0H2V1H1V2H0V3H1V4H2V5H3H6H7V1V0H4H3ZM6 4V3H5V2H6V1H5V2H4V1H3V2H4V3H3V4H4V3H5V4H6Z" fill={color}/>
+    <path fillRule="evenodd" clipRule="evenodd" d="M3 0H2V1H1V2H0V3H1V4H2V5H3H6H7V1V0H4H3ZM6 4V3H5V2H6V1H5V2H4V1H3V2H4V3H3V4H4V3H5V4H6Z" fill={color}/>    
     </svg>
   );
 };

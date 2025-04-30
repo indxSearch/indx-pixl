@@ -21,7 +21,7 @@ const Linear: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M6 5L1 5L1 4H2V3L3 3V2L4 2V1L5 1V0L6 0L6 5Z" fill={color}/>
+    <path d="M6 5L1 5L1 4H2V3L3 3V2L4 2V1L5 1V0L6 0L6 5Z" fill={color}/>    
     </svg>
   );
 };

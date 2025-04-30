@@ -1,11 +1,12 @@
 {
   "name": "@indxsearch/pixl",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "7x5 pixel React icons by Indx Search.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "tsc",
@@ -18,7 +19,7 @@
     "svg",
     "indxsearch"
   ],
-  "author": "Your Name or Organization",
+  "author": "Indx Search",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.15.3",

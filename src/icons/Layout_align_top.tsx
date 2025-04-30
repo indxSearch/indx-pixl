@@ -21,7 +21,7 @@ const Layout_align_top: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M3 4H4V3H3V4ZM6 1H1V0H6V1ZM5 5H2V2H5V5Z" fill={color}/>
+    <path d="M3 4H4V3H3V4ZM6 1H1V0H6V1ZM5 5H2V2H5V5Z" fill={color}/>    
     </svg>
   );
 };

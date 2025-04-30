@@ -21,7 +21,7 @@ const Money: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M3 0V1H2V2H1V3H2V4H3V5H0V0H3ZM7 5H4V4H5V3H6V2H5V1H4V0H7V5ZM4 3H3V2H4V3Z" fill={color}/>
+    <path d="M3 0V1H2V2H1V3H2V4H3V5H0V0H3ZM7 5H4V4H5V3H6V2H5V1H4V0H7V5ZM4 3H3V2H4V3Z" fill={color}/>    
     </svg>
   );
 };

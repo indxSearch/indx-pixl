@@ -21,7 +21,7 @@ const Power: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M7 2H6V3H7V4H6V5H3V3H4V4H5V1H4V2H3V0H6V1H7V2ZM3 3H1V2H3V3ZM1 2H0V0H1V2Z" fill={color}/>
+    <path d="M7 2H6V3H7V4H6V5H3V3H4V4H5V1H4V2H3V0H6V1H7V2ZM3 3H1V2H3V3ZM1 2H0V0H1V2Z" fill={color}/>    
     </svg>
   );
 };

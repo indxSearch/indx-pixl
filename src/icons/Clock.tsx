@@ -21,7 +21,7 @@ const Clock: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path fill-rule="evenodd" clip-rule="evenodd" d="M2 0H3H4H5V1H4V2H5V1H6V2V3V4H5V3H4H3V2V1H2V0ZM2 4H1V3V2V1H2V2V3V4ZM2 4V5H3H4H5V4H4H3H2Z" fill={color}/>
+    <path fillRule="evenodd" clipRule="evenodd" d="M2 0H3H4H5V1H4V2H5V1H6V2V3V4H5V3H4H3V2V1H2V0ZM2 4H1V3V2V1H2V2V3V4ZM2 4V5H3H4H5V4H4H3H2Z" fill={color}/>    
     </svg>
   );
 };

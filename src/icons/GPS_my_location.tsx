@@ -21,7 +21,7 @@ const GPS_my_location: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M4 1H5V2H6V3H5V4H4V5H3V4H2V3H1V2H2V1H3V0H4V1ZM4 2H3V3H4V2Z" fill={color}/>
+    <path d="M4 1H5V2H6V3H5V4H4V5H3V4H2V3H1V2H2V1H3V0H4V1ZM4 2H3V3H4V2Z" fill={color}/>    
     </svg>
   );
 };

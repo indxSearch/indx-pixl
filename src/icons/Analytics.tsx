@@ -21,7 +21,7 @@ const Analytics: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path fill-rule="evenodd" clip-rule="evenodd" d="M3 0H2V5H3V0ZM1 2H0V5H1V2ZM4 3H5V5H4V3ZM7 1H6V5H7V1Z" fill={color}/>
+    <path fillRule="evenodd" clipRule="evenodd" d="M3 0H2V5H3V0ZM1 2H0V5H1V2ZM4 3H5V5H4V3ZM7 1H6V5H7V1Z" fill={color}/>    
     </svg>
   );
 };

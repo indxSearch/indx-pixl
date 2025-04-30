@@ -21,7 +21,7 @@ const Nuget: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M5 1V2H6L6 4H5L5 3H4V4L5 4V5L3 5V4L2 4L2 2H3V3L4 3V2L3 2L3 1L5 1ZM2 1L1 1L1 0L2 0V1Z" fill={color}/>
+    <path d="M5 1V2H6L6 4H5L5 3H4V4L5 4V5L3 5V4L2 4L2 2H3V3L4 3V2L3 2L3 1L5 1ZM2 1L1 1L1 0L2 0V1Z" fill={color}/>    
     </svg>
   );
 };

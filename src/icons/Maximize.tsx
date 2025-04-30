@@ -21,7 +21,7 @@ const Maximize: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path fill-rule="evenodd" clip-rule="evenodd" d="M1 0H2H3V1H2V2H1V1V0ZM5 2V1H4V0H5H6V1V2H5ZM1 3H2V4H3V5H2H1V4V3ZM5 3H6V4V5H5H4V4H5V3Z" fill={color}/>
+    <path fillRule="evenodd" clipRule="evenodd" d="M1 0H2H3V1H2V2H1V1V0ZM5 2V1H4V0H5H6V1V2H5ZM1 3H2V4H3V5H2H1V4V3ZM5 3H6V4V5H5H4V4H5V3Z" fill={color}/>    
     </svg>
   );
 };

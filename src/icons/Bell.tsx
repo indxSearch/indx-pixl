@@ -21,7 +21,7 @@ const Bell: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M3 1V0H4V1H5V3H6V4H4V5H3V4H1V3H2V1H3Z" fill={color}/>
+    <path d="M3 1V0H4V1H5V3H6V4H4V5H3V4H1V3H2V1H3Z" fill={color}/>    
     </svg>
   );
 };
