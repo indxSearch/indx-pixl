@@ -12,6 +12,7 @@ const files = fs.readdirSync(inputFolder).filter(file => file.endsWith('.svg'));
 
 files.forEach(file => {
   const componentName = path.basename(file, '.svg')
+    .replace(/\s+/g, '_') // replace spaces with underscores
     .replace(/(^\w|-\w)/g, clear => clear.replace('-', '').toUpperCase());
 
   const svgContent = fs.readFileSync(path.join(inputFolder, file), 'utf8');
@@ -77,6 +78,7 @@ console.log('✅ All icons converted!');
 // --- After generating all icons ---
 const exportLines = files.map(file => {
     const componentName = path.basename(file, '.svg')
+      .replace(/\s+/g, '_')
       .replace(/(^\w|-\w)/g, clear => clear.replace('-', '').toUpperCase());
     return `export { default as ${componentName} } from './${componentName}';`;
   });

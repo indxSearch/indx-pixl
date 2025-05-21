@@ -1,0 +1,45 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# TypeScript
+*.d.ts
+*.d.ts.map
+
+# Local environment
+.env*
+.env.local
+.env.*.local
+
+# Editor/IDE
+.vscode/
+.idea/
+.DS_Store
+
+# OS/Tooling
+Thumbs.db
+*.swp
+
+# Package lockfiles (optional, depending on your team)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Logs
+logs/
+*.log
+
+# Test coverage
+coverage/
+
+# Output from scripts
+src/icons/*.tsx
+src/icons/index.ts

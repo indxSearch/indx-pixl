@@ -21,7 +21,7 @@ const Virtual_reality_vr_headset: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M3 5H1V4H3V5ZM6 5H4V4H6V5ZM1 4H0V1H1V4ZM4 4H3V3H4V4ZM7 4H6V1H7V4ZM6 0V1H1V0H6Z" fill={color}/>
+    <path d="M3 5H1V4H3V5ZM6 5H4V4H6V5ZM1 4H0V1H1V4ZM4 4H3V3H4V4ZM7 4H6V1H7V4ZM6 0V1H1V0H6Z" fill={color}/>    
     </svg>
   );
 };

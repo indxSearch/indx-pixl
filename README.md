@@ -24,4 +24,4 @@ Each icon accepts two optional props:
 
 ---
 
-Made by [Indx Search](https://indx.co)
+Made by [Indx](https://indx.co)
