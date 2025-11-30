@@ -5,7 +5,7 @@ type IconProps = {
   size?: number | string;
 };
 
-const GPS_my_location: React.FC<IconProps> = ({
+const Gps_my_location: React.FC<IconProps> = ({
   color = "black",
   size = 21,
 }) => {
@@ -26,4 +26,4 @@ const GPS_my_location: React.FC<IconProps> = ({
   );
 };
 
-export default GPS_my_location;
+export default Gps_my_location;

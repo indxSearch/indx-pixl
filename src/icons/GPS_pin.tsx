@@ -5,7 +5,7 @@ type IconProps = {
   size?: number | string;
 };
 
-const GPS_pin: React.FC<IconProps> = ({
+const Gps_pin: React.FC<IconProps> = ({
   color = "black",
   size = 21,
 }) => {
@@ -26,4 +26,4 @@ const GPS_pin: React.FC<IconProps> = ({
   );
 };
 
-export default GPS_pin;
+export default Gps_pin;

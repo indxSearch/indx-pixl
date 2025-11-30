@@ -21,7 +21,7 @@ const Arrow_left_down: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-    <path fillRule="evenodd" clipRule="evenodd" d="M5 1H6V0H5H4V1H5ZM3 3V2V1H4V2V3H5V2H6V3H5V4H4V5H3V4H2V3H1V2H2V3H3ZM3 3V4H4V3H3Z" fill={color}/>    
+    <path d="M6 0L4 0V1H6V0ZM4 1H3V3L4 3V1ZM2 2H1L1 3H2L2 2ZM6 2H5V3L6 3V2ZM3 3H2V4H3L3 3ZM5 3H4V4H5V3ZM4 4H3V5H4V4Z" fill={color}/>    
     </svg>
   );
 };

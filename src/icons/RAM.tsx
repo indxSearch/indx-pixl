@@ -5,7 +5,7 @@ type IconProps = {
   size?: number | string;
 };
 
-const RAM: React.FC<IconProps> = ({
+const Ram: React.FC<IconProps> = ({
   color = "black",
   size = 21,
 }) => {
@@ -26,4 +26,4 @@ const RAM: React.FC<IconProps> = ({
   );
 };
 
-export default RAM;
+export default Ram;

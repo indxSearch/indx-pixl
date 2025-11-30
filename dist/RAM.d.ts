@@ -3,5 +3,5 @@ type IconProps = {
     color?: string;
     size?: number | string;
 };
-declare const RAM: React.FC<IconProps>;
-export default RAM;
+declare const Ram: React.FC<IconProps>;
+export default Ram;

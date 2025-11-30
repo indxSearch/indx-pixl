@@ -5,7 +5,7 @@ type IconProps = {
   size?: number | string;
 };
 
-const RSS_feed: React.FC<IconProps> = ({
+const Rss_feed: React.FC<IconProps> = ({
   color = "black",
   size = 21,
 }) => {
@@ -26,4 +26,4 @@ const RSS_feed: React.FC<IconProps> = ({
   );
 };
 
-export default RSS_feed;
+export default Rss_feed;
