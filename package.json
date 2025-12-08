@@ -1,6 +1,6 @@
 {
   "name": "@indxsearch/pixl",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "7x5 pixel React icons by Indx Search.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
