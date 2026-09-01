@@ -43,3 +43,5 @@ coverage/
 # Output from scripts
 src/icons/*.tsx
 src/icons/index.ts
+# npm pack output
+*.tgz
