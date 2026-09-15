@@ -6,7 +6,9 @@ button { font: inherit; color: inherit; }
 .app { height: 100%; padding: 10px; display: flex; }
 .surface { flex: 1; display: flex; flex-direction: column; gap: var(--spacing); padding: var(--spacing); background: var(--lv2); border-radius: var(--radius); min-width: 0; }
 .body { flex: 1; display: flex; gap: var(--spacing); min-height: 0; }
-.column { width: 250px; flex: none; display: flex; flex-direction: column; gap: var(--spacing); min-height: 0; }
+.column { width: 250px; flex: none; display: flex; flex-direction: column; gap: var(--spacing); min-height: 0; overflow-y: auto; scrollbar-width: none; }
+.column > * { flex-shrink: 0; }
+.column > .panel.grow { flex-shrink: 1; }
 .filler { flex: 1; background: var(--lv0); border-radius: var(--radius); }
 
 /* toolbar */

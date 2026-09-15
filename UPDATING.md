@@ -1,89 +1,50 @@
-# Updating Icons
+# Updating icons
 
-This guide explains how to add new icons to the `indx-pixl` icon set.
+How to add or change icons and publish a new version of `@indxsearch/pixl`.
 
-## The editor (recommended)
+## With the editor (recommended)
 
-Icons are drawn in the in-repo editor, a Figma-like canvas built on `@indxsearch/systm`:
+1. **Start the editor** from the repo root. See [editor/README.md](editor/README.md) for details.
 
-```bash
-npm run editor:install   # once
-npm run editor           # opens http://localhost:5175
-```
+   ```bash
+   npm run editor:install   # first time only
+   npm run editor
+   ```
 
-- **Artboards** group icons ("Core icons", "Car illustrations"). They are organization only.
-- **Arrange icons** (artboard inspector or right-click) lays icons out in a grid. Columns, gap and padding are stored per artboard.
-- **Icons** are components: 7×5 frames with a name. Draw loose rects on an artboard, select them and press **⌘⌥K** (or *Make component*) to turn them into an icon. Only components are exported.
-- **Fills** are levels `lv0`–`lv8` (exported as `var(--lvN)`, so they flip in dark mode), systm accents (`var(--CSignal)`, `var(--CTeal)`, `var(--CPureBlue)`, `var(--CLightBlue)`, `var(--CWarning)`, the same in both modes) or free hex colors. Keys `0`–`8` set the level of the selection. Pasted or imported colors close to a level or accent snap to that token.
-- **Colors** are pixl's own named colors, stored in `pixl.json`. Click **+** in the Colors row to add one, and double-click a swatch to edit its name, light value and optional dark value. Changing a color updates every pixel that uses it. Deleting a color that's in use asks what to replace it with. Double-click a recent free color to save it as a color. Colors export as `var(--pixl-name, #light)`, and Export all writes `colors.css` with the dark values.
-- **Saving is automatic.** Edits are written to `pixl.json`, the editable source of truth, about a second after you stop. ⌘S saves right away. If the file changes on disk (another tab, `git pull`, checkout), an idle editor reloads it. With unsaved edits you get a banner to reload from disk or keep your version. Commit `pixl.json`.
-- **Export all** writes one `raw-icons/<name>.svg` per component and can run `convert-icons.js` in the same step.
-- **Paste from Figma**: in Figma select a frame, right-click › Copy/Paste as › **Copy as SVG**, then ⌘V in the editor. Each clipped child frame becomes an icon, and layer names come through if Figma's export setting "Include id attribute" is on. Grays close to a level become that level, other colors stay hex. The icons land on the selected artboard (below its content) or a new one. With an icon open, a single pasted icon is added into it.
-- **Import** pulls `raw-icons/` into a new artboard, rasterizing Figma paths to rects (one-time migration, or to pick up hand-made SVGs).
+2. **Draw or change icons.** Work on a draft artboard, or mark icons as drafts, until they're ready. Changes save to `pixl.json` automatically.
+3. **Export.** Click **Export all** and keep "Run convert-icons.js afterwards" checked. This writes `raw-icons/*.svg` and `colors.css`, and regenerates `src/icons/`.
+4. **Build.**
 
-Shortcuts: V select · A artboard · I icon · R rect · double-click an icon to edit its rects · Esc to leave · ⌘D duplicate · ⌘[ ⌘] order · ⌘Z undo · Space+drag pan · ⌘+scroll zoom.
+   ```bash
+   npm run build
+   ```
 
-## Adding New Icons by hand
+5. **Commit** `pixl.json`, `raw-icons/`, `colors.css`, `src/icons/` and `dist/` together.
+6. **Publish.** Bump the version in `package.json`, then:
 
-### 1. Prepare Your SVG File
+   ```bash
+   npm publish
+   ```
 
-Create an SVG icon following these requirements:
-- **Grid**: Must be on a strict 7x5 pixel grid
-- **ViewBox**: Should have `viewBox="0 0 7 5"`
-- **Shapes**: `<rect>` and/or `<path>` elements (the editor exports rects)
-- **Fill**: `var(--lvN)` fills are kept and flip with the systm level system; any other fill becomes the fallback when no `color` prop is passed
+Renaming an icon changes its component name, and renaming a color changes its `--pixl-*` variable. Treat both as breaking changes for apps that use them.
 
-### 2. Add to Raw Icons Folder
+## By hand
 
-Place your SVG file in the `raw-icons/` directory:
-```bash
-raw-icons/my-icon-name.svg
-```
+The editor is the source of truth. An SVG added by hand is overwritten by the next Export all unless you also bring it into `pixl.json`, using **Import** or by pasting it into the editor.
 
-The filename will be converted to a React component name:
-- Spaces become underscores
-- Converted to PascalCase
-- Example: `my icon name.svg` → `My_icon_name.tsx`
+1. **Create an SVG** on a 7×5 grid with `viewBox="0 0 7 5"`, made of `<rect>` or `<path>` elements. Fill with `var(--lvN)`, a systm accent such as `var(--CSignal)`, a `var(--pixl-name, #hex)` color, or hex.
+2. **Add it** to `raw-icons/` as `raw-icons/my icon.svg`.
+3. **Convert and build.**
 
-### 3. Run the Conversion Script
+   ```bash
+   node convert-icons.js
+   npm run build
+   ```
 
-Execute the conversion script to generate React components:
-```bash
-node convert-icons.js
-```
+## What the converter generates
 
-This will automatically:
-- Generate a React component in `src/icons/`
-- Add the component props (`color`, `size`)
-- Calculate aspect ratio automatically
-- Update `src/icons/index.ts` with the new export
+`convert-icons.js` turns every SVG in `raw-icons/` into a component in `src/icons/` and updates `src/icons/index.ts`.
 
-### 4. Build and Test
-
-Build the package and test your new icon:
-```bash
-npm run build
-```
-
-## Generated Component Structure
-
-Each generated component includes:
-- **color prop**: Optional. When set, overrides every fill (single-tone icon). When omitted, the icon keeps its level fills (`var(--lvN)`), so multi-tone icons render with the design system's grayscale and flip in dark mode.
-- **size prop**: Width in pixels as a number (default: `21`)
-- **Auto-calculated height**: Maintains the 7:5 aspect ratio
-
-Example usage:
-```tsx
-import { MyIconName } from '@indxsearch/pixl';
-
-<MyIconName size={28} color="blue" />
-```
-
-## Recommended Size Values
-
-Use multiples that maintain the 7:5 ratio:
-- 14x10
-- 21x15 (default)
-- 28x20
-- 35x25
-- 42x30
+- **Names:** the first letter is capitalized and spaces become underscores. `my icon.svg` becomes `My_icon`.
+- **`size`:** the width, defaulting to 21. The height follows the aspect ratio of the viewBox.
+- **`color`:** optional. Each fill becomes `fill={color ?? "<original fill>"}`, so `color` overrides everything and leaving it out keeps the design's own fills.
