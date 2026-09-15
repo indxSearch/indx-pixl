@@ -112,3 +112,12 @@ button { font: inherit; color: inherit; }
 
 .ab-title, .icon-label text { pointer-events: bounding-box; }
 .toolbar .status { overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+
+/* save state + conflict banner */
+.save-state.unsaved, .save-state.saving { color: var(--lv6); }
+.save-state.conflict, .save-state.error { color: var(--CSignal); }
+.banner { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 5px 0 15px; background: var(--lv0); border: 1px solid var(--CSignal); border-radius: var(--radius); font: var(--text-xs); color: var(--lv7); }
+.banner .spacer { flex: 1; }
+
+/* logo: 21×15 (3px per icon pixel). Toolbar padding 5 + 10 = 15px on the left matches gap 10 + separator margin 5 on the right */
+.toolbar .brand { display: flex; padding-left: 10px; }

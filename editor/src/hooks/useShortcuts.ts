@@ -19,7 +19,7 @@ export function useShortcuts(cmd: Commands) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
-      if (t.matches('input,textarea,select,[contenteditable]')) { if (e.key === 'Escape' || e.key === 'Enter') t.blur(); return; }
+      if (t instanceof Element && t.matches('input,textarea,select,[contenteditable]')) { if (e.key === 'Escape' || e.key === 'Enter') t.blur(); return; }
       const m = e.metaKey || e.ctrlKey, k = e.key.toLowerCase();
       const ids = state.ui.sel;
       if (m) {

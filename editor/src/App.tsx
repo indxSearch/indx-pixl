@@ -9,6 +9,7 @@ import { Inspector } from './panels/Inspector';
 import { FillPanel } from './panels/Fill';
 import { Preview } from './panels/Preview';
 import { useShortcuts } from './hooks/useShortcuts';
+import { useAutosave } from './hooks/useAutosave';
 import { allComponents, exportIconSvg, importSvg, skippedComponents } from './model/svg';
 import { looksLikeSvg, parseSvg } from './model/pasteSvg';
 import * as ops from './model/ops';
@@ -21,7 +22,6 @@ export default function App() {
 
 function Editor() {
   const { state, dispatch, edit, ui, sel, dirty, index } = useEditor();
-  const [saving, setSaving] = useState(false);
   const status = useCallback((s: string) => { ui({ status: s }); setTimeout(() => ui({ status: '' }), Math.max(2000, s.length * 60)); }, [ui]);
 
   // ---- theme ----
@@ -37,22 +37,17 @@ function Editor() {
 
   // ---- load ----
   const [loaded, setLoaded] = useState(false);
+  const autosave = useAutosave(status);
   useEffect(() => {
-    api.loadDoc().then((doc) => { if (doc) dispatch({ type: 'LOAD', doc }); setLoaded(true); }).catch((e) => status('Load failed: ' + e.message));
+    autosave.load().then(() => setLoaded(true)).catch((e) => status('Load failed: ' + e.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // zoom to fit once after load, so the document is never off-screen on first open
   useEffect(() => { if (loaded) zoomFit(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded]);
-  useEffect(() => { const f = (e: BeforeUnloadEvent) => { if (dirty) { e.preventDefault(); } }; window.addEventListener('beforeunload', f); return () => window.removeEventListener('beforeunload', f); }, [dirty]);
 
   // ---- commands ----
-  const save = useCallback(async () => {
-    setSaving(true);
-    try { await api.saveDoc(state.doc); dispatch({ type: 'MARK_SAVED' }); status('Saved pixl.json'); }
-    catch (e) { status('Save failed: ' + (e as Error).message); }
-    finally { setSaving(false); }
-  }, [state.doc, dispatch, status]);
+  const save = autosave.saveNow;
 
   const currentIcon = (): Icon | null => {
     const id = state.ui.focus ?? (sel[0]?.kind === 'icon' ? sel[0].id : sel[0]?.iconId ?? null);
@@ -268,7 +263,15 @@ function Editor() {
   return (
     <div className="app">
       <div className="surface">
-        <Toolbar dark={dark} onDark={onDark} onSave={save} onExportAll={() => setExportOpen(true)} onImport={importRaw} onZoom={zoom} onZoomFit={zoomFit} saving={saving} />
+        <Toolbar dark={dark} onDark={onDark} onExportAll={() => setExportOpen(true)} onImport={importRaw} onZoom={zoom} onZoomFit={zoomFit} saveState={autosave.saveState} />
+        {autosave.saveState === 'conflict' && (
+          <div className="banner">
+            <span>pixl.json changed on disk{dirty ? ' while you have unsaved edits' : ''}.</span>
+            <span className="spacer" />
+            <Button size="micro" variant="secondary" onClick={autosave.resolveReload}>Reload from disk</Button>
+            <Button size="micro" variant="primary" onClick={autosave.resolveKeepMine}>Keep my version</Button>
+          </div>
+        )}
         <div className="body">
           <div className="column"><Layers onMenu={onLayerMenu} /></div>
           <div className="stage">

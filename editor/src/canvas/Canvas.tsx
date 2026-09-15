@@ -28,7 +28,10 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const lastDown = useRef<{ t: number; id: string | null }>({ t: 0, id: null });
 
-  const setDragBoth = (d: Drag | null) => { dragRef.current = d; setDrag(d); };
+  const setDragBoth = (d: Drag | null) => {
+    if (!!d !== !!dragRef.current) ui({ dragging: !!d });
+    dragRef.current = d; setDrag(d);
+  };
 
   // ---- stage size + wheel (non-passive) ----
   useEffect(() => {

@@ -18,6 +18,7 @@ export interface UI {
   status: string;
   rename: string | null; // node id whose name field should take focus
   autoMerge: boolean; // merge an icon's rects when leaving it
+  dragging: boolean; // a canvas drag is in progress (autosave waits)
 }
 export interface State {
   doc: Doc;
@@ -33,7 +34,7 @@ export type Action =
   | { type: 'UNDO' }
   | { type: 'REDO' }
   | { type: 'LOAD'; doc: Doc }
-  | { type: 'MARK_SAVED' }
+  | { type: 'MARK_SAVED'; doc: Doc }
   | { type: 'UI'; patch: Partial<UI> };
 
 const MAX_HISTORY = 200;
@@ -57,10 +58,13 @@ function reducer(s: State, a: Action): State {
       const [next, ...rest] = s.future;
       return { ...s, doc: next, past: [...s.past, s.doc], future: rest };
     }
-    case 'LOAD':
-      return { ...s, doc: a.doc, past: [], future: [], savedDoc: a.doc, ui: { ...s.ui, sel: [], focus: null } };
+    case 'LOAD': {
+      // keep selection/focus when the nodes still exist (e.g. reloading after an external change)
+      const ids = new Set(a.doc.artboards.flatMap((ab) => [ab.id, ...ab.rects.map((r) => r.id), ...ab.icons.flatMap((i) => [i.id, ...i.rects.map((r) => r.id)])]));
+      return { ...s, doc: a.doc, past: [], future: [], savedDoc: a.doc, ui: { ...s.ui, sel: s.ui.sel.filter((id) => ids.has(id)), focus: s.ui.focus && ids.has(s.ui.focus) ? s.ui.focus : null } };
+    }
     case 'MARK_SAVED':
-      return { ...s, savedDoc: s.doc };
+      return { ...s, savedDoc: a.doc }; // the doc that was written, which may be older than the current one
     case 'UI':
       return { ...s, ui: { ...s.ui, ...a.patch } };
   }
@@ -74,7 +78,7 @@ const initial: State = {
   ui: {
     tool: 'select', sel: [], focus: null, hover: null,
     view: load('pixl.view', { x: 80, y: 80, k: 8 }),
-    fill: 'lv8', theme: load('pixl.theme', 'system'), grid: true, expanded: {}, status: '', rename: null, autoMerge: load('pixl.autoMerge', true),
+    fill: 'lv8', theme: load('pixl.theme', 'system'), grid: true, expanded: {}, status: '', rename: null, autoMerge: load('pixl.autoMerge', true), dragging: false,
   },
 };
 

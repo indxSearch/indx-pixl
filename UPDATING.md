@@ -15,7 +15,7 @@ npm run editor           # opens http://localhost:5175
 - **Arrange icons** (artboard inspector or right-click) lays icons out in a grid. Columns, gap and padding are stored per artboard.
 - **Icons** are components: 7×5 frames with a name. Draw loose rects on an artboard, select them and press **⌘⌥K** (or *Make component*) to turn them into an icon. Only components are exported.
 - **Fills** are levels `lv0`–`lv8` (exported as `var(--lvN)`, so they flip in dark mode) or free hex colors. Keys `0`–`8` set the level of the selection.
-- **Save** (⌘S) writes `pixl.json`, the editable source of truth. Commit it.
+- **Saving is automatic.** Edits are written to `pixl.json`, the editable source of truth, about a second after you stop. ⌘S saves right away. If the file changes on disk (another tab, `git pull`, checkout), an idle editor reloads it. With unsaved edits you get a banner to reload from disk or keep your version. Commit `pixl.json`.
 - **Export all** writes one `raw-icons/<name>.svg` per component and can run `convert-icons.js` in the same step.
 - **Paste from Figma**: in Figma select a frame, right-click › Copy/Paste as › **Copy as SVG**, then ⌘V in the editor. Each clipped child frame becomes an icon, and layer names come through if Figma's export setting "Include id attribute" is on. Grays close to a level become that level, other colors stay hex. The icons land on the selected artboard (below its content) or a new one. With an icon open, a single pasted icon is added into it.
 - **Import** pulls `raw-icons/` into a new artboard, rasterizing Figma paths to rects (one-time migration, or to pick up hand-made SVGs).
