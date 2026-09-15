@@ -10,6 +10,7 @@ import { FillPanel } from './panels/Fill';
 import { Preview } from './panels/Preview';
 import { useShortcuts } from './hooks/useShortcuts';
 import { allComponents, exportIconSvg, importSvg, skippedComponents } from './model/svg';
+import { looksLikeSvg, parseSvg } from './model/pasteSvg';
 import * as ops from './model/ops';
 import { type Artboard, type Doc, type Icon, type Node, bboxOf, uid } from './model/types';
 import * as api from './api';
@@ -21,7 +22,7 @@ export default function App() {
 function Editor() {
   const { state, dispatch, edit, ui, sel, dirty, index } = useEditor();
   const [saving, setSaving] = useState(false);
-  const status = useCallback((s: string) => { ui({ status: s }); setTimeout(() => ui({ status: '' }), 2000); }, [ui]);
+  const status = useCallback((s: string) => { ui({ status: s }); setTimeout(() => ui({ status: '' }), Math.max(2000, s.length * 60)); }, [ui]);
 
   // ---- theme ----
   const sysDark = useMemo(() => window.matchMedia('(prefers-color-scheme: dark)'), []);
@@ -94,15 +95,10 @@ function Editor() {
     try {
       const files = await api.rawIcons();
       if (!files.length) return status('raw-icons/ is empty');
-      const cols = 10, gap = 3, pad = 3;
-      const icons: Icon[] = files.map((f, i) => {
-        const ic = importSvg(f.svg, f.name);
-        return { ...ic, x: pad + (i % cols) * (7 + gap), y: pad + Math.floor(i / cols) * (5 + gap) };
-      });
-      const rows = Math.ceil(icons.length / cols);
+      const icons: Icon[] = files.map((f, i) => ({ ...importSvg(f.svg, f.name), x: i, y: 0 }));
       const last = state.doc.artboards[state.doc.artboards.length - 1];
-      const ab: Artboard = { id: uid(), name: ops.nextName(state.doc, 'Imported'), x: last ? last.x + last.w + 10 : 0, y: last ? last.y : 0, w: pad * 2 + cols * (7 + gap) - gap, h: pad * 2 + rows * (5 + gap) - gap, icons, rects: [] };
-      edit((d) => ops.addArtboard(d, ab));
+      const ab: Artboard = { id: uid(), name: ops.nextName(state.doc, 'Imported'), x: last ? last.x + last.w + 20 : 0, y: last ? last.y : 0, w: 1, h: 1, icons, rects: [] };
+      edit((d) => ops.arrangeIcons(ops.addArtboard(d, ab), ab.id));
       ui({ sel: [ab.id] });
       status(`Imported ${icons.length} icons`);
     } catch (e) { status('Import failed: ' + (e as Error).message); }
@@ -164,6 +160,48 @@ function Editor() {
   const cmds = useMemo(() => ({ save, copySvg: () => copySvg(), makeComponent: () => makeComponent(), duplicate: () => duplicate(), remove: () => remove(), merge: () => merge(), zoomFit, zoomSel, zoom }), [save, copySvg, makeComponent, duplicate, remove, merge, zoomFit, zoomSel, zoom]);
   useShortcuts(cmds);
 
+  // dev-only handle for debugging in the browser console
+  if (import.meta.env.DEV) (window as unknown as { __pixl: unknown }).__pixl = { state, sel };
+
+  // ---- paste SVG (e.g. Figma › Copy as SVG) ----
+  const pasteSvg = useCallback((text: string) => {
+    let result;
+    try { result = parseSvg(text); } catch (e) { return status((e as Error).message); }
+    const found = result.icons.filter((i) => i.rects.length);
+    if (!found.length) return status('No filled shapes found in the SVG');
+    const focusIconId = state.ui.focus;
+    const artboardId = focusIconId ? index.get(focusIconId)?.artboardId ?? null : sel[0]?.artboardId ?? null;
+    const placed = ops.placePasted(state.doc, found, { artboardId, focusIconId }, uid);
+    edit(() => placed.doc);
+    if (placed.into === 'icon') ui({ sel: placed.sel });
+    else ui({ sel: placed.sel, focus: null, expanded: placed.artboardId ? { ...state.ui.expanded, [placed.artboardId]: true } : state.ui.expanded });
+    const where = placed.into === 'icon' ? 'into the icon' : placed.into === 'new' ? 'on a new artboard' : 'on the artboard';
+    const how = result.mode === 'clusters' ? ' (no frames found, grouped by spacing: check positions)' : '';
+    const unnamed = placed.into !== 'icon' && found.some((i) => !i.name) && result.mode !== 'clusters' ? ' Names missing: enable "Include id attribute" in Figma.' : '';
+    status(`Pasted ${found.length} icon${found.length === 1 ? '' : 's'} ${where}${how}.${result.skipped ? ` Skipped ${result.skipped} unsupported shape${result.skipped === 1 ? '' : 's'}.` : ''}${unnamed}`);
+  }, [state.doc, state.ui.focus, state.ui.expanded, index, sel, edit, ui, status]);
+  const pasteRef = useMemo(() => ({ fn: pasteSvg }), []); // eslint-disable-line react-hooks/exhaustive-deps
+  pasteRef.fn = pasteSvg;
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      if ((e.target as HTMLElement | null)?.closest?.('input,textarea,[contenteditable]')) return;
+      const data = e.clipboardData;
+      if (!data) return;
+      const text = data.getData('image/svg+xml') || data.getData('text/plain');
+      if (text && looksLikeSvg(text)) { e.preventDefault(); pasteRef.fn(text); return; }
+      const html = data.getData('text/html');
+      if (html && /figma/i.test(html)) { e.preventDefault(); status('That is a Figma copy. In Figma use right-click › Copy/Paste as › Copy as SVG, then paste here.'); }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [pasteRef, status]);
+  const pasteFromClipboard = useCallback(async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (looksLikeSvg(text)) pasteSvg(text); else status('Clipboard does not contain SVG. In Figma: Copy as SVG.');
+    } catch { status('Clipboard access blocked. Use ⌘V instead.'); }
+  }, [pasteSvg, status]);
+
   // ---- context menu ----
   const [menu, setMenu] = useState<MenuState | null>(null);
   const closeMenu = useCallback(() => setMenu(null), []);
@@ -177,12 +215,13 @@ function Editor() {
     const canvasItems = (): MenuItem[] => [{ label: 'New artboard here', shortcut: 'A', onClick: () => {
       const ab: Artboard = { id: uid(), name: ops.nextName(state.doc, 'Artboard'), x: Math.round(world?.x ?? 0), y: Math.round(world?.y ?? 0), w: 80, h: 40, icons: [], rects: [] };
       edit((d) => ops.addArtboard(d, ab)); ui({ sel: [ab.id] });
-    } }, { label: 'Zoom to fit', shortcut: '⌘0', onClick: zoomFit }];
+    } }, { label: 'Paste SVG', shortcut: '⌘V', onClick: pasteFromClipboard }, { label: 'Zoom to fit', shortcut: '⌘0', onClick: zoomFit }];
     if (!node) {
       items.push({ label: 'New artboard here', shortcut: 'A', onClick: () => {
         const ab: Artboard = { id: uid(), name: ops.nextName(state.doc, 'Artboard'), x: Math.round(world?.x ?? 0), y: Math.round(world?.y ?? 0), w: 80, h: 40, icons: [], rects: [] };
         edit((d) => ops.addArtboard(d, ab)); ui({ sel: [ab.id] });
       } });
+      items.push({ label: 'Paste SVG', shortcut: '⌘V', onClick: pasteFromClipboard });
       items.push({ label: 'Zoom to fit', shortcut: '⌘0', onClick: zoomFit });
       if (state.ui.focus) items.push({ label: 'Zoom to icon', shortcut: '⇧2', onClick: zoomSel });
       if (state.ui.focus) items.push({ label: 'Leave icon', shortcut: 'Esc', onClick: () => ui({ focus: null, sel: [] }) });
@@ -207,6 +246,7 @@ function Editor() {
       const a = one.obj as Artboard;
       items.push({ label: 'Rename', onClick: () => ui({ sel: [one.id], rename: one.id }) });
       items.push({ label: a.export === false ? 'Include in Export all' : 'Exclude from Export all', onClick: () => edit((d) => ops.setProps(d, one.id, { export: a.export === false })) });
+      items.push({ label: 'Arrange icons', onClick: () => edit((d) => ops.arrangeIcons(d, one.id)) });
     }
     if (cur.length) {
       items.push('sep');
@@ -221,7 +261,7 @@ function Editor() {
     }
     if (world) { items.push('sep'); items.push(...canvasItems()); }
     setMenu({ x, y, items });
-  }, [index, state.ui.sel, state.ui.focus, state.doc, sel, edit, ui, zoomFit, zoomSel, makeComponent, copySvg, exportIcon, duplicate, remove, merge]);
+  }, [index, state.ui.sel, state.ui.focus, state.doc, sel, edit, ui, zoomFit, zoomSel, makeComponent, copySvg, exportIcon, duplicate, remove, merge, pasteFromClipboard]);
   const onCanvasMenu = useCallback((r: MenuRequest) => openMenu(r.x, r.y, r.nodeId, r.world), [openMenu]);
   const onLayerMenu = useCallback((x: number, y: number, id: string) => openMenu(x, y, id), [openMenu]);
 
@@ -233,7 +273,7 @@ function Editor() {
           <div className="column"><Layers onMenu={onLayerMenu} /></div>
           <div className="stage">
             <Canvas onMenu={onCanvasMenu} />
-            <div className="hints"><span>V Select</span><span>A Artboard</span><span>I Icon</span><span>R Rect</span><span>0–8 Level</span><span>⌘-click Deep select</span><span>⌘⌥K Make component</span><span>⌥⌘U Merge</span><span>⌥-drag Duplicate</span><span>⌘D Duplicate</span><span>⌘[ ⌘] Order</span><span>⇧2 Zoom to selection</span><span>⌘Z Undo</span><span>Space + drag Pan</span><span>⌘ + scroll Zoom</span></div>
+            <div className="hints"><span>V Select</span><span>A Artboard</span><span>I Icon</span><span>R Rect</span><span>0–8 Level</span><span>⌘V Paste SVG</span><span>⌘-click Deep select</span><span>⌘⌥K Make component</span><span>⌥⌘U Merge</span><span>⌥-drag Duplicate</span><span>⌘D Duplicate</span><span>⌘[ ⌘] Order</span><span>⇧2 Zoom to selection</span><span>⌘Z Undo</span><span>Space + drag Pan</span><span>⌘ + scroll Zoom</span></div>
           </div>
           <div className="column">
             <Inspector onCopySvg={copySvg} onExportIcon={exportIcon} onMakeComponent={makeComponent} />

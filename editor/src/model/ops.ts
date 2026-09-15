@@ -176,3 +176,77 @@ export function mergeIcons(doc: Doc, iconIds: string[]): Doc {
   }
   return changed ? d : doc;
 }
+
+import { DEFAULT_GRID, type IconGrid } from './types';
+/**
+ * Lay out an artboard's icons on a grid in reading order (top-to-bottom, left-to-right by current position),
+ * and fit the artboard around them. Loose rects keep their place.
+ */
+export function arrangeIcons(doc: Doc, artboardId: string, grid?: Partial<IconGrid>): Doc {
+  const d = clone(doc), a = find(d, artboardId);
+  if (!a) return doc;
+  const g: IconGrid = { ...DEFAULT_GRID, ...a.grid, ...grid };
+  g.cols = Math.max(1, Math.round(g.cols)); g.gap = Math.max(0, Math.round(g.gap)); g.pad = Math.max(0, Math.round(g.pad));
+  a.grid = g;
+  if (!a.icons.length) return d;
+  const cw = Math.max(...a.icons.map((i) => i.w)), ch = Math.max(...a.icons.map((i) => i.h));
+  const ordered = [...a.icons].sort((p, q) => (Math.abs(p.y - q.y) < ch / 2 ? p.x - q.x : p.y - q.y));
+  const pos = new Map(ordered.map((ic, i) => [ic.id, i]));
+  for (const ic of a.icons) {
+    const i = pos.get(ic.id)!;
+    ic.x = g.pad + (i % g.cols) * (cw + g.gap);
+    ic.y = g.pad + Math.floor(i / g.cols) * (ch + g.gap);
+  }
+  const cols = Math.min(g.cols, a.icons.length), rows = Math.ceil(a.icons.length / g.cols);
+  a.w = g.pad * 2 + cols * (cw + g.gap) - g.gap;
+  a.h = g.pad * 2 + rows * (ch + g.gap) - g.gap;
+  for (const r of a.rects) { a.w = Math.max(a.w, r.x + r.w); a.h = Math.max(a.h, r.y + r.h); }
+  return d;
+}
+
+/**
+ * Place parsed icons. Into the focused icon when one icon is pasted there; otherwise onto `artboardId`
+ * below its existing content (keeping the pasted layout), or onto a new artboard when none is given.
+ * Returns the doc and the ids to select.
+ */
+export function placePasted(
+  doc: Doc,
+  parsed: { name: string | null; x: number; y: number; w: number; h: number; rects: Rect[] }[],
+  target: { artboardId: string | null; focusIconId: string | null },
+  newId: () => string,
+): { doc: Doc; sel: string[]; artboardId: string | null; into: 'icon' | 'artboard' | 'new' } {
+  const d = clone(doc);
+  if (target.focusIconId && parsed.length === 1) {
+    for (const a of d.artboards) {
+      const ic = a.icons.find((i) => i.id === target.focusIconId);
+      if (!ic) continue;
+      const rects = parsed[0].rects.filter((r) => r.x < ic.w && r.y < ic.h).map((r) => ({ ...r, id: newId(), w: Math.min(r.w, ic.w - r.x), h: Math.min(r.h, ic.h - r.y) }));
+      ic.rects.push(...rects);
+      return { doc: d, sel: rects.map((r) => r.id), artboardId: a.id, into: 'icon' };
+    }
+  }
+  const minX = Math.min(...parsed.map((p) => p.x)), minY = Math.min(...parsed.map((p) => p.y));
+  let a = target.artboardId ? d.artboards.find((x) => x.id === target.artboardId) : undefined;
+  const into = a ? 'artboard' : 'new';
+  if (!a) {
+    const last = d.artboards[d.artboards.length - 1];
+    a = { id: newId(), name: nextName(d, 'Pasted'), x: last ? last.x + last.w + 20 : 0, y: last ? last.y : 0, w: 1, h: 1, icons: [], rects: [] };
+    d.artboards.push(a);
+  }
+  const g = { ...DEFAULT_GRID, ...a.grid };
+  const bottom = Math.max(0, ...a.icons.map((i) => i.y + i.h), ...a.rects.map((r) => r.y + r.h));
+  const ox = g.pad - minX, oy = (a.icons.length || a.rects.length ? bottom + g.gap : g.pad) - minY;
+  const taken = new Set(d.artboards.flatMap((x) => x.icons.map((i) => i.name)));
+  const sel: string[] = [];
+  for (const p of parsed) {
+    let name = p.name ?? nextName(d, 'icon');
+    if (taken.has(name)) { let n = 2; while (taken.has(`${name} ${n}`)) n++; name = `${name} ${n}`; }
+    taken.add(name);
+    const icon: Icon = { id: newId(), name, x: p.x + ox, y: p.y + oy, w: Math.max(1, p.w), h: Math.max(1, p.h), rects: p.rects.map((r) => ({ ...r, id: newId() })) };
+    a.icons.push(icon);
+    sel.push(icon.id);
+    a.w = Math.max(a.w, icon.x + icon.w + g.pad);
+    a.h = Math.max(a.h, icon.y + icon.h + g.pad);
+  }
+  return { doc: d, sel, artboardId: a.id, into };
+}

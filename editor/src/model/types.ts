@@ -2,7 +2,11 @@ export type Fill = string; // 'lv0'..'lv8' or '#rrggbb'
 
 export interface Rect { id: string; x: number; y: number; w: number; h: number; fill: Fill }
 export interface Icon { id: string; name: string; x: number; y: number; w: number; h: number; rects: Rect[]; draft?: boolean }
-export interface Artboard { id: string; name: string; x: number; y: number; w: number; h: number; icons: Icon[]; rects: Rect[]; export?: boolean }
+export interface Artboard { id: string; name: string; x: number; y: number; w: number; h: number; icons: Icon[]; rects: Rect[]; export?: boolean; grid?: IconGrid }
+
+/** Layout used by Arrange icons: columns, spacing between icons, and padding to the artboard edge (icon pixels). */
+export interface IconGrid { cols: number; gap: number; pad: number }
+export const DEFAULT_GRID: IconGrid = { cols: 10, gap: 7, pad: 7 };
 
 /** Is this icon part of Export all? Draft icons and icons on non-exported artboards are skipped. */
 export const isExported = (a: Artboard, ic: Icon) => a.export !== false && !ic.draft;

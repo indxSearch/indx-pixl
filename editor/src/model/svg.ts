@@ -31,6 +31,15 @@ export function toHex(c: string): string | null {
   return /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : null;
 }
 const lum = (hex: string) => { const n = parseInt(hex.slice(1), 16); return 0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255); };
+/** Colors close to a level (light palette) become that level; anything else, like real colors, stays hex. */
+export function levelOrHex(hex: string, tolerance = 18): Fill {
+  const rgb = (h: string) => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+  const [r, g, b] = rgb(hex);
+  let best = -1, bd = Infinity;
+  LEVELS_LIGHT.forEach((c, i) => { const [cr, cg, cb] = rgb(c); const d = Math.hypot(r - cr, g - cg, b - cb); if (d < bd) { bd = d; best = i; } });
+  return bd <= tolerance ? `lv${best}` : hex;
+}
+
 export function nearestLevel(hex: string): Fill {
   const l = lum(hex);
   let best = 0, bd = Infinity;
@@ -59,7 +68,7 @@ export function importSvg(text: string, name: string, mapToLevels = true): Omit<
     if (!f || f === 'none') return null;
     const m = f.match(/var\(\s*--lv(\d)/); if (m) return `lv${m[1]}`;
     const hex = toHex(f); if (!hex) return null;
-    return mapToLevels ? nearestLevel(hex) : hex;
+    return mapToLevels ? levelOrHex(hex) : hex;
   };
   const rects: Rect[] = [];
   for (const el of Array.from(root.querySelectorAll('rect,path'))) {

@@ -25,7 +25,7 @@ export function Toolbar({ dark, onDark, onSave, onExportAll, onImport, onZoom, o
       <Button size="micro" variant={state.ui.autoMerge ? 'secondary' : 'ghost'} title="Merge an icon's rects into one shape per color when you leave it (⌥⌘U merges manually)" onClick={() => { persist('pixl.autoMerge', !state.ui.autoMerge); ui({ autoMerge: !state.ui.autoMerge }); }}>Auto merge</Button>
       <span className="sep" />
       <span className="meta">pixl.json · {count} icons{dirty ? ' · unsaved' : ''}</span>
-      <span className="status">{state.ui.status}</span>
+      <span className="status" title={state.ui.status}>{state.ui.status}</span>
       <span className="spacer" />
       <Button size="micro" variant="ghost" onClick={() => onZoom(0.8)} aria-label="Zoom out">−</Button>
       <button className="zoom" onClick={onZoomFit} title="Zoom to fit (⌘0)">{Math.round(state.ui.view.k / 8 * 100)}%</button>

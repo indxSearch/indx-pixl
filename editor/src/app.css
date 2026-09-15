@@ -37,7 +37,7 @@ button { font: inherit; color: inherit; }
 .field .lbl { width: 30px; }
 .field > div { flex: 1; min-width: 0; }
 .fields2 { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
-.fields2 .field .lbl { width: 12px; }
+.fields2 .field .lbl { width: 26px; }
 .btn-row { display: flex; gap: 7px; flex-wrap: wrap; }
 .sw { width: 11px; height: 11px; flex: none; border: 1px solid var(--lv3); display: inline-block; }
 .sw.lg { width: 17px; height: 17px; }
@@ -109,3 +109,6 @@ button { font: inherit; color: inherit; }
 .ctx-item.danger:hover:not(:disabled) { color: var(--CSignal); }
 .ctx-key { font: var(--text-xs); color: var(--lv4); }
 .ctx-sep { height: 1px; background: var(--lv3); margin: 5px 0; }
+
+.ab-title, .icon-label text { pointer-events: bounding-box; }
+.toolbar .status { overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }

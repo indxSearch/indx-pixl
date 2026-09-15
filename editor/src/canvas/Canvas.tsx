@@ -257,14 +257,17 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
     const p = pt(e), w = toWorld(view, p);
     const hit = hitOf(e.target);
     let n = hit?.node ?? null;
+    let background: string | null = null; // artboard under an empty-space click
     if (n && hit?.role !== 'title') {
       if (focus && !(n.kind === 'rect' && n.iconId === focus)) { ui({ focus: null }); }
       if (n.kind === 'rect' && n.iconId && n.iconId !== focus) n = index.get(n.iconId)!;
-      if (n.kind === 'artboard') n = null; // background click
+      if (n.kind === 'icon' && n.id === focus) { background = n.artboardId; n = null; }
+      else if (n.kind === 'artboard') { background = n.id; n = null; }
     }
-    // right-click on a node selects it; on empty space the current selection is kept (like Figma)
+    // right-click on a node selects it; on empty space the current selection is kept (like Figma),
+    // and with nothing selected the menu targets the artboard under the cursor
     if (n && !state.ui.sel.includes(n.id)) ui({ sel: [n.id] });
-    onMenu({ x: e.clientX, y: e.clientY, nodeId: n?.id ?? (state.ui.sel[0] ?? null), world: w });
+    onMenu({ x: e.clientX, y: e.clientY, nodeId: n?.id ?? state.ui.sel[0] ?? background, world: w });
   };
 
   const onDoubleClick = (e: React.MouseEvent) => {

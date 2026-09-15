@@ -12,10 +12,12 @@ npm run editor           # opens http://localhost:5175
 ```
 
 - **Artboards** group icons ("Core icons", "Car illustrations"). They are organization only.
+- **Arrange icons** (artboard inspector or right-click) lays icons out in a grid. Columns, gap and padding are stored per artboard.
 - **Icons** are components: 7×5 frames with a name. Draw loose rects on an artboard, select them and press **⌘⌥K** (or *Make component*) to turn them into an icon. Only components are exported.
 - **Fills** are levels `lv0`–`lv8` (exported as `var(--lvN)`, so they flip in dark mode) or free hex colors. Keys `0`–`8` set the level of the selection.
 - **Save** (⌘S) writes `pixl.json`, the editable source of truth. Commit it.
 - **Export all** writes one `raw-icons/<name>.svg` per component and can run `convert-icons.js` in the same step.
+- **Paste from Figma**: in Figma select a frame, right-click › Copy/Paste as › **Copy as SVG**, then ⌘V in the editor. Each clipped child frame becomes an icon, and layer names come through if Figma's export setting "Include id attribute" is on. Grays close to a level become that level, other colors stay hex. The icons land on the selected artboard (below its content) or a new one. With an icon open, a single pasted icon is added into it.
 - **Import** pulls `raw-icons/` into a new artboard, rasterizing Figma paths to rects (one-time migration, or to pick up hand-made SVGs).
 
 Shortcuts: V select · A artboard · I icon · R rect · double-click an icon to edit its rects · Esc to leave · ⌘D duplicate · ⌘[ ⌘] order · ⌘Z undo · Space+drag pan · ⌘+scroll zoom.

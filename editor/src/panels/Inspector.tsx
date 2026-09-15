@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button, InputField, ToggleSwitch } from '@indxsearch/systm';
 import { Component, Copy, Download } from '@indxsearch/pixl';
 import { useEditor } from '../model/store';
-import { type Artboard, type Icon, type Node, type Rect, fillAttr, uid } from '../model/types';
+import { type Artboard, DEFAULT_GRID, type Icon, type Node, type Rect, fillAttr, uid } from '../model/types';
 import * as ops from '../model/ops';
 import { Panel } from './Panel';
 
@@ -54,6 +54,23 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent }: { onCopy
           <>
             <ToggleSwitch label="Include in Export all" checked={(one.obj as Artboard).export !== false} onChange={(v) => edit((d) => ops.setProps(d, one.id, { export: v }))} />
             {(one.obj as Artboard).export === false && <div className="hint">Icons on this artboard are drafts and are skipped by Export all.</div>}
+            <div className="rule" />
+            <span className="lbl">Icon grid</span>
+            {(() => {
+              const g = { ...DEFAULT_GRID, ...(one.obj as Artboard).grid };
+              const set = (patch: Partial<typeof g>) => edit((d) => ops.arrangeIcons(d, one.id, patch));
+              return (
+                <>
+                  <div className="fields2">
+                    <Num label="Cols" value={g.cols} min={1} onChange={(v) => set({ cols: v })} />
+                    <Num label="Gap" value={g.gap} min={0} onChange={(v) => set({ gap: v })} />
+                  </div>
+                  <div className="fields2"><Num label="Pad" value={g.pad} min={0} onChange={(v) => set({ pad: v })} /></div>
+                  <Button size="micro" variant="secondary" onClick={() => set({})}>Arrange icons</Button>
+                  <div className="hint">Lays icons out in reading order and fits the artboard. Values are in icon pixels.</div>
+                </>
+              );
+            })()}
           </>
         )}
         {one?.kind === 'icon' && (
