@@ -10,7 +10,9 @@ export const DEFAULT_GRID: IconGrid = { cols: 10, gap: 7, pad: 7 };
 
 /** Is this icon part of Export all? Draft icons and icons on non-exported artboards are skipped. */
 export const isExported = (a: Artboard, ic: Icon) => a.export !== false && !ic.draft;
-export interface Doc { version: 1; artboards: Artboard[] }
+/** A named document color. `dark` is optional; without it the color is the same in both modes. */
+export interface ColorToken { id: string; name: string; light: string; dark?: string }
+export interface Doc { version: 1; artboards: Artboard[]; colors?: ColorToken[] }
 
 export type Kind = 'artboard' | 'icon' | 'rect';
 export interface Box { x: number; y: number; w: number; h: number }
@@ -30,7 +32,20 @@ export interface Node {
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 export const isLevel = (f: Fill) => /^lv[0-8]$/.test(f);
-export const fillAttr = (f: Fill) => (isLevel(f) ? `var(--${f})` : f);
+
+/** systm accent colors (same in light and dark). Values from @indxsearch/systm 2.10 for matching pasted hex. */
+export const ACCENTS = [
+  { token: 'CSignal', hex: '#ff4238' },
+  { token: 'CTeal', hex: '#72f5c6' },
+  { token: 'CPureBlue', hex: '#0000ff' },
+  { token: 'CLightBlue', hex: '#6b9eff' },
+  { token: 'CWarning', hex: '#ffc107' },
+] as const;
+export const isAccent = (f: Fill) => ACCENTS.some((a) => a.token === f);
+/** A design-system token (level or accent) rather than a free hex color. */
+export const isToken = (f: Fill) => isLevel(f) || isAccent(f) || f.startsWith('c:');
+/** Fill as CSS for rendering inside the editor. Library colors use per-id variables injected by the app. */
+export const fillAttr = (f: Fill) => (f.startsWith('c:') ? `var(--pixlc-${f.slice(2)})` : isLevel(f) || isAccent(f) ? `var(--${f})` : f);
 export const emptyDoc = (): Doc => ({ version: 1, artboards: [] });
 
 export function indexDoc(doc: Doc): Map<string, Node> {

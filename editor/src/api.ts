@@ -21,5 +21,5 @@ export async function saveDoc(doc: Doc, baseVersion: string | null, opts: { forc
   return (await j<{ version: string }>(r)).version;
 }
 export const rawIcons = () => fetch('/api/raw-icons').then((r) => j<{ name: string; svg: string }[]>(r));
-export const exportIcons = (files: { name: string; svg: string }[], convert: boolean) =>
-  fetch('/api/export', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ files, convert }) }).then((r) => j<{ ok: true; written: string[]; convertOutput: string }>(r));
+export const exportIcons = (files: { name: string; svg: string }[], convert: boolean, colorsCss?: string) =>
+  fetch('/api/export', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ files, convert, colorsCss }) }).then((r) => j<{ ok: true; written: string[]; convertOutput: string }>(r));

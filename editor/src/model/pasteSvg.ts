@@ -1,6 +1,6 @@
 // Parse SVG text (e.g. Figma's "Copy as SVG" of a frame) into pixel icons.
 // Runs in the browser: the SVG is mounted off-screen so transforms and bounding boxes can be measured.
-import { type Box, type Fill, type Rect, uid } from './types';
+import { type Box, type ColorToken, type Fill, type Rect, uid } from './types';
 import { type Grid, maximalRects } from './pixels';
 import { levelOrHex, toHex } from './svg';
 
@@ -61,7 +61,7 @@ function nameOf(el: Element | null): string | null {
   return (id.includes(' ') ? id : id.replace(/_/g, ' ')).trim() || null;
 }
 
-export function parseSvg(text: string, mapColors = true): ParseResult {
+export function parseSvg(text: string, colors: ColorToken[] = [], mapColors = true): ParseResult {
   const parsed = new DOMParser().parseFromString(text, 'image/svg+xml');
   const src = parsed.querySelector('svg');
   if (!src || parsed.querySelector('parsererror')) throw new Error('Clipboard does not contain valid SVG');
@@ -96,7 +96,7 @@ export function parseSvg(text: string, mapColors = true): ParseResult {
       const path = shapePath(el);
       if (!path) { skipped++; continue; }
       const m = ctmOf(el);
-      shapes.push({ el, path, m, box: boxOfMatrix(m, el.getBBox()), fill: mapColors ? levelOrHex(hex) : hex, rule: cs.fillRule === 'evenodd' ? 'evenodd' : 'nonzero', clip: el.parentElement?.closest('[clip-path]') ?? null });
+      shapes.push({ el, path, m, box: boxOfMatrix(m, el.getBBox()), fill: mapColors ? levelOrHex(hex, colors) : hex, rule: cs.fillRule === 'evenodd' ? 'evenodd' : 'nonzero', clip: el.parentElement?.closest('[clip-path]') ?? null });
     }
 
     const paint = (frame: Box, list: Shape[]): Grid => {

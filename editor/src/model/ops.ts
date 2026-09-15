@@ -250,3 +250,41 @@ export function placePasted(
   }
   return { doc: d, sel, artboardId: a.id, into };
 }
+
+import type { ColorToken } from './types';
+const replaceFills = (d: Doc, from: Fill, to: Fill) => {
+  for (const a of d.artboards) {
+    for (const r of a.rects) if (r.fill === from) r.fill = to;
+    for (const ic of a.icons) for (const r of ic.rects) if (r.fill === from) r.fill = to;
+  }
+};
+export function addColor(doc: Doc, color: ColorToken, replaceHex?: string): Doc {
+  const d = clone(doc);
+  d.colors = [...(d.colors ?? []), color];
+  if (replaceHex) replaceFills(d, replaceHex, `c:${color.id}`);
+  return d;
+}
+export function updateColor(doc: Doc, id: string, patch: Partial<Omit<ColorToken, 'id'>>): Doc {
+  const d = clone(doc);
+  const c = d.colors?.find((x) => x.id === id);
+  if (!c) return doc;
+  Object.assign(c, patch);
+  if ('dark' in patch && patch.dark === undefined) delete c.dark;
+  return d;
+}
+/** Delete a color; pixels using it get `replacement`, or the color's light value as plain hex. */
+export function deleteColor(doc: Doc, id: string, replacement: Fill | null): Doc {
+  const d = clone(doc);
+  const c = d.colors?.find((x) => x.id === id);
+  if (!c) return doc;
+  d.colors = d.colors!.filter((x) => x.id !== id);
+  replaceFills(d, `c:${id}`, replacement ?? c.light);
+  return d;
+}
+export function moveColor(doc: Doc, id: string, dir: -1 | 1): Doc {
+  const d = clone(doc), list = d.colors ?? [];
+  const i = list.findIndex((c) => c.id === id), j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return doc;
+  [list[i], list[j]] = [list[j], list[i]];
+  return d;
+}

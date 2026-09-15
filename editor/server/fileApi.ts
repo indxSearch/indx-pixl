@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto';
 const ROOT = path.resolve(__dirname, '..', '..');
 const DOC = path.join(ROOT, 'pixl.json');
 const RAW = path.join(ROOT, 'raw-icons');
+const COLORS_CSS = path.join(ROOT, 'colors.css');
 const NAME_RE = /^[\p{L}\p{N}][\p{L}\p{N} \-_]*$/u;
 
 function readBody(req: IncomingMessage): Promise<string> {
@@ -72,7 +73,8 @@ export function fileApi(): Plugin {
             return send(res, 200, files.map((f) => ({ name: f.replace(/\.svg$/, ''), svg: fs.readFileSync(path.join(RAW, f), 'utf8') })));
           }
           if (url === '/api/export' && req.method === 'POST') {
-            const { files, convert } = JSON.parse(await readBody(req)) as { files: { name: string; svg: string }[]; convert?: boolean };
+            const { files, convert, colorsCss } = JSON.parse(await readBody(req)) as { files: { name: string; svg: string }[]; convert?: boolean; colorsCss?: string };
+            if (typeof colorsCss === 'string') fs.writeFileSync(COLORS_CSS, colorsCss);
             fs.mkdirSync(RAW, { recursive: true });
             const written: string[] = [];
             for (const f of files) {

@@ -12,6 +12,7 @@ import { useShortcuts } from './hooks/useShortcuts';
 import { useAutosave } from './hooks/useAutosave';
 import { allComponents, exportIconSvg, importSvg, skippedComponents } from './model/svg';
 import { looksLikeSvg, parseSvg } from './model/pasteSvg';
+import { editorColorCss, exportColorCss } from './model/colors';
 import * as ops from './model/ops';
 import { type Artboard, type Doc, type Icon, type Node, bboxOf, uid } from './model/types';
 import * as api from './api';
@@ -56,12 +57,12 @@ function Editor() {
   const copySvg = useCallback(async (ic?: Icon) => {
     const icon = ic ?? currentIcon();
     if (!icon) return status('No icon selected');
-    try { await navigator.clipboard.writeText(exportIconSvg(icon)); status(`Copied ${icon.name}.svg`); } catch { status('Clipboard blocked'); }
+    try { await navigator.clipboard.writeText(exportIconSvg(icon, state.doc.colors)); status(`Copied ${icon.name}.svg`); } catch { status('Clipboard blocked'); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, sel]);
   const exportIcon = useCallback(async (ic: Icon) => {
-    try { await api.exportIcons([{ name: ic.name, svg: exportIconSvg(ic) }], false); status(`Wrote raw-icons/${ic.name}.svg`); } catch (e) { status('Export failed: ' + (e as Error).message); }
-  }, [status]);
+    try { await api.exportIcons([{ name: ic.name, svg: exportIconSvg(ic, state.doc.colors) }], false, exportColorCss(state.doc.colors)); status(`Wrote raw-icons/${ic.name}.svg`); } catch (e) { status('Export failed: ' + (e as Error).message); }
+  }, [status, state.doc.colors]);
   const [exportOpen, setExportOpen] = useState(false);
   const [convert, setConvert] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -72,7 +73,7 @@ function Editor() {
   const exportAll = useCallback(async () => {
     setExporting(true);
     try {
-      const r = await api.exportIcons(icons.map((i) => ({ name: i.name, svg: exportIconSvg(i) })), convert);
+      const r = await api.exportIcons(icons.map((i) => ({ name: i.name, svg: exportIconSvg(i, state.doc.colors) })), convert, exportColorCss(state.doc.colors));
       status(`Exported ${r.written.length} icons${convert ? ' + converted' : ''}`);
       if (r.convertOutput) console.log(r.convertOutput);
       setExportOpen(false);
@@ -90,7 +91,7 @@ function Editor() {
     try {
       const files = await api.rawIcons();
       if (!files.length) return status('raw-icons/ is empty');
-      const icons: Icon[] = files.map((f, i) => ({ ...importSvg(f.svg, f.name), x: i, y: 0 }));
+      const icons: Icon[] = files.map((f, i) => ({ ...importSvg(f.svg, f.name, state.doc.colors), x: i, y: 0 }));
       const last = state.doc.artboards[state.doc.artboards.length - 1];
       const ab: Artboard = { id: uid(), name: ops.nextName(state.doc, 'Imported'), x: last ? last.x + last.w + 20 : 0, y: last ? last.y : 0, w: 1, h: 1, icons, rects: [] };
       edit((d) => ops.arrangeIcons(ops.addArtboard(d, ab), ab.id));
@@ -161,7 +162,7 @@ function Editor() {
   // ---- paste SVG (e.g. Figma › Copy as SVG) ----
   const pasteSvg = useCallback((text: string) => {
     let result;
-    try { result = parseSvg(text); } catch (e) { return status((e as Error).message); }
+    try { result = parseSvg(text, state.doc.colors); } catch (e) { return status((e as Error).message); }
     const found = result.icons.filter((i) => i.rects.length);
     if (!found.length) return status('No filled shapes found in the SVG');
     const focusIconId = state.ui.focus;
@@ -262,6 +263,7 @@ function Editor() {
 
   return (
     <div className="app">
+      <style>{editorColorCss(state.doc.colors)}</style>
       <div className="surface">
         <Toolbar dark={dark} onDark={onDark} onExportAll={() => setExportOpen(true)} onImport={importRaw} onZoom={zoom} onZoomFit={zoomFit} saveState={autosave.saveState} />
         {autosave.saveState === 'conflict' && (

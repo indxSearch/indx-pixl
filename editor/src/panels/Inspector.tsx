@@ -48,7 +48,7 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent }: { onCopy
         <div className="fields2"><Num label="W" value={same('w')} min={1} onChange={(v) => setGeo('w', v)} /><Num label="H" value={same('h')} min={1} onChange={(v) => setGeo('h', v)} /></div>
         {sel.every((n) => n.kind === 'rect') && (() => {
           const f = sel.every((n) => (n.obj as Rect).fill === (sel[0].obj as Rect).fill) ? (sel[0].obj as Rect).fill : null;
-          return <div className="field"><span className="lbl">Fill</span><span className="sw lg" style={{ background: f ? fillAttr(f) : 'var(--lv2)' }} /><span className="mono">{f ? (f.startsWith('lv') ? `var(--${f})` : f) : 'mixed'}</span></div>;
+          return <div className="field"><span className="lbl">Fill</span><span className="sw lg" style={{ background: f ? fillAttr(f) : 'var(--lv2)' }} /><span className="mono">{f ? (f.startsWith('c:') ? (state.doc.colors?.find((c) => c.id === f.slice(2))?.name ?? 'missing color') : fillAttr(f)) : 'mixed'}</span></div>;
         })()}
         {one?.kind === 'artboard' && (
           <>

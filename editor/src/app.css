@@ -121,3 +121,15 @@ button { font: inherit; color: inherit; }
 
 /* logo: 21×15 (3px per icon pixel). Toolbar padding 5 + 10 = 15px on the left matches gap 10 + separator margin 5 on the right */
 .toolbar .brand { display: flex; padding-left: 10px; }
+
+.accents { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; }
+
+/* color library */
+.sw-btn.add { display: flex; align-items: center; justify-content: center; background: transparent; color: var(--lv4); border-style: dashed; }
+.sw-btn.add:hover { color: var(--lv7); border-color: var(--lv5); }
+.color-editor { display: flex; flex-direction: column; gap: 10px; padding: 10px; border: 1px solid var(--lv3); border-radius: var(--radius); background: var(--lv1); }
+.color-editor .field .lbl { width: 34px; }
+.color-editor input[type=color] { width: 30px; height: 30px; flex: none; padding: 0; border: 1px solid var(--lv3); border-radius: var(--radius); background: none; }
+.color-editor .btn-row { align-items: center; }
+.color-editor .spacer { flex: 1; }
+.mono-hint { font-family: ui-monospace, Menlo, monospace; }

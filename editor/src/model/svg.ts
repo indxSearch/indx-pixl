@@ -1,10 +1,22 @@
-import { type Doc, type Fill, type Icon, type Rect, fillAttr, isExported, uid } from './types';
+import { ACCENTS, type ColorToken, type Doc, type Fill, type Icon, type Rect, isAccent, isExported, isLevel, uid } from './types';
+import { cssVarOf, slugOf } from './colors';
 import { fillsOf, maximalRects, mergedRects, outlinePath, toGrid } from './pixels';
 
 export const LEVELS_LIGHT = ['#FFFFFF', '#FBFBFB', '#EFEFEF', '#CFCFCF', '#757575', '#4A4A50', '#1A1A21', '#121215', '#080809'];
 
+/** Fill as written into exported SVG. Library colors carry their light value as a fallback. */
+export function exportFill(f: Fill, colors: ColorToken[] = []): string {
+  if (isLevel(f) || isAccent(f)) return `var(--${f})`;
+  if (f.startsWith('c:')) {
+    const c = colors.find((x) => x.id === f.slice(2));
+    return c ? `var(${cssVarOf(c)}, ${c.light})` : '#000000';
+  }
+  return f;
+}
+
 /** One union outline path per fill, like Figma's Union. Rects mode keeps one <rect> per rect. */
-export function exportIconSvg(icon: Icon, mode: 'union' | 'rects' = 'union'): string {
+export function exportIconSvg(icon: Icon, colors: ColorToken[] = [], mode: 'union' | 'rects' = 'union'): string {
+  const fillAttr = (f: Fill) => exportFill(f, colors);
   let lines: string[];
   if (mode === 'rects') lines = icon.rects.map((r) => `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="${fillAttr(r.fill)}"/>`);
   else {
@@ -31,13 +43,18 @@ export function toHex(c: string): string | null {
   return /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : null;
 }
 const lum = (hex: string) => { const n = parseInt(hex.slice(1), 16); return 0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255); };
-/** Colors close to a level (light palette) become that level; anything else, like real colors, stays hex. */
-export function levelOrHex(hex: string, tolerance = 18): Fill {
+/** Colors close to a level (light palette), an accent or a library color become that token; anything else stays hex. */
+export function levelOrHex(hex: string, colors: ColorToken[] = [], tolerance = 18): Fill {
   const rgb = (h: string) => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
   const [r, g, b] = rgb(hex);
-  let best = -1, bd = Infinity;
-  LEVELS_LIGHT.forEach((c, i) => { const [cr, cg, cb] = rgb(c); const d = Math.hypot(r - cr, g - cg, b - cb); if (d < bd) { bd = d; best = i; } });
-  return bd <= tolerance ? `lv${best}` : hex;
+  const candidates: [Fill, string][] = [
+    ...LEVELS_LIGHT.map((c, i) => [`lv${i}`, c] as [Fill, string]),
+    ...ACCENTS.map((a) => [a.token, a.hex] as [Fill, string]),
+    ...colors.flatMap((c) => { const h = toHex(c.light); return h ? [[`c:${c.id}`, h] as [Fill, string]] : []; }),
+  ];
+  let best: Fill = hex, bd = Infinity;
+  for (const [token, c] of candidates) { const [cr, cg, cb] = rgb(c); const d = Math.hypot(r - cr, g - cg, b - cb); if (d < bd) { bd = d; best = token; } }
+  return bd <= tolerance ? best : hex;
 }
 
 export function nearestLevel(hex: string): Fill {
@@ -56,7 +73,7 @@ export function rasterize(d: string, rule: string | null, W: number, H: number):
   return maximalRects(g, 'x');
 }
 
-export function importSvg(text: string, name: string, mapToLevels = true): Omit<Icon, 'x' | 'y'> {
+export function importSvg(text: string, name: string, colors: ColorToken[] = [], mapToLevels = true): Omit<Icon, 'x' | 'y'> {
   const root = new DOMParser().parseFromString(text, 'image/svg+xml').querySelector('svg');
   if (!root) throw new Error('Not an SVG');
   let w = 7, h = 5;
@@ -66,9 +83,15 @@ export function importSvg(text: string, name: string, mapToLevels = true): Omit<
   w = Math.max(1, Math.round(w)); h = Math.max(1, Math.round(h));
   const mapFill = (f: string | null): Fill | null => {
     if (!f || f === 'none') return null;
-    const m = f.match(/var\(\s*--lv(\d)/); if (m) return `lv${m[1]}`;
+    const m = f.match(/var\(\s*--(lv[0-8]|C[A-Za-z]+)\b/); if (m && (/^lv/.test(m[1]) || ACCENTS.some((a) => a.token === m[1]))) return m[1];
+    const pm = f.match(/var\(\s*--pixl-([a-z0-9-]+)\s*(?:,\s*([^)]+))?\)/);
+    if (pm) {
+      const c = colors.find((x) => slugOf(x.name) === pm[1]);
+      if (c) return `c:${c.id}`;
+      f = pm[2]?.trim() ?? '';
+    }
     const hex = toHex(f); if (!hex) return null;
-    return mapToLevels ? levelOrHex(hex) : hex;
+    return mapToLevels ? levelOrHex(hex, colors) : hex;
   };
   const rects: Rect[] = [];
   for (const el of Array.from(root.querySelectorAll('rect,path'))) {
