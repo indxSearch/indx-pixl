@@ -1,12 +1,13 @@
 import React from "react";
 
 type IconProps = {
+  /** Overrides every fill. Omit to keep the icon's own level fills (var(--lvN)). */
   color?: string;
   size?: number | string;
 };
 
 const Chevron_up: React.FC<IconProps> = ({
-  color = "black",
+  color,
   size = 21,
 }) => {
   const aspectRatio = 0.7142857142857143;
@@ -21,7 +22,7 @@ const Chevron_up: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-    <path fillRule="evenodd" clipRule="evenodd" d="M3 2H4V3H5V4H6V3H5V2H4V1H3V2ZM2 3V2H3V3H2ZM2 3V4H1V3H2Z" fill={color}/>    
+    <path d="M3 1H4V2H5V3H6V4H5V3H4V2H3V3H2V4H1V3H2V2H3Z" fill={color ?? "var(--lv8)"}/>    
     </svg>
   );
 };

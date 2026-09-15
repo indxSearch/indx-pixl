@@ -1,8 +1,8 @@
 import { jsx as _jsx } from "react/jsx-runtime";
-const Microphone = ({ color = "black", size = 21, }) => {
+const Microphone = ({ color, size = 21, }) => {
     const aspectRatio = 0.7142857142857143;
     const width = size;
     const height = typeof size === "number" ? size * aspectRatio : `calc(${size} * 0.7142857142857143)`;
-    return (_jsx("svg", { width: width, height: height, viewBox: "0 0 7 5", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: _jsx("path", { fillRule: "evenodd", clipRule: "evenodd", d: "M4 0H3V1H2V2V3H3V4H2V5H3H4H5V4H4V3H5V2V1H4V0ZM4 1V2H3V1H4ZM6 3V2V1H7V2V3H6ZM0 3V2V1H1V2V3H0Z", fill: color }) }));
+    return (_jsx("svg", { width: width, height: height, viewBox: "0 0 7 5", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: _jsx("path", { d: "M3 0H4V1H5V3H4V4H5V5H2V4H3V3H2V1H3ZM4 1H3V2H4ZM0 1H1V3H0ZM6 1H7V3H6Z", fill: color !== null && color !== void 0 ? color : "var(--lv8)" }) }));
 };
 export default Microphone;

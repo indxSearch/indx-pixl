@@ -1,8 +1,8 @@
 import { jsx as _jsx } from "react/jsx-runtime";
-const Check = ({ color = "black", size = 21, }) => {
+const Check = ({ color, size = 21, }) => {
     const aspectRatio = 0.7142857142857143;
     const width = size;
     const height = typeof size === "number" ? size * aspectRatio : `calc(${size} * 0.7142857142857143)`;
-    return (_jsx("svg", { width: width, height: height, viewBox: "0 0 7 5", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: _jsx("path", { fillRule: "evenodd", clipRule: "evenodd", d: "M7 0H6V1H5V2H4V3H3V4H2V3H1V2H0V3H1V4H2V5H3V4H4V3H5V2H6V1H7V0Z", fill: color }) }));
+    return (_jsx("svg", { width: width, height: height, viewBox: "0 0 7 5", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: _jsx("path", { d: "M6 0H7V1H6V2H5V3H4V4H3V5H2V4H1V3H0V2H1V3H2V4H3V3H4V2H5V1H6Z", fill: color !== null && color !== void 0 ? color : "var(--lv8)" }) }));
 };
 export default Check;

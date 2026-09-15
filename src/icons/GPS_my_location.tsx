@@ -1,12 +1,13 @@
 import React from "react";
 
 type IconProps = {
+  /** Overrides every fill. Omit to keep the icon's own level fills (var(--lvN)). */
   color?: string;
   size?: number | string;
 };
 
 const Gps_my_location: React.FC<IconProps> = ({
-  color = "black",
+  color,
   size = 21,
 }) => {
   const aspectRatio = 0.7142857142857143;
@@ -21,7 +22,7 @@ const Gps_my_location: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-    <path d="M4 1H5V2H6V3H5V4H4V5H3V4H2V3H1V2H2V1H3V0H4V1ZM4 2H3V3H4V2Z" fill={color}/>    
+    <path d="M3 0H4V1H5V2H6V3H5V4H4V5H3V4H2V3H1V2H2V1H3ZM4 2H3V3H4Z" fill={color ?? "var(--lv8)"}/>    
     </svg>
   );
 };

@@ -15,10 +15,11 @@ files.forEach(file => {
     .replace(/\s+/g, '_') // replace spaces with underscores
     .replace(/(^\w|-\w)/g, clear => clear.replace('-', '').toUpperCase());
 
-  const svgContent = fs.readFileSync(path.join(inputFolder, file), 'utf8');
+  // Strip <defs> (Figma clip paths) so only drawn shapes are matched.
+  const svgContent = fs.readFileSync(path.join(inputFolder, file), 'utf8').replace(/<defs>[\s\S]*?<\/defs>/g, '');
 
   const viewBoxMatch = svgContent.match(/viewBox="([^"]+)"/);
-  const pathMatch = svgContent.match(/<path[^>]*>/g);
+  const pathMatch = svgContent.match(/<(?:path|rect)[^>]*>/g);
 
   if (!viewBoxMatch || !pathMatch) {
     console.error(`Skipping ${file}: missing viewBox or path`);
@@ -38,12 +39,13 @@ files.forEach(file => {
   const component = `import React from "react";
 
 type IconProps = {
+  /** Overrides every fill. Omit to keep the icon's own level fills (var(--lvN)). */
   color?: string;
   size?: number | string;
 };
 
 const ${componentName}: React.FC<IconProps> = ({
-  color = "black",
+  color,
   size = ${width * 3},
 }) => {
   const aspectRatio = ${aspectRatio};
@@ -59,7 +61,7 @@ const ${componentName}: React.FC<IconProps> = ({
       xmlns="http://www.w3.org/2000/svg"
     >
     ${paths
-      .replace(/fill="[^"]*"/g, 'fill={color}')
+      .replace(/fill="([^"]*)"/g, (_, f) => `fill={color ?? "${f === 'black' ? '#080809' : f}"}`)
       .replace(/fill-rule=/g, 'fillRule=')
       .replace(/clip-rule=/g, 'clipRule=')}    
     </svg>

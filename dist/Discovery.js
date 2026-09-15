@@ -1,8 +1,8 @@
 import { jsx as _jsx } from "react/jsx-runtime";
-const Discovery = ({ color = "black", size = 21, }) => {
+const Discovery = ({ color, size = 21, }) => {
     const aspectRatio = 0.7142857142857143;
     const width = size;
     const height = typeof size === "number" ? size * aspectRatio : `calc(${size} * 0.7142857142857143)`;
-    return (_jsx("svg", { width: width, height: height, viewBox: "0 0 7 5", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: _jsx("path", { fillRule: "evenodd", clipRule: "evenodd", d: "M4 0H3V2H0V3H3V5H4V3H7V2H4V0ZM4 2V3H3V2H4ZM5 0H6V1H5V0ZM2 0H1V1H2V0ZM1 4H2V5H1V4ZM6 4H5V5H6V4Z", fill: color }) }));
+    return (_jsx("svg", { width: width, height: height, viewBox: "0 0 7 5", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: _jsx("path", { d: "M1 0H2V1H1ZM3 0H4V2H7V3H4V5H3V3H0V2H3ZM5 0H6V1H5ZM4 2H3V3H4ZM1 4H2V5H1ZM5 4H6V5H5Z", fill: color !== null && color !== void 0 ? color : "var(--lv8)" }) }));
 };
 export default Discovery;

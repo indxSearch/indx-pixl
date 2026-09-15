@@ -1,8 +1,8 @@
 import { jsx as _jsx } from "react/jsx-runtime";
-const Recorder = ({ color = "black", size = 21, }) => {
+const Recorder = ({ color, size = 21, }) => {
     const aspectRatio = 0.7142857142857143;
     const width = size;
     const height = typeof size === "number" ? size * aspectRatio : `calc(${size} * 0.7142857142857143)`;
-    return (_jsx("svg", { width: width, height: height, viewBox: "0 0 7 5", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: _jsx("path", { fillRule: "evenodd", clipRule: "evenodd", d: "M1 0L2 0V1L1 1L1 0ZM1 2L0 2L0 1L1 1V2ZM2 2H1L1 3L2 3V4L1 4L1 5H2H3L4 5H5H6V4L5 4L5 3L6 3V2L7 2V1L6 1V0L5 0V1L4 1V2L5 2V3H4H3H2V2ZM5 2V1L6 1V2H5ZM2 2L3 2L3 1L2 1L2 2Z", fill: color }) }));
+    return (_jsx("svg", { width: width, height: height, viewBox: "0 0 7 5", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: _jsx("path", { d: "M1 0H2V1H3V2H2V3H5V2H4V1H5V0H6V1H7V2H6V3H5V4H6V5H1V4H2V3H1V2H0V1H1ZM2 1H1V2H2ZM6 1H5V2H6Z", fill: color !== null && color !== void 0 ? color : "var(--lv8)" }) }));
 };
 export default Recorder;

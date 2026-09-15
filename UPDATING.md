@@ -2,15 +2,33 @@
 
 This guide explains how to add new icons to the `indx-pixl` icon set.
 
-## Adding New Icons
+## The editor (recommended)
+
+Icons are drawn in the in-repo editor, a Figma-like canvas built on `@indxsearch/systm`:
+
+```bash
+npm run editor:install   # once
+npm run editor           # opens http://localhost:5175
+```
+
+- **Artboards** group icons ("Core icons", "Car illustrations"). They are organization only.
+- **Icons** are components: 7×5 frames with a name. Draw loose rects on an artboard, select them and press **⌘⌥K** (or *Make component*) to turn them into an icon. Only components are exported.
+- **Fills** are levels `lv0`–`lv8` (exported as `var(--lvN)`, so they flip in dark mode) or free hex colors. Keys `0`–`8` set the level of the selection.
+- **Save** (⌘S) writes `pixl.json`, the editable source of truth. Commit it.
+- **Export all** writes one `raw-icons/<name>.svg` per component and can run `convert-icons.js` in the same step.
+- **Import** pulls `raw-icons/` into a new artboard, rasterizing Figma paths to rects (one-time migration, or to pick up hand-made SVGs).
+
+Shortcuts: V select · A artboard · I icon · R rect · double-click an icon to edit its rects · Esc to leave · ⌘D duplicate · ⌘[ ⌘] order · ⌘Z undo · Space+drag pan · ⌘+scroll zoom.
+
+## Adding New Icons by hand
 
 ### 1. Prepare Your SVG File
 
 Create an SVG icon following these requirements:
 - **Grid**: Must be on a strict 7x5 pixel grid
 - **ViewBox**: Should have `viewBox="0 0 7 5"`
-- **Paths**: Must contain at least one `<path>` element
-- **Fill**: Path fills will be replaced with the dynamic `color` prop
+- **Shapes**: `<rect>` and/or `<path>` elements (the editor exports rects)
+- **Fill**: `var(--lvN)` fills are kept and flip with the systm level system; any other fill becomes the fallback when no `color` prop is passed
 
 ### 2. Add to Raw Icons Folder
 
@@ -47,7 +65,7 @@ npm run build
 ## Generated Component Structure
 
 Each generated component includes:
-- **color prop**: Accepts any CSS color (default: `"black"`)
+- **color prop**: Optional. When set, overrides every fill (single-tone icon). When omitted, the icon keeps its level fills (`var(--lvN)`), so multi-tone icons render with the design system's grayscale and flip in dark mode.
 - **size prop**: Width in pixels as a number (default: `21`)
 - **Auto-calculated height**: Maintains the 7:5 aspect ratio
 

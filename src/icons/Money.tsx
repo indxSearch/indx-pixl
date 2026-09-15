@@ -1,12 +1,13 @@
 import React from "react";
 
 type IconProps = {
+  /** Overrides every fill. Omit to keep the icon's own level fills (var(--lvN)). */
   color?: string;
   size?: number | string;
 };
 
 const Money: React.FC<IconProps> = ({
-  color = "black",
+  color,
   size = 21,
 }) => {
   const aspectRatio = 0.7142857142857143;
@@ -21,7 +22,7 @@ const Money: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-    <path d="M3 0V1H2V2H1V3H2V4H3V5H0V0H3ZM7 5H4V4H5V3H6V2H5V1H4V0H7V5ZM4 3H3V2H4V3Z" fill={color}/>    
+    <path d="M0 0H3V1H2V2H1V3H2V4H3V5H0ZM4 0H7V5H4V4H5V3H6V2H5V1H4ZM3 2H4V3H3Z" fill={color ?? "var(--lv8)"}/>    
     </svg>
   );
 };

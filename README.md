@@ -19,7 +19,7 @@ const Example = () => (
 ```
 
 Each icon accepts two optional props:
-- `color` — Any CSS color (`string`)
+- `color` — Any CSS color (`string`). Optional: omit it to keep the icon's own level fills (`var(--lv0)`…`var(--lv8)` from `@indxsearch/systm`), which flip automatically in dark mode. Multi-tone icons only render as designed without `color`.
 - `size` — A `number` (width in pixels), ideally use a number scaling with 7x5 ratio (14x10, 21x15, 28x20, etc.). The height is auto calculated.
 
 ---

@@ -1,8 +1,8 @@
 import { jsx as _jsx } from "react/jsx-runtime";
-const User_group = ({ color = "black", size = 21, }) => {
+const User_group = ({ color, size = 21, }) => {
     const aspectRatio = 0.7142857142857143;
     const width = size;
     const height = typeof size === "number" ? size * aspectRatio : `calc(${size} * 0.7142857142857143)`;
-    return (_jsx("svg", { width: width, height: height, viewBox: "0 0 7 5", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: _jsx("path", { d: "M1 5H0V4H1V5ZM3 5H2V4H3V5ZM2 4H1V3H0V2H3V3H2V4ZM5 3H4V2H5V3ZM7 3H6V2H7V3ZM2 1H1V0H2V1ZM5 1H4V0H5V1ZM7 1H6V0H7V1Z", fill: color }) }));
+    return (_jsx("svg", { width: width, height: height, viewBox: "0 0 7 5", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: _jsx("path", { d: "M1 0H2V1H1ZM4 0H5V1H4ZM6 0H7V1H6ZM0 2H3V3H2V4H3V5H2V4H1V5H0V4H1V3H0ZM4 2H5V3H4ZM6 2H7V3H6Z", fill: color !== null && color !== void 0 ? color : "var(--lv8)" }) }));
 };
 export default User_group;

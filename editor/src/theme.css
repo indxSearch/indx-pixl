@@ -1,0 +1,9 @@
+/* Manual theme override on top of systm's prefers-color-scheme rule. Values copied from @indxsearch/systm globals.css. */
+html.theme-light {
+  --lv0: #FFFFFF; --lv1: #FBFBFB; --lv2: #EFEFEF; --lv3: #CFCFCF; --lv4: #757575; --lv5: #4A4A50; --lv6: #1A1A21; --lv7: #121215; --lv8: #080809;
+  color-scheme: light;
+}
+html.theme-dark {
+  --lv0: #080809; --lv1: #121215; --lv2: #1A1A21; --lv3: #393941; --lv4: #565661; --lv5: #8F8F97; --lv6: #EFEFEF; --lv7: #FBFBFB; --lv8: #FFFFFF;
+  color-scheme: dark;
+}

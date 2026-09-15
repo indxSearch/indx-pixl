@@ -1,12 +1,13 @@
 import React from "react";
 
 type IconProps = {
+  /** Overrides every fill. Omit to keep the icon's own level fills (var(--lvN)). */
   color?: string;
   size?: number | string;
 };
 
 const ArrowLeft: React.FC<IconProps> = ({
-  color = "black",
+  color,
   size = 21,
 }) => {
   const aspectRatio = 0.7142857142857143;
@@ -21,7 +22,7 @@ const ArrowLeft: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-    <path d="M3 0H2V1H3V0ZM2 1L1 1V2L2 2V1ZM1 2H0L0 3H1L1 2ZM6 2L2 2V3L6 3V2ZM2 3H1V4H2L2 3ZM3 4H2V5H3V4Z" fill={color}/>    
+    <path d="M2 0H3V1H2V2H6V3H2V4H3V5H2V4H1V3H0V2H1V1H2ZM2 2H1V3H2Z" fill={color ?? "var(--lv8)"}/>    
     </svg>
   );
 };

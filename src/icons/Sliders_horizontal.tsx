@@ -1,12 +1,13 @@
 import React from "react";
 
 type IconProps = {
+  /** Overrides every fill. Omit to keep the icon's own level fills (var(--lvN)). */
   color?: string;
   size?: number | string;
 };
 
 const Sliders_horizontal: React.FC<IconProps> = ({
-  color = "black",
+  color,
   size = 21,
 }) => {
   const aspectRatio = 0.7142857142857143;
@@ -21,7 +22,7 @@ const Sliders_horizontal: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-    <path fillRule="evenodd" clipRule="evenodd" d="M5 1V0H6V1H5ZM5 2H4H3V1H4H5V2ZM6 2V3H5V2H6ZM6 2H7V1H6V2ZM1 3V4H0V3H1ZM2 3H1V2H2V3ZM3 3H2V4H1V5H2V4H3H4V3H3Z" fill={color}/>    
+    <path d="M5 0H6V1H7V2H6V3H5V2H3V1H5ZM6 1H5V2H6ZM1 2H2V3H4V4H2V5H1V4H0V3H1ZM2 3H1V4H2Z" fill={color ?? "var(--lv8)"}/>    
     </svg>
   );
 };

@@ -1,12 +1,13 @@
 import React from "react";
 
 type IconProps = {
+  /** Overrides every fill. Omit to keep the icon's own level fills (var(--lvN)). */
   color?: string;
   size?: number | string;
 };
 
 const Spark: React.FC<IconProps> = ({
-  color = "black",
+  color,
   size = 21,
 }) => {
   const aspectRatio = 0.7142857142857143;
@@ -21,7 +22,7 @@ const Spark: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-    <path d="M2 5H1L1 4L2 4V5ZM6 5H5V4L6 4V5ZM4 4H3V3H4L4 4ZM1 3H0L0 2L1 2L1 3ZM3 3H2V2L3 2V3ZM5 3H4V2L5 2V3ZM7 3H6V2L7 2V3ZM4 2H3L3 1L4 1V2ZM2 1L1 1L1 0L2 0V1ZM6 1L5 1V0L6 0V1Z" fill={color}/>    
+    <path d="M1 0H2V1H1ZM5 0H6V1H5ZM3 1H4V2H5V3H4V4H3V3H2V2H3ZM4 2H3V3H4ZM0 2H1V3H0ZM6 2H7V3H6ZM1 4H2V5H1ZM5 4H6V5H5Z" fill={color ?? "var(--lv8)"}/>    
     </svg>
   );
 };

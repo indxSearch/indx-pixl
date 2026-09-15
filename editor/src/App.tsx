@@ -1,0 +1,263 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button, Checkbox, Modal } from '@indxsearch/systm';
+import { EditorProvider, persist, useEditor } from './model/store';
+import { Canvas, type MenuRequest } from './canvas/Canvas';
+import { ContextMenu, type MenuItem, type MenuState } from './panels/ContextMenu';
+import { Toolbar } from './panels/Toolbar';
+import { Layers } from './panels/Layers';
+import { Inspector } from './panels/Inspector';
+import { FillPanel } from './panels/Fill';
+import { Preview } from './panels/Preview';
+import { useShortcuts } from './hooks/useShortcuts';
+import { allComponents, exportIconSvg, importSvg, skippedComponents } from './model/svg';
+import * as ops from './model/ops';
+import { type Artboard, type Doc, type Icon, type Node, bboxOf, uid } from './model/types';
+import * as api from './api';
+
+export default function App() {
+  return <EditorProvider><Editor /></EditorProvider>;
+}
+
+function Editor() {
+  const { state, dispatch, edit, ui, sel, dirty, index } = useEditor();
+  const [saving, setSaving] = useState(false);
+  const status = useCallback((s: string) => { ui({ status: s }); setTimeout(() => ui({ status: '' }), 2000); }, [ui]);
+
+  // ---- theme ----
+  const sysDark = useMemo(() => window.matchMedia('(prefers-color-scheme: dark)'), []);
+  const [sys, setSys] = useState(sysDark.matches);
+  useEffect(() => { const f = () => setSys(sysDark.matches); sysDark.addEventListener('change', f); return () => sysDark.removeEventListener('change', f); }, [sysDark]);
+  const dark = state.ui.theme === 'system' ? sys : state.ui.theme === 'dark';
+  useEffect(() => { document.documentElement.classList.toggle('theme-dark', dark); document.documentElement.classList.toggle('theme-light', !dark); }, [dark]);
+  const onDark = (v: boolean) => { const t = v ? 'dark' : 'light'; ui({ theme: t }); persist('pixl.theme', t); };
+
+  // ---- persist viewport ----
+  useEffect(() => { const t = setTimeout(() => persist('pixl.view', state.ui.view), 300); return () => clearTimeout(t); }, [state.ui.view]);
+
+  // ---- load ----
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    api.loadDoc().then((doc) => { if (doc) dispatch({ type: 'LOAD', doc }); setLoaded(true); }).catch((e) => status('Load failed: ' + e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // zoom to fit once after load, so the document is never off-screen on first open
+  useEffect(() => { if (loaded) zoomFit(); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
+  useEffect(() => { const f = (e: BeforeUnloadEvent) => { if (dirty) { e.preventDefault(); } }; window.addEventListener('beforeunload', f); return () => window.removeEventListener('beforeunload', f); }, [dirty]);
+
+  // ---- commands ----
+  const save = useCallback(async () => {
+    setSaving(true);
+    try { await api.saveDoc(state.doc); dispatch({ type: 'MARK_SAVED' }); status('Saved pixl.json'); }
+    catch (e) { status('Save failed: ' + (e as Error).message); }
+    finally { setSaving(false); }
+  }, [state.doc, dispatch, status]);
+
+  const currentIcon = (): Icon | null => {
+    const id = state.ui.focus ?? (sel[0]?.kind === 'icon' ? sel[0].id : sel[0]?.iconId ?? null);
+    return id ? (state.doc.artboards.flatMap((a) => a.icons).find((i) => i.id === id) ?? null) : null;
+  };
+  const copySvg = useCallback(async (ic?: Icon) => {
+    const icon = ic ?? currentIcon();
+    if (!icon) return status('No icon selected');
+    try { await navigator.clipboard.writeText(exportIconSvg(icon)); status(`Copied ${icon.name}.svg`); } catch { status('Clipboard blocked'); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, sel]);
+  const exportIcon = useCallback(async (ic: Icon) => {
+    try { await api.exportIcons([{ name: ic.name, svg: exportIconSvg(ic) }], false); status(`Wrote raw-icons/${ic.name}.svg`); } catch (e) { status('Export failed: ' + (e as Error).message); }
+  }, [status]);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [convert, setConvert] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const icons = allComponents(state.doc);
+  const skipped = skippedComponents(state.doc);
+  const dupes = [...new Set(icons.map((i) => i.name).filter((n, i, a) => a.indexOf(n) !== i))];
+  const badNames = icons.map((i) => i.name).filter((n) => !/^[\p{L}\p{N}][\p{L}\p{N} \-_]*$/u.test(n));
+  const exportAll = useCallback(async () => {
+    setExporting(true);
+    try {
+      const r = await api.exportIcons(icons.map((i) => ({ name: i.name, svg: exportIconSvg(i) })), convert);
+      status(`Exported ${r.written.length} icons${convert ? ' + converted' : ''}`);
+      if (r.convertOutput) console.log(r.convertOutput);
+      setExportOpen(false);
+    } catch (e) { status('Export failed: ' + (e as Error).message); }
+    finally { setExporting(false); }
+  }, [icons, convert, status]);
+  const makeComponent = useCallback((name?: string) => {
+    const rects = sel.filter((n) => n.kind === 'rect' && !n.iconId);
+    if (!rects.length || new Set(rects.map((n) => n.artboardId)).size !== 1) return status('Select loose rects on one artboard');
+    const id = uid(), nm = (name || '').trim() || ops.nextName(state.doc, 'icon');
+    edit((d) => ops.makeComponent(d, rects[0].artboardId, rects.map((n) => n.id), id, nm));
+    ui({ sel: [id], focus: null });
+  }, [sel, state.doc, edit, ui, status]);
+  const importRaw = useCallback(async () => {
+    try {
+      const files = await api.rawIcons();
+      if (!files.length) return status('raw-icons/ is empty');
+      const cols = 10, gap = 3, pad = 3;
+      const icons: Icon[] = files.map((f, i) => {
+        const ic = importSvg(f.svg, f.name);
+        return { ...ic, x: pad + (i % cols) * (7 + gap), y: pad + Math.floor(i / cols) * (5 + gap) };
+      });
+      const rows = Math.ceil(icons.length / cols);
+      const last = state.doc.artboards[state.doc.artboards.length - 1];
+      const ab: Artboard = { id: uid(), name: ops.nextName(state.doc, 'Imported'), x: last ? last.x + last.w + 10 : 0, y: last ? last.y : 0, w: pad * 2 + cols * (7 + gap) - gap, h: pad * 2 + rows * (5 + gap) - gap, icons, rects: [] };
+      edit((d) => ops.addArtboard(d, ab));
+      ui({ sel: [ab.id] });
+      status(`Imported ${icons.length} icons`);
+    } catch (e) { status('Import failed: ' + (e as Error).message); }
+  }, [state.doc, edit, ui, status]);
+
+  const zoom = useCallback((f: number) => {
+    const el = document.querySelector('svg.canvas')!.getBoundingClientRect();
+    const v = state.ui.view, p = { x: el.width / 2, y: el.height / 2 };
+    const k = Math.min(200, Math.max(0.5, v.k * f)), r = k / v.k;
+    ui({ view: { x: p.x - (p.x - v.x) * r, y: p.y - (p.y - v.y) * r, k } });
+  }, [state.ui.view, ui]);
+  const zoomToBox = useCallback((b: { x: number; y: number; w: number; h: number }, pad = 120) => {
+    const el = document.querySelector('svg.canvas')!.getBoundingClientRect();
+    const k = Math.min(200, Math.max(0.5, Math.min((el.width - pad) / Math.max(1, b.w), (el.height - pad) / Math.max(1, b.h))));
+    ui({ view: { k, x: (el.width - b.w * k) / 2 - b.x * k, y: (el.height - b.h * k) / 2 - b.y * k } });
+  }, [ui]);
+  const zoomFit = useCallback(() => {
+    const abs = state.doc.artboards;
+    if (!abs.length) return ui({ view: { x: 80, y: 80, k: 8 } });
+    const x0 = Math.min(...abs.map((a) => a.x)), y0 = Math.min(...abs.map((a) => a.y)), x1 = Math.max(...abs.map((a) => a.x + a.w)), y1 = Math.max(...abs.map((a) => a.y + a.h));
+    zoomToBox({ x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+  }, [state.doc, ui, zoomToBox]);
+  const zoomSel = useCallback(() => {
+    const nodes = sel.length ? sel : state.ui.focus ? [index.get(state.ui.focus)!].filter(Boolean) : [];
+    const b = bboxOf(nodes);
+    if (b) zoomToBox(b, 240);
+  }, [sel, state.ui.focus, index, zoomToBox]);
+
+  const duplicate = useCallback((nodes: Node[] = sel) => {
+    if (!nodes.length) return;
+    const ids = nodes.map((n) => n.id), map = ops.duplicateIdMap(nodes, uid);
+    edit((d) => ops.duplicateNodes(d, ids, map));
+    ui({ sel: ids.map((i) => map[i]) });
+  }, [sel, edit, ui]);
+  const remove = useCallback((nodes: Node[] = sel) => {
+    if (!nodes.length) return;
+    const ids = nodes.map((n) => n.id);
+    edit((d) => ops.deleteNodes(d, ids));
+    ui({ sel: [], focus: nodes.some((n) => n.id === state.ui.focus) ? null : state.ui.focus });
+  }, [sel, edit, ui, state.ui.focus]);
+
+  /** Merge (union) the rects of the given icons, or of the current selection / focused icon. */
+  const merge = useCallback((iconIds?: string[]) => {
+    const ids = iconIds ?? [...new Set(sel.map((n) => (n.kind === 'icon' ? n.id : n.iconId)).filter((x): x is string => !!x).concat(state.ui.focus ? [state.ui.focus] : []))];
+    if (!ids.length) return status('Select an icon to merge');
+    const before = state.doc;
+    edit((d) => ops.mergeIcons(d, ids));
+    if (ops.mergeIcons(before, ids) !== before) { ui({ sel: state.ui.sel.filter((id) => index.get(id)?.kind !== 'rect') }); status(`Merged ${ids.length} icon${ids.length === 1 ? '' : 's'}`); }
+    else status('Already merged');
+  }, [sel, state.ui.focus, state.ui.sel, state.doc, edit, ui, index, status]);
+  // auto-merge when leaving an icon
+  const prevFocus = useMemo(() => ({ id: null as string | null }), []);
+  useEffect(() => {
+    const left = prevFocus.id;
+    prevFocus.id = state.ui.focus;
+    if (left && left !== state.ui.focus && state.ui.autoMerge && index.has(left)) edit((d) => ops.mergeIcons(d, [left]));
+  }, [state.ui.focus, state.ui.autoMerge, edit, index, prevFocus]);
+
+  const cmds = useMemo(() => ({ save, copySvg: () => copySvg(), makeComponent: () => makeComponent(), duplicate: () => duplicate(), remove: () => remove(), merge: () => merge(), zoomFit, zoomSel, zoom }), [save, copySvg, makeComponent, duplicate, remove, merge, zoomFit, zoomSel, zoom]);
+  useShortcuts(cmds);
+
+  // ---- context menu ----
+  const [menu, setMenu] = useState<MenuState | null>(null);
+  const closeMenu = useCallback(() => setMenu(null), []);
+  const openMenu = useCallback((x: number, y: number, nodeId: string | null, world?: { x: number; y: number }) => {
+    // selection may have been updated in the same event; resolve from the latest doc index
+    const node = nodeId ? index.get(nodeId) ?? null : null;
+    const cur = state.ui.sel.includes(nodeId ?? '') ? sel : node ? [node] : [];
+    const one = cur.length === 1 ? cur[0] : null;
+    const ids = cur.map((n) => n.id);
+    const items: MenuItem[] = [];
+    const canvasItems = (): MenuItem[] => [{ label: 'New artboard here', shortcut: 'A', onClick: () => {
+      const ab: Artboard = { id: uid(), name: ops.nextName(state.doc, 'Artboard'), x: Math.round(world?.x ?? 0), y: Math.round(world?.y ?? 0), w: 80, h: 40, icons: [], rects: [] };
+      edit((d) => ops.addArtboard(d, ab)); ui({ sel: [ab.id] });
+    } }, { label: 'Zoom to fit', shortcut: '⌘0', onClick: zoomFit }];
+    if (!node) {
+      items.push({ label: 'New artboard here', shortcut: 'A', onClick: () => {
+        const ab: Artboard = { id: uid(), name: ops.nextName(state.doc, 'Artboard'), x: Math.round(world?.x ?? 0), y: Math.round(world?.y ?? 0), w: 80, h: 40, icons: [], rects: [] };
+        edit((d) => ops.addArtboard(d, ab)); ui({ sel: [ab.id] });
+      } });
+      items.push({ label: 'Zoom to fit', shortcut: '⌘0', onClick: zoomFit });
+      if (state.ui.focus) items.push({ label: 'Zoom to icon', shortcut: '⇧2', onClick: zoomSel });
+      if (state.ui.focus) items.push({ label: 'Leave icon', shortcut: 'Esc', onClick: () => ui({ focus: null, sel: [] }) });
+      setMenu({ x, y, items }); return;
+    }
+    const looseRects = cur.every((n) => n.kind === 'rect' && !n.iconId) && new Set(cur.map((n) => n.artboardId)).size === 1;
+    if (looseRects) items.push({ label: 'Make component', shortcut: '⌘⌥K', onClick: () => makeComponent() });
+    if (cur.length > 1 && cur.every((n) => n.kind === 'icon')) items.push({ label: 'Merge rects (union)', shortcut: '⌥⌘U', onClick: () => merge(ids) });
+    if (cur.every((n) => n.kind === 'rect' && n.iconId)) items.push({ label: 'Merge icon rects (union)', shortcut: '⌥⌘U', onClick: () => merge([cur[0].iconId!]) });
+    if (one?.kind === 'icon') {
+      const ic = one.obj as Icon;
+      items.push({ label: 'Edit icon', shortcut: 'Enter', onClick: () => ui({ focus: one.id, sel: [] }) });
+      items.push({ label: 'Rename', onClick: () => ui({ sel: [one.id], rename: one.id }) });
+      items.push({ label: ic.draft ? 'Unmark draft' : 'Mark as draft', onClick: () => edit((d) => ops.setProps(d, one.id, { draft: !ic.draft })) });
+      items.push({ label: 'Merge rects (union)', shortcut: '⌥⌘U', onClick: () => merge([one.id]) });
+      items.push('sep');
+      items.push({ label: 'Copy SVG', shortcut: '⌘E', onClick: () => copySvg(ic) });
+      items.push({ label: 'Export this icon', onClick: () => exportIcon(ic) });
+      items.push({ label: 'Detach component', onClick: () => { edit((d) => ops.detachComponent(d, one.id)); ui({ sel: [] }); } });
+    }
+    if (one?.kind === 'artboard') {
+      const a = one.obj as Artboard;
+      items.push({ label: 'Rename', onClick: () => ui({ sel: [one.id], rename: one.id }) });
+      items.push({ label: a.export === false ? 'Include in Export all' : 'Exclude from Export all', onClick: () => edit((d) => ops.setProps(d, one.id, { export: a.export === false })) });
+    }
+    if (cur.length) {
+      items.push('sep');
+      items.push({ label: 'Zoom to selection', shortcut: '⇧2', onClick: zoomSel });
+      items.push({ label: 'Duplicate', shortcut: '⌘D', onClick: () => duplicate(cur) });
+      if (one?.kind !== 'artboard') {
+        items.push({ label: 'Bring to front', shortcut: '⌘]', onClick: () => edit((d) => ops.reorder(d, ids, 1)) });
+        items.push({ label: 'Send to back', shortcut: '⌘[', onClick: () => edit((d) => ops.reorder(d, ids, -1)) });
+      }
+      items.push('sep');
+      items.push({ label: 'Delete', shortcut: '⌫', danger: true, onClick: () => remove(cur) });
+    }
+    if (world) { items.push('sep'); items.push(...canvasItems()); }
+    setMenu({ x, y, items });
+  }, [index, state.ui.sel, state.ui.focus, state.doc, sel, edit, ui, zoomFit, zoomSel, makeComponent, copySvg, exportIcon, duplicate, remove, merge]);
+  const onCanvasMenu = useCallback((r: MenuRequest) => openMenu(r.x, r.y, r.nodeId, r.world), [openMenu]);
+  const onLayerMenu = useCallback((x: number, y: number, id: string) => openMenu(x, y, id), [openMenu]);
+
+  return (
+    <div className="app">
+      <div className="surface">
+        <Toolbar dark={dark} onDark={onDark} onSave={save} onExportAll={() => setExportOpen(true)} onImport={importRaw} onZoom={zoom} onZoomFit={zoomFit} saving={saving} />
+        <div className="body">
+          <div className="column"><Layers onMenu={onLayerMenu} /></div>
+          <div className="stage">
+            <Canvas onMenu={onCanvasMenu} />
+            <div className="hints"><span>V Select</span><span>A Artboard</span><span>I Icon</span><span>R Rect</span><span>0–8 Level</span><span>⌘-click Deep select</span><span>⌘⌥K Make component</span><span>⌥⌘U Merge</span><span>⌥-drag Duplicate</span><span>⌘D Duplicate</span><span>⌘[ ⌘] Order</span><span>⇧2 Zoom to selection</span><span>⌘Z Undo</span><span>Space + drag Pan</span><span>⌘ + scroll Zoom</span></div>
+          </div>
+          <div className="column">
+            <Inspector onCopySvg={copySvg} onExportIcon={exportIcon} onMakeComponent={makeComponent} />
+            <FillPanel />
+            <Preview />
+            <div className="filler" />
+          </div>
+        </div>
+      </div>
+      <ContextMenu menu={menu} onClose={closeMenu} />
+      <Modal open={exportOpen} onOpenChange={setExportOpen} title="Export all" description={`Write ${icons.length} icon${icons.length === 1 ? '' : 's'} to raw-icons/ as SVG.`}>
+        <div className="stack" style={{ paddingTop: 10 }}>
+          {skipped.length > 0 && <div className="hint">Skipping {skipped.length} draft{skipped.length === 1 ? '' : 's'}: {skipped.slice(0, 12).map((s) => s.icon.name).join(', ')}{skipped.length > 12 ? ', …' : ''}</div>}
+          {dupes.length > 0 && <div className="warn">Duplicate names: {dupes.join(', ')}</div>}
+          {badNames.length > 0 && <div className="warn">Invalid names (letters, digits, space, - and _ only): {badNames.join(', ')}</div>}
+          <Checkbox label="Run convert-icons.js afterwards (regenerates src/icons)" checked={convert} onChange={(e) => setConvert(e.target.checked)} />
+          <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
+            <Button size="micro" variant="ghost" onClick={() => setExportOpen(false)}>Cancel</Button>
+            <Button size="micro" variant="primary" disabled={!icons.length || dupes.length > 0 || badNames.length > 0} loading={exporting} onClick={exportAll}>Export</Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+export type { Doc };

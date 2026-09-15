@@ -1,8 +1,8 @@
 import { jsx as _jsx } from "react/jsx-runtime";
-const Power = ({ color = "black", size = 21, }) => {
+const Power = ({ color, size = 21, }) => {
     const aspectRatio = 0.7142857142857143;
     const width = size;
     const height = typeof size === "number" ? size * aspectRatio : `calc(${size} * 0.7142857142857143)`;
-    return (_jsx("svg", { width: width, height: height, viewBox: "0 0 7 5", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: _jsx("path", { d: "M7 2H6V3H7V4H6V5H3V3H4V4H5V1H4V2H3V0H6V1H7V2ZM3 3H1V2H3V3ZM1 2H0V0H1V2Z", fill: color }) }));
+    return (_jsx("svg", { width: width, height: height, viewBox: "0 0 7 5", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: _jsx("path", { d: "M0 0H1V2H3V0H6V1H7V2H6V3H7V4H6V5H3V3H1V2H0ZM5 1H4V2H3V3H4V4H5Z", fill: color !== null && color !== void 0 ? color : "var(--lv8)" }) }));
 };
 export default Power;

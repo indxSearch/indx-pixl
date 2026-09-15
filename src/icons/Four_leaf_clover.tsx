@@ -1,12 +1,13 @@
 import React from "react";
 
 type IconProps = {
+  /** Overrides every fill. Omit to keep the icon's own level fills (var(--lvN)). */
   color?: string;
   size?: number | string;
 };
 
 const Four_leaf_clover: React.FC<IconProps> = ({
-  color = "black",
+  color,
   size = 21,
 }) => {
   const aspectRatio = 0.7142857142857143;
@@ -21,7 +22,7 @@ const Four_leaf_clover: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-    <path d="M3 5H2L2 4H1V3L3 3V5ZM6 4H5V5L4 5V3H6L6 4ZM4 3H3V2L4 2V3ZM3 2L1 2V1L2 1V0L3 0L3 2ZM5 1L6 1V2L4 2V0L5 0V1Z" fill={color}/>    
+    <path d="M2 0H3V2H4V0H5V1H6V2H4V3H6V4H5V5H4V3H3V5H2V4H1V3H3V2H1V1H2Z" fill={color ?? "var(--lv8)"}/>    
     </svg>
   );
 };
