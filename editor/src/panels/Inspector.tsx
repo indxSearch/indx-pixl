@@ -34,6 +34,12 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent }: { onCopy
   };
   const one = sel.length === 1 ? sel[0] : null;
   const title = one ? ({ artboard: 'Artboard', icon: 'Icon', rect: 'Rect', text: 'Text' } as const)[one.kind] : `${sel.length} selected`;
+  const textSel = sel.filter((n) => n.kind === 'text');
+  const sameTextSize = textSel.length && textSel.every((n) => (n.obj as TextNode).size === (textSel[0].obj as TextNode).size) ? (textSel[0].obj as TextNode).size : '';
+  const setTextSize = (size: number) => {
+    const ids = textSel.map((n) => n.id);
+    edit((d) => ids.reduce((acc, id) => ops.setProps(acc, id, { size }), d));
+  };
 
   return (
     <Panel title={title}>
@@ -42,10 +48,10 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent }: { onCopy
         {one?.kind === 'text' && (() => {
           const t = one.obj as TextNode;
           return <>
-            <div className="field"><span className="lbl">Text</span><InputField value={t.text} onChange={(e) => { const text = e.target.value; edit((d) => ops.setProps(d, one.id, { text, w: Math.max(1, text.length * t.size) })); }} /></div>
-            <Num label="Font" value={t.size} min={1} onChange={(size) => edit((d) => ops.setProps(d, one.id, { size, w: Math.max(1, t.text.length * size) }))} />
+            <div className="field"><span className="lbl">Text</span><InputField value={t.text} onChange={(e) => edit((d) => ops.setProps(d, one.id, { text: e.target.value }))} /></div>
           </>;
         })()}
+        {textSel.length > 0 && <Num label="Font" value={sameTextSize} min={1} onChange={setTextSize} />}
         <div className="fields2"><Num label="X" value={same('x')} onChange={(v) => setGeo('x', v)} /><Num label="Y" value={same('y')} onChange={(v) => setGeo('y', v)} /></div>
         <div className="fields2"><Num label="W" value={same('w')} min={1} onChange={(v) => setGeo('w', v)} /><Num label="H" value={same('h')} min={1} onChange={(v) => setGeo('h', v)} /></div>
         {sel.every((n) => n.kind === 'rect' || n.kind === 'text') && (() => {
@@ -57,19 +63,19 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent }: { onCopy
             <ToggleSwitch label="Include in Export all" checked={(one.obj as Artboard).export !== false} onChange={(v) => edit((d) => ops.setProps(d, one.id, { export: v }))} />
             {(one.obj as Artboard).export === false && <div className="hint">Icons on this artboard are skipped by Export all, even if included individually.</div>}
             <div className="rule" />
-            <span className="lbl">Icon grid</span>
+            <span className="lbl">Auto layout</span>
             {(() => {
               const g = { ...DEFAULT_GRID, ...(one.obj as Artboard).grid };
-              const set = (patch: Partial<typeof g>) => edit((d) => ops.arrangeIcons(d, one.id, patch));
+              const set = (patch: Partial<typeof g>) => edit((d) => ops.arrangeArtboardItems(d, one.id, patch));
               return (
                 <>
+                  <ToggleSwitch label="Horizontal wrap" checked={!!g.auto} onChange={(v) => set({ auto: v })} />
                   <div className="fields2">
-                    <Num label="Cols" value={g.cols} min={1} onChange={(v) => set({ cols: v })} />
                     <Num label="Gap" value={g.gap} min={0} onChange={(v) => set({ gap: v })} />
+                    <Num label="Pad" value={g.pad} min={0} onChange={(v) => set({ pad: v })} />
                   </div>
-                  <div className="fields2"><Num label="Pad" value={g.pad} min={0} onChange={(v) => set({ pad: v })} /></div>
-                  <Button size="micro" variant="secondary" onClick={() => set({})}>Arrange icons</Button>
-                  <div className="hint">Lays icons out in reading order and fits the artboard. Values are in icon pixels.</div>
+                  <Button size="micro" variant="secondary" onClick={() => set({})}>Arrange items</Button>
+                  <div className="hint">Lays icons and labels out horizontally with wrap. The artboard width controls where rows wrap.</div>
                 </>
               );
             })()}

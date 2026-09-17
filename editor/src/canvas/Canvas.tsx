@@ -13,7 +13,7 @@ type Drag =
   | { type: 'draw'; artboardId: string; iconId: string | null; ox: number; oy: number; x0: number; y0: number; x1: number; y1: number; cw: number; ch: number }
   | { type: 'drawArtboard'; x0: number; y0: number; x1: number; y1: number };
 
-const LABEL_ZOOM = 3;   // show icon labels / frames from this zoom
+const LABEL_ZOOM = 6;   // show icon labels / frames from this zoom
 const GRID_ZOOM = 8;    // show icon pixel grid from this zoom
 
 export interface MenuRequest { x: number; y: number; nodeId: string | null; world: { x: number; y: number } }
@@ -144,7 +144,10 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
       const a = index.get(hit.node.artboardId)!;
       const id = uid();
       const name = ops.nextName(doc, 'icon');
-      edit((d) => ops.addIcon(d, a.id, { id, name, x: Math.floor(w.x - a.ax), y: Math.floor(w.y - a.ay), w: 7, h: 5, rects: [] }));
+      edit((d) => {
+        const next = ops.addIcon(d, a.id, { id, name, x: Math.floor(w.x - a.ax), y: Math.floor(w.y - a.ay), w: 7, h: 5, rects: [] });
+        return ((a.obj as Artboard).grid?.auto) ? ops.arrangeArtboardItems(next, a.id) : next;
+      });
       ui({ sel: [id], focus: null, tool: 'select' });
       return;
     }
@@ -152,8 +155,11 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
       const a = hit ? index.get(hit.node.artboardId)?.obj as Artboard : [...doc.artboards].reverse().find((ab) => w.x >= ab.x && w.y >= ab.y && w.x <= ab.x + ab.w && w.y <= ab.y + ab.h);
       if (!a) return;
       const id = uid(), size = 2, value = 'Label';
-      const text: TextNode = { id, text: value, x: Math.floor(w.x - a.x), y: Math.floor(w.y - a.y), w: value.length * size, h: 3, size, fill: state.ui.fill };
-      edit((d) => ops.addText(d, a.id, text));
+      const text: TextNode = { id, text: value, x: Math.floor(w.x - a.x), y: Math.floor(w.y - a.y), w: 7, h: 3, size, fill: state.ui.fill };
+      edit((d) => {
+        const next = ops.addText(d, a.id, text);
+        return a.grid?.auto ? ops.arrangeArtboardItems(next, a.id) : next;
+      });
       ui({ sel: [id], focus: null, tool: 'select' });
       return;
     }
@@ -294,8 +300,22 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
       // preview position, then change only its parent container on release.
       const target = [...stateRef.current.doc.artboards].reverse().find((a) => w.x >= a.x && w.y >= a.y && w.x <= a.x + a.w && w.y <= a.y + a.h);
       const icons = d.ids.filter((id) => index.get(id)?.kind === 'icon');
-      if (target && icons.length && icons.some((id) => index.get(id)?.artboardId !== target.id)) {
-        edit((doc) => ops.moveIconsToArtboard(doc, icons, target.id), true);
+      const texts = d.ids.filter((id) => index.get(id)?.kind === 'text');
+      const affected = new Set(d.ids.map((id) => index.get(id)?.artboardId).filter((id): id is string => !!id));
+      if (target && [...icons, ...texts].some((id) => index.get(id)?.artboardId !== target.id)) {
+        affected.add(target.id);
+        edit((doc) => {
+          let next = ops.moveIconsToArtboard(doc, icons, target.id);
+          next = ops.moveTextsToArtboard(next, texts, target.id);
+          for (const id of affected) if (next.artboards.find((a) => a.id === id)?.grid?.auto) next = ops.arrangeArtboardItems(next, id);
+          return next;
+        }, true);
+      } else {
+        edit((doc) => {
+          let next = doc;
+          for (const id of affected) if (next.artboards.find((a) => a.id === id)?.grid?.auto) next = ops.arrangeArtboardItems(next, id);
+          return next;
+        }, true);
       }
       return;
     }

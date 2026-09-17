@@ -6,9 +6,9 @@ export interface TextNode { id: string; text: string; x: number; y: number; w: n
 export interface Icon { id: string; name: string; x: number; y: number; w: number; h: number; rects: Rect[]; export?: boolean }
 export interface Artboard { id: string; name: string; x: number; y: number; w: number; h: number; icons: Icon[]; rects: Rect[]; texts?: TextNode[]; export?: boolean; grid?: IconGrid }
 
-/** Layout used by Arrange icons: columns, spacing between icons, and padding to the artboard edge (icon pixels). */
-export interface IconGrid { cols: number; gap: number; pad: number }
-export const DEFAULT_GRID: IconGrid = { cols: 10, gap: 7, pad: 7 };
+/** Layout used by Arrange / Auto layout. Values are in icon pixels. */
+export interface IconGrid { cols: number; gap: number; pad: number; auto?: boolean }
+export const DEFAULT_GRID: IconGrid = { cols: 10, gap: 7, pad: 7, auto: false };
 
 /** Is this icon part of Export all? Icons are drafts unless `export` is true, and icons on non-exported artboards are skipped. */
 export const isExported = (a: Artboard, ic: Icon) => a.export !== false && ic.export === true;

@@ -259,9 +259,13 @@ function Editor() {
     if (cur.every((n) => n.kind === 'rect' && n.iconId)) items.push({ label: 'Merge icon rects (union)', shortcut: '⌥⌘U', onClick: () => merge([cur[0].iconId!]) });
     if (one?.kind === 'icon') {
       const ic = one.obj as Icon;
+      const ab = index.get(one.artboardId)?.obj as Artboard | undefined;
       items.push({ label: 'Add label', shortcut: 'T', onClick: () => {
-        const t: TextNode = { id: uid(), text: ic.name, x: ic.x + ic.w + 2, y: ic.y, w: Math.max(1, ic.name.length * 2), h: 3, size: 2, fill: 'lv8' };
-        edit((d) => ops.addText(d, one.artboardId, t));
+        const t: TextNode = { id: uid(), text: ic.name, x: ic.x + ic.w + 2, y: ic.y, w: ic.w, h: 3, size: 2, fill: 'lv8' };
+        edit((d) => {
+          const next = ops.addText(d, one.artboardId, t);
+          return ab?.grid?.auto ? ops.arrangeArtboardItems(next, one.artboardId) : next;
+        });
         ui({ sel: [t.id], expanded: { ...state.ui.expanded, [one.artboardId]: true } });
       } });
       items.push({ label: 'Edit icon', shortcut: 'Enter', onClick: () => ui({ focus: one.id, sel: [] }) });
@@ -277,7 +281,7 @@ function Editor() {
       const a = one.obj as Artboard;
       items.push({ label: 'Rename', onClick: () => ui({ sel: [one.id], renaming: { id: one.id, at: 'layers' }, expanded: { ...state.ui.expanded, [one.artboardId]: true } }) });
       items.push({ label: a.export === false ? 'Include in Export all' : 'Exclude from Export all', onClick: () => edit((d) => ops.setProps(d, one.id, { export: a.export === false })) });
-      items.push({ label: 'Arrange icons', onClick: () => edit((d) => ops.arrangeIcons(d, one.id)) });
+      items.push({ label: 'Arrange items', onClick: () => edit((d) => ops.arrangeArtboardItems(d, one.id)) });
     }
     if (cur.length) {
       items.push('sep');

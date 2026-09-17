@@ -43,6 +43,28 @@ export function moveIconsToArtboard(doc: Doc, iconIds: string[], targetArtboardI
   return d;
 }
 
+/** Move top-level labels into another artboard while preserving their world position. */
+export function moveTextsToArtboard(doc: Doc, textIds: string[], targetArtboardId: string): Doc {
+  if (!textIds.length) return doc;
+  const source = indexDoc(doc), target = source.get(targetArtboardId);
+  if (!target || target.kind !== 'artboard') return doc;
+  const set = new Set(textIds), d = clone(doc), moved: TextNode[] = [];
+  for (const a of d.artboards) {
+    const kept: TextNode[] = [];
+    for (const t of a.texts ?? []) {
+      if (!set.has(t.id)) { kept.push(t); continue; }
+      const n = source.get(t.id);
+      if (n) moved.push({ ...t, x: n.ax - target.ax, y: n.ay - target.ay });
+      else kept.push(t);
+    }
+    a.texts = kept;
+  }
+  const destination = d.artboards.find((a) => a.id === targetArtboardId);
+  if (!destination || !moved.length) return doc;
+  (destination.texts ??= []).push(...moved);
+  return d;
+}
+
 /** Set local geometry (x,y relative to parent) of one node. */
 export function setGeometry(doc: Doc, id: string, box: Partial<Box>): Doc {
   const d = clone(doc);
@@ -254,6 +276,85 @@ export function arrangeIcons(doc: Doc, artboardId: string, grid?: Partial<IconGr
   a.w = g.pad * 2 + cols * (cw + g.gap) - g.gap;
   a.h = g.pad * 2 + rows * (ch + g.gap) - g.gap;
   for (const r of a.rects) { a.w = Math.max(a.w, r.x + r.w); a.h = Math.max(a.h, r.y + r.h); }
+  return d;
+}
+
+type LayoutItem = { id: string; x: number; y: number; w: number; h: number; set: (x: number, y: number) => void };
+
+const layoutItems = (a: Artboard): LayoutItem[] => [
+  ...a.icons.map((ic) => ({ id: ic.id, x: ic.x, y: ic.y, w: ic.w, h: ic.h, set: (x: number, y: number) => { ic.x = x; ic.y = y; } })),
+  ...(a.texts ?? []).map((t) => ({ id: t.id, x: t.x, y: t.y, w: t.w, h: t.h, set: (x: number, y: number) => { t.x = x; t.y = y; } })),
+];
+
+const readingOrder = (items: LayoutItem[]) =>
+  items.sort((p, q) => (Math.abs(p.y - q.y) <= Math.max(p.h, q.h, 1) / 2 ? p.x - q.x : p.y - q.y));
+
+const normalizedGrid = (a: Artboard, grid?: Partial<IconGrid>): IconGrid => {
+  const g: IconGrid = { ...DEFAULT_GRID, ...a.grid, ...grid, auto: grid?.auto ?? a.grid?.auto ?? DEFAULT_GRID.auto };
+  g.cols = Math.max(1, Math.round(g.cols)); g.gap = Math.max(0, Math.round(g.gap)); g.pad = Math.max(0, Math.round(g.pad));
+  return g;
+};
+
+const applyWrappedLayout = (a: Artboard, g: IconGrid, ordered: LayoutItem[]) => {
+  const innerW = Math.max(1, a.w - g.pad * 2);
+  let x = g.pad, y = g.pad, rowH = 0, maxRight = g.pad;
+  for (const item of ordered) {
+    if (x > g.pad && x + item.w > g.pad + innerW) { x = g.pad; y += rowH + g.gap; rowH = 0; }
+    item.set(x, y);
+    x += item.w + g.gap;
+    rowH = Math.max(rowH, item.h);
+    maxRight = Math.max(maxRight, x - g.gap);
+  }
+  a.w = Math.max(a.w, maxRight + g.pad);
+  a.h = Math.max(g.pad * 2 + rowH, y + rowH + g.pad);
+  for (const r of a.rects) { a.w = Math.max(a.w, r.x + r.w + g.pad); a.h = Math.max(a.h, r.y + r.h + g.pad); }
+};
+
+/**
+ * Lay out an artboard's top-level icons and text labels horizontally with wrap.
+ * The artboard width is the wrap boundary; height grows to fit the rows.
+ */
+export function arrangeArtboardItems(doc: Doc, artboardId: string, grid?: Partial<IconGrid>): Doc {
+  const d = clone(doc), a = find(d, artboardId);
+  if (!a) return doc;
+  const g = normalizedGrid(a, grid);
+  a.grid = g;
+  const items = layoutItems(a);
+  if (!items.length) return d;
+  applyWrappedLayout(a, g, readingOrder(items));
+  return d;
+}
+
+/** Move selected auto-layout icons/labels one slot earlier or later in their artboard's wrapped order. */
+export function reorderAutoLayoutItems(doc: Doc, ids: string[], dir: -1 | 1): Doc {
+  const idx = indexDoc(doc), selected = new Set(ids);
+  const artboardIds = [...new Set(ids.map((id) => idx.get(id)).filter((n): n is NonNullable<typeof n> => !!n && (n.kind === 'icon' || n.kind === 'text')).map((n) => n.artboardId))];
+  if (!artboardIds.length) return doc;
+  const d = clone(doc);
+  let changed = false;
+  for (const artboardId of artboardIds) {
+    const a = find(d, artboardId);
+    if (!a?.grid?.auto) continue;
+    const items = readingOrder(layoutItems(a));
+    if (!items.some((item) => selected.has(item.id))) continue;
+    if (dir < 0) {
+      for (let i = 1; i < items.length; i++) {
+        if (selected.has(items[i].id) && !selected.has(items[i - 1].id)) {
+          [items[i - 1], items[i]] = [items[i], items[i - 1]];
+          changed = true;
+        }
+      }
+    } else {
+      for (let i = items.length - 2; i >= 0; i--) {
+        if (selected.has(items[i].id) && !selected.has(items[i + 1].id)) {
+          [items[i], items[i + 1]] = [items[i + 1], items[i]];
+          changed = true;
+        }
+      }
+    }
+    applyWrappedLayout(a, normalizedGrid(a), items);
+  }
+  if (!changed) return doc;
   return d;
 }
 

@@ -22,6 +22,11 @@ export function useShortcuts(cmd: Commands) {
       if (t instanceof Element && t.matches('input,textarea,select,[contenteditable]')) { if (e.key === 'Escape' || e.key === 'Enter') t.blur(); return; }
       const m = e.metaKey || e.ctrlKey, k = e.key.toLowerCase();
       const ids = state.ui.sel;
+      const autoLayoutSel = ids.some((id) => {
+        const n = index.get(id), a = n && index.get(n.artboardId)?.obj as { grid?: { auto?: boolean } } | undefined;
+        return !!a?.grid?.auto && (n?.kind === 'icon' || n?.kind === 'text');
+      });
+      const arrow = (dx: number, dy: number, dir: -1 | 1) => edit((d) => autoLayoutSel ? ops.reorderAutoLayoutItems(d, ids, dir) : ops.moveNodes(d, ids, dx, dy));
       if (m) {
         if (k === 'z') { dispatch({ type: e.shiftKey ? 'REDO' : 'UNDO' }); }
         else if (k === 'd') cmd.duplicate();
@@ -50,10 +55,10 @@ export function useShortcuts(cmd: Commands) {
         case 'g': ui({ grid: !state.ui.grid }); break;
         case 'Escape': if (ids.length) ui({ sel: [] }); else ui({ focus: null, tool: 'select' }); break;
         case 'Delete': case 'Backspace': cmd.remove(); break;
-        case 'ArrowLeft': edit((d) => ops.moveNodes(d, ids, -1, 0)); break;
-        case 'ArrowRight': edit((d) => ops.moveNodes(d, ids, 1, 0)); break;
-        case 'ArrowUp': edit((d) => ops.moveNodes(d, ids, 0, -1)); break;
-        case 'ArrowDown': edit((d) => ops.moveNodes(d, ids, 0, 1)); break;
+        case 'ArrowLeft': arrow(-1, 0, -1); break;
+        case 'ArrowRight': arrow(1, 0, 1); break;
+        case 'ArrowUp': arrow(0, -1, -1); break;
+        case 'ArrowDown': arrow(0, 1, 1); break;
         case 'Enter': { const n = sel[0]; if (sel.length === 1 && n.kind === 'icon') ui({ focus: n.id, sel: (n.obj as { rects: { id: string }[] }).rects.map((r) => r.id) }); break; }
         default:
           if (/^[0-8]$/.test(e.key)) { const fill = `lv${e.key}`; ui({ fill }); if (ids.length) edit((d) => ops.setFill(d, ids, fill)); }
