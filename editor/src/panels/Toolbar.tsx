@@ -25,7 +25,10 @@ export function Toolbar({ dark, onDark, onExportAll, onImport, onZoom, onZoomFit
         <Button key={t.id} size="micro" variant={state.ui.tool === t.id ? 'primary' : 'ghost'} iconLeft={t.icon} title={`${t.label} (${t.key})`} onClick={() => ui({ tool: t.id })}>{t.label}</Button>
       ))}
       <Button size="micro" variant={state.ui.grid ? 'secondary' : 'ghost'} iconLeft={<Component />} title="Pixel grid (G)" onClick={() => ui({ grid: !state.ui.grid })}>Grid</Button>
-      <Button size="micro" variant={state.ui.autoMerge ? 'secondary' : 'ghost'} title="Merge an icon's rects into one shape per color when you leave it (⌥⌘U merges manually)" onClick={() => { persist('pixl.autoMerge', !state.ui.autoMerge); ui({ autoMerge: !state.ui.autoMerge }); }}>Auto merge</Button>
+      <span className="sep" />
+      <span title="Merge an icon's pixels into as few rects per color when you leave it (⌥⌘U merges manually)">
+        <ToggleSwitch checked={state.ui.autoMerge} onChange={(v) => { persist('pixl.autoMerge', v); ui({ autoMerge: v }); }} label="Auto merge" />
+      </span>
       <span className="sep" />
       <span className="meta">pixl.json · {count} icons · <span className={'save-state ' + saveState} title="Saves automatically. ⌘S saves now.">{SAVE_LABEL[saveState]}</span></span>
       <span className="status" title={state.ui.status}>{state.ui.status}</span>

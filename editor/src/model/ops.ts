@@ -163,7 +163,7 @@ export function duplicateIdMap(nodes: { id: string; kind: string; obj: unknown }
   return map;
 }
 
-import { mergedRects, sameRects } from './pixels';
+import { isSplit, mergedRects, sameRects, splitRects } from './pixels';
 import { uid as newId } from './types';
 /** Normalize icons to maximal rects per fill (the automated "union"). Returns the same doc if nothing changes. */
 export function mergeIcons(doc: Doc, iconIds: string[]): Doc {
@@ -176,6 +176,23 @@ export function mergeIcons(doc: Doc, iconIds: string[]): Doc {
   }
   return changed ? d : doc;
 }
+
+/**
+ * Split icons into 1×1 pixels for editing (the reverse of mergeIcons). Returns the same doc if nothing changes.
+ * `idMap` receives, for every original rect id, the ids of the pixels it became.
+ */
+export function splitIcons(doc: Doc, iconIds: string[], idMap?: Map<string, string[]>): Doc {
+  const d = clone(doc);
+  let changed = false;
+  for (const a of d.artboards) for (const ic of a.icons) {
+    if (!iconIds.includes(ic.id) || isSplit(ic)) continue;
+    ic.rects = splitRects(ic, newId, idMap);
+    changed = true;
+  }
+  return changed ? d : doc;
+}
+/** Replace ids in a selection using a split idMap. */
+export const remapSel = (sel: string[], idMap: Map<string, string[]>) => [...new Set(sel.flatMap((id) => idMap.get(id) ?? [id]))];
 
 import { DEFAULT_GRID, type IconGrid } from './types';
 /**

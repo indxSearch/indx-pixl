@@ -32,7 +32,7 @@ export function allComponents(doc: Doc): Icon[] {
 }
 /** Components skipped by Export all, with the reason. */
 export function skippedComponents(doc: Doc): { icon: Icon; reason: string }[] {
-  return doc.artboards.flatMap((a) => a.icons.filter((ic) => !isExported(a, ic)).map((ic) => ({ icon: ic, reason: a.export === false ? `artboard "${a.name}" not exported` : 'draft' })));
+  return doc.artboards.flatMap((a) => a.icons.filter((ic) => !isExported(a, ic)).map((ic) => ({ icon: ic, reason: a.export === false ? `artboard "${a.name}" not exported` : 'not included in export' })));
 }
 
 // ---- import ----

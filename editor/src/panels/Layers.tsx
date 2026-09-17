@@ -1,14 +1,18 @@
-import { Component, Plus } from '@indxsearch/pixl';
+import { Component, Instance, Plus } from '@indxsearch/pixl';
 import { useEditor } from '../model/store';
 import { type Artboard, type Icon, type Rect, fillAttr, isExported } from '../model/types';
 import * as ops from '../model/ops';
 import { uid } from '../model/types';
 import { Panel } from './Panel';
+import { NameInput } from './NameInput';
 
 export function Layers({ onMenu }: { onMenu: (x: number, y: number, nodeId: string) => void }) {
   const { state, ui, edit } = useEditor();
   const { doc } = state;
-  const { sel, focus, expanded } = state.ui;
+  const { sel, focus, expanded, renaming } = state.ui;
+  const nameOf = (id: string, name: string) => renaming?.at === 'layers' && renaming.id === id
+    ? <NameInput id={id} name={name} />
+    : <span className="name" onDoubleClick={(e) => { e.stopPropagation(); ui({ sel: [id], renaming: { id, at: 'layers' } }); }}>{name}</span>;
   const isOpen = (id: string, dflt: boolean) => expanded[id] ?? dflt;
   const toggle = (id: string, dflt: boolean) => ui({ expanded: { ...expanded, [id]: !isOpen(id, dflt) } });
   const ctx = (e: React.MouseEvent, id: string, focusIcon: string | null) => {
@@ -42,9 +46,8 @@ export function Layers({ onMenu }: { onMenu: (x: number, y: number, nodeId: stri
       <div key={ic.id}>
         <div className={'row' + (sel.includes(ic.id) ? ' sel' : '') + (focus === ic.id ? ' focus' : '') + (live ? '' : ' draft')} style={{ paddingLeft: 24 }} onClick={(e) => pick(e, ic.id, null)} onDoubleClick={() => ui({ focus: ic.id, sel: [] })} onContextMenu={(e) => ctx(e, ic.id, null)}>
           <span className="caret" onClick={(e) => { e.stopPropagation(); toggle(ic.id, ic.id === focus); }}>{open ? '▾' : '▸'}</span>
-          <Component size={12} color={live ? 'var(--CPureBlue)' : 'var(--lv4)'} />
-          <span className="name">{ic.name}</span>
-          {ic.draft && <span className="tag">draft</span>}
+          {live ? <Component size={12} color="var(--CPureBlue)" /> : <Instance size={12} color="var(--lv4)" />}
+          {nameOf(ic.id, ic.name)}
           <span className="dim">{ic.w}×{ic.h}</span>
         </div>
         {open && ic.rects.slice().reverse().map((r) => rectRow(r, 2, ic.id))}
@@ -62,7 +65,7 @@ export function Layers({ onMenu }: { onMenu: (x: number, y: number, nodeId: stri
             <div className={'row ab' + (sel.includes(a.id) ? ' sel' : '') + (a.export === false ? ' draft' : '')} style={{ paddingLeft: 10 }} onClick={(e) => pick(e, a.id, null)} onContextMenu={(e) => ctx(e, a.id, null)}>
               <span className="caret" onClick={(e) => { e.stopPropagation(); toggle(a.id, true); }}>{open ? '▾' : '▸'}</span>
               <span className="frame-glyph" />
-              <span className="name">{a.name}</span>
+              {nameOf(a.id, a.name)}
               {a.export === false && <span className="tag">not exported</span>}
               <span className="dim">{a.icons.length}</span>
             </div>

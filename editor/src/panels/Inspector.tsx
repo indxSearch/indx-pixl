@@ -53,7 +53,7 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent }: { onCopy
         {one?.kind === 'artboard' && (
           <>
             <ToggleSwitch label="Include in Export all" checked={(one.obj as Artboard).export !== false} onChange={(v) => edit((d) => ops.setProps(d, one.id, { export: v }))} />
-            {(one.obj as Artboard).export === false && <div className="hint">Icons on this artboard are drafts and are skipped by Export all.</div>}
+            {(one.obj as Artboard).export === false && <div className="hint">Icons on this artboard are skipped by Export all, even if included individually.</div>}
             <div className="rule" />
             <span className="lbl">Icon grid</span>
             {(() => {
@@ -75,7 +75,7 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent }: { onCopy
         )}
         {one?.kind === 'icon' && (
           <>
-            <ToggleSwitch label="Draft (skip in Export all)" checked={!!(one.obj as Icon).draft} onChange={(v) => edit((d) => ops.setProps(d, one.id, { draft: v }))} />
+            <ToggleSwitch label="Include in export" checked={(one.obj as Icon).export === true} onChange={(v) => edit((d) => ops.setProps(d, one.id, { export: v }))} />
             <div className="field"><span className="lbl">File</span><span className="mono dim">raw-icons/{(one.obj as Icon).name}.svg</span></div>
             <div className="btn-row">
               <Button size="micro" variant="secondary" iconLeft={<Copy />} onClick={() => onCopySvg(one.obj as Icon)}>Copy SVG</Button>

@@ -145,13 +145,20 @@ function Editor() {
     if (ops.mergeIcons(before, ids) !== before) { ui({ sel: state.ui.sel.filter((id) => index.get(id)?.kind !== 'rect') }); status(`Merged ${ids.length} icon${ids.length === 1 ? '' : 's'}`); }
     else status('Already merged');
   }, [sel, state.ui.focus, state.ui.sel, state.doc, edit, ui, index, status]);
-  // auto-merge when leaving an icon
+  // split into 1×1 pixels when entering an icon; auto-merge when leaving it
   const prevFocus = useMemo(() => ({ id: null as string | null }), []);
   useEffect(() => {
-    const left = prevFocus.id;
-    prevFocus.id = state.ui.focus;
-    if (left && left !== state.ui.focus && state.ui.autoMerge && index.has(left)) edit((d) => ops.mergeIcons(d, [left]));
-  }, [state.ui.focus, state.ui.autoMerge, edit, index, prevFocus]);
+    const left = prevFocus.id, entered = state.ui.focus;
+    prevFocus.id = entered;
+    if (left === entered) return;
+    const base = state.doc, idMap = new Map<string, string[]>();
+    const merged = left && state.ui.autoMerge && index.has(left) ? ops.mergeIcons(base, [left]) : base;
+    const next = entered && index.has(entered) ? ops.splitIcons(merged, [entered], idMap) : merged;
+    if (next === base) return;
+    // splitting alone is not an undo step; merging is
+    edit((d) => (d === base ? next : d), merged === base);
+    if (idMap.size) ui({ sel: ops.remapSel(state.ui.sel, idMap) });
+  }, [state.ui.focus, state.ui.autoMerge, state.doc, state.ui.sel, edit, ui, index, prevFocus]);
 
   const cmds = useMemo(() => ({ save, copySvg: () => copySvg(), makeComponent: () => makeComponent(), duplicate: () => duplicate(), remove: () => remove(), merge: () => merge(), zoomFit, zoomSel, zoom }), [save, copySvg, makeComponent, duplicate, remove, merge, zoomFit, zoomSel, zoom]);
   useShortcuts(cmds);
@@ -231,7 +238,7 @@ function Editor() {
       const ic = one.obj as Icon;
       items.push({ label: 'Edit icon', shortcut: 'Enter', onClick: () => ui({ focus: one.id, sel: [] }) });
       items.push({ label: 'Rename', onClick: () => ui({ sel: [one.id], rename: one.id }) });
-      items.push({ label: ic.draft ? 'Unmark draft' : 'Mark as draft', onClick: () => edit((d) => ops.setProps(d, one.id, { draft: !ic.draft })) });
+      items.push({ label: ic.export ? 'Exclude from export' : 'Include in export', onClick: () => edit((d) => ops.setProps(d, one.id, { export: !ic.export })) });
       items.push({ label: 'Merge rects (union)', shortcut: '⌥⌘U', onClick: () => merge([one.id]) });
       items.push('sep');
       items.push({ label: 'Copy SVG', shortcut: '⌘E', onClick: () => copySvg(ic) });
@@ -291,7 +298,7 @@ function Editor() {
       <ContextMenu menu={menu} onClose={closeMenu} />
       <Modal open={exportOpen} onOpenChange={setExportOpen} title="Export all" description={`Write ${icons.length} icon${icons.length === 1 ? '' : 's'} to raw-icons/ as SVG.`}>
         <div className="stack" style={{ paddingTop: 10 }}>
-          {skipped.length > 0 && <div className="hint">Skipping {skipped.length} draft{skipped.length === 1 ? '' : 's'}: {skipped.slice(0, 12).map((s) => s.icon.name).join(', ')}{skipped.length > 12 ? ', …' : ''}</div>}
+          {skipped.length > 0 && <div className="hint">Skipping {skipped.length} icon{skipped.length === 1 ? '' : 's'} not included in export: {skipped.slice(0, 12).map((s) => s.icon.name).join(', ')}{skipped.length > 12 ? ', …' : ''}</div>}
           {dupes.length > 0 && <div className="warn">Duplicate names: {dupes.join(', ')}</div>}
           {badNames.length > 0 && <div className="warn">Invalid names (letters, digits, space, - and _ only): {badNames.join(', ')}</div>}
           <Checkbox label="Run convert-icons.js afterwards (regenerates src/icons)" checked={convert} onChange={(e) => setConvert(e.target.checked)} />

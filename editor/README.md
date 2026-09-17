@@ -24,8 +24,8 @@ The editor opens `pixl.json` from the repo root. This file is the source of trut
 
 - **Artboards** group icons, for example "Core icons" or "Vehicles". They only organize the canvas and don't affect the exported files.
 - **Icons** are components: named 7×5 frames made of pixels. Only icons are exported. Loose pixels drawn directly on an artboard are sketches.
-- **Pixels** are rectangles snapped to the grid. When you leave an icon, the editor merges its pixels into as few rectangles per color as possible. This is the "Auto merge" toggle.
-- **Drafts** are skipped by Export all. You can mark a single icon as a draft, or turn off "Include in Export all" for a whole artboard.
+- **Pixels** are rectangles snapped to the grid. Inside an icon you always edit 1×1 pixels: entering an icon splits it, and drawing a rect adds one pixel per cell. When you leave an icon, the editor merges its pixels into as few rectangles per color as possible to keep `pixl.json` small. This is the "Auto merge" toggle. Exported SVGs are the same either way.
+- **Icons are drafts by default** and are skipped by Export all. Turn on "Include in export" for each icon that is ready. Turning off "Include in Export all" on an artboard skips every icon on it.
 
 ## Drawing
 
@@ -36,11 +36,12 @@ The editor opens `pixl.json` from the repo root. This file is the source of trut
 
 - Press **A** and drag to create an artboard.
 - Press **I** and click an artboard to place an empty icon.
-- Press **R** and drag to draw pixels. Inside an icon they belong to that icon.
+- Press **R** and drag to draw pixels. Inside an icon they belong to that icon. The tool switches back to Select when you let go, like in Figma.
 - Or draw loose pixels, select them and press **⌘⌥K** to make them into an icon.
 - Double-click an icon, or select it and press **Enter**, to edit its pixels. **⌘-click** jumps straight to a pixel. **Esc** leaves the icon.
 - **⌥-drag** duplicates. Arrow keys nudge by one pixel.
-- Right-click anything for its actions: edit, rename, mark as draft, merge, copy SVG, export, duplicate, reorder, delete.
+- Double-click a name to rename it, either on the canvas or in Layers. Enter saves and Escape cancels.
+- Right-click anything for its actions: edit, rename, include in export, merge, copy SVG, export, duplicate, reorder, delete.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../docs/screenshots/context-menu-dark.png">
@@ -75,7 +76,7 @@ The Fill panel offers four kinds of fill:
 
 - **Saving is automatic.** Edits are written to `pixl.json` about a second after you stop. **⌘S** saves right away.
 - **If `pixl.json` changes on disk**, from another tab, `git pull` or a checkout, an idle editor reloads it. If you have unsaved edits, a banner lets you reload from disk or keep your version. The editor never silently overwrites the file.
-- **Export all** writes one SVG per icon to `raw-icons/` and writes `colors.css`. It can also run `convert-icons.js` to regenerate the React components. Drafts are skipped and listed in the dialog.
+- **Export all** writes one SVG per icon to `raw-icons/` and writes `colors.css`. It can also run `convert-icons.js` to regenerate the React components. Icons not included in export are skipped and listed in the dialog.
 - **Copy SVG** and **Export** in the icon inspector handle a single icon.
 
 ## Bringing icons in
@@ -135,7 +136,7 @@ The Fill panel offers four kinds of fill:
       "rects": [],                       // loose pixels, not exported
       "icons": [
         {
-          "id": "…", "name": "search", "x": 6, "y": 6, "w": 7, "h": 5, "draft": false,
+          "id": "…", "name": "search", "x": 6, "y": 6, "w": 7, "h": 5, "export": true,   // drafts omit this
           "rects": [{ "id": "…", "x": 2, "y": 0, "w": 2, "h": 1, "fill": "lv8" }]
         }
       ]

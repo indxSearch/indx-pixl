@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, type View } from '../model/store';
 import { type Artboard, type Box, type Doc, type Icon, type Node, type Rect, bboxOf, fillAttr, intersects, isExported, uid } from '../model/types';
 import * as ops from '../model/ops';
+import { NameInput } from '../panels/NameInput';
 import { HANDLES, type Handle, handlePos, norm, resizeBox, screenBox, toWorld } from './geometry';
 
 type Drag =
@@ -99,10 +100,10 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
     const hitId = hit?.node?.id ?? null;
     const dbl = tool === 'select' && hitId && lastDown.current.id === hitId && now - lastDown.current.t < 400;
     lastDown.current = { t: now, id: hitId };
-    if (dbl && hit?.node) {
+    if (dbl && hit?.node && hit.role !== 'title') {
       const n = hit.node;
       const iconId = n.kind === 'icon' ? n.id : n.iconId;
-      if (iconId && iconId !== focus) { ui({ focus: iconId, sel: n.kind === 'rect' ? [n.id] : [] }); return; }
+      if (iconId && iconId !== focus) { ui({ focus: iconId, sel: n.kind === 'rect' ? [enterAt(iconId, w)].filter(Boolean) : [] }); return; }
     }
 
     if (hit?.handle && sel.length === 1) {
@@ -147,8 +148,13 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
 
     // ⌘-click: deep select a rect inside an icon (enters that icon)
     if (e.metaKey && n.kind === 'rect' && n.iconId) {
-      if (n.iconId !== focus) ui({ focus: n.iconId, sel: e.shiftKey ? [...state.ui.sel.filter((id) => index.get(id)?.iconId === n.iconId), n.id] : [n.id] });
-      else toggleSel(n.id, e.shiftKey);
+      if (n.iconId !== focus) {
+        const pixel = enterAt(n.iconId, w);
+        ui({ focus: n.iconId, sel: pixel ? [pixel] : [] });
+        setDragBoth({ type: 'move', ids: [pixel], sw: w, orig: dragBase.current, moved: false });
+        return;
+      }
+      toggleSel(n.id, e.shiftKey);
       setDragBoth({ type: 'move', ids: [n.id], sw: w, orig: doc, moved: false });
       return;
     }
@@ -171,6 +177,18 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
     }
     toggleSel(n.id, e.shiftKey);
     startMove(n.id, w, e.shiftKey, e.altKey);
+  };
+
+  /** Enter an icon at a world point: split it into pixels now and return the id of the pixel under the point. */
+  const dragBase = useRef(doc);
+  const enterAt = (iconId: string, w: { x: number; y: number }): string => {
+    const n = index.get(iconId)!;
+    const next = ops.splitIcons(doc, [iconId]);
+    if (next !== doc) edit(() => next, true);
+    dragBase.current = next;
+    const x = Math.floor(w.x - n.ax), y = Math.floor(w.y - n.ay);
+    const ic = next.artboards.find((a) => a.id === n.artboardId)!.icons.find((i) => i.id === iconId)!;
+    return ic.rects.find((r) => r.x === x && r.y === y)?.id ?? '';
   };
 
   const startMove = (id: string, w: { x: number; y: number }, shift: boolean, alt = false) => {
@@ -242,9 +260,25 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
     setDragBoth(null);
     if (d.type === 'draw') {
       const b = norm(d.x0, d.y0, d.x1, d.y1);
-      const rect: Rect = { id: uid(), x: b.x, y: b.y, w: b.w + 1, h: b.h + 1, fill: state.ui.fill };
-      edit((doc) => ops.addRect(doc, d.artboardId, d.iconId, rect));
-      ui({ sel: [rect.id] });
+      if (d.iconId) {
+        // inside an icon, draw 1×1 pixels
+        const pixels: Rect[] = [];
+        for (let y = b.y; y <= b.y + b.h; y++) for (let x = b.x; x <= b.x + b.w; x++) pixels.push({ id: uid(), x, y, w: 1, h: 1, fill: state.ui.fill });
+        edit((doc) => ops.splitIcons(pixels.reduce((acc, r) => ops.addRect(acc, d.artboardId, d.iconId, r), doc), [d.iconId!]));
+        ui({ sel: pixels.map((r) => r.id), tool: 'select' });
+      } else {
+        const rect: Rect = { id: uid(), x: b.x, y: b.y, w: b.w + 1, h: b.h + 1, fill: state.ui.fill };
+        edit((doc) => ops.addRect(doc, d.artboardId, d.iconId, rect));
+        ui({ sel: [rect.id], tool: 'select' });
+      }
+    }
+    if (d.type === 'resize') {
+      const iconId = index.get(d.id)?.iconId;
+      if (iconId) {
+        const idMap = new Map<string, string[]>();
+        const next = ops.splitIcons(doc, [iconId], idMap);
+        if (next !== doc) { edit(() => next, true); ui({ sel: ops.remapSel(state.ui.sel, idMap) }); }
+      }
     }
     if (d.type === 'drawArtboard') {
       const b = norm(d.x0, d.y0, d.x1, d.y1);
@@ -274,11 +308,14 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
   };
 
   const onDoubleClick = (e: React.MouseEvent) => {
-    const hit = hitOf(e.target);
+    // pointer capture retargets click events to the svg, so find the element under the pointer
+    const hit = hitOf(document.elementFromPoint(e.clientX, e.clientY));
     if (!hit?.node) return;
     const n = hit.node;
+    // double-click a canvas title to rename the artboard or icon inline
+    if (hit.role === 'title') { ui({ sel: [n.id], renaming: { id: n.id, at: 'canvas' } }); return; }
     const iconId = n.kind === 'icon' ? n.id : n.iconId;
-    if (iconId && iconId !== focus) ui({ focus: iconId, sel: n.kind === 'rect' ? [n.id] : [] });
+    if (iconId && iconId !== focus) ui({ focus: iconId, sel: n.kind === 'rect' ? [enterAt(iconId, toWorld(view, pt(e)))].filter(Boolean) : [] });
   };
 
   // ---- render ----
@@ -286,19 +323,23 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
   const vis = (b: Box) => { const s = screenBox(view, b); return s.x + s.w > -50 && s.y + s.h > -50 && s.x < size.w + 50 && s.y < size.h + 50; };
   const cursor = space ? 'grab' : tool === 'select' ? 'default' : 'crosshair';
 
+  const isRenaming = (id: string) => state.ui.renaming?.at === 'canvas' && state.ui.renaming.id === id;
   const overlay: React.ReactNode[] = [];
   for (const a of doc.artboards) {
     if (!vis(a)) continue;
     const s = screenBox(view, a);
-    overlay.push(<text key={'t' + a.id} className={'ab-title' + (a.export === false ? ' draft' : '')} x={s.x} y={s.y - 6} data-id={a.id} data-kind="artboard" data-role="title">{a.name}{a.export === false ? ' · not exported' : ''}</text>);
+    if (isRenaming(a.id)) overlay.push(<foreignObject key={'t' + a.id} x={s.x - 4} y={s.y - 22} width={Math.max(160, s.w)} height={20}><NameInput id={a.id} name={a.name} className="canvas-name ab" /></foreignObject>);
+    else overlay.push(<text key={'t' + a.id} className={'ab-title' + (a.export === false ? ' draft' : '')} x={s.x} y={s.y - 6} data-id={a.id} data-kind="artboard" data-role="title">{a.name}{a.export === false ? ' · not exported' : ''}</text>);
     if (k >= LABEL_ZOOM) for (const ic of a.icons) {
       const ib = { x: a.x + ic.x, y: a.y + ic.y, w: ic.w, h: ic.h };
       if (!vis(ib)) continue;
       const is = screenBox(view, ib);
       const isFocus = ic.id === focus, live = isExported(a, ic);
       overlay.push(<g key={'l' + ic.id} className={'icon-label' + (isFocus ? ' focus' : '') + (live ? '' : ' draft')} data-id={ic.id} data-kind="icon" data-role="title">
-        <path transform={`translate(${is.x} ${is.y - 14}) scale(1.4)`} d={COMPONENT_PATH} />
-        <text x={is.x + 14} y={is.y - 6}>{ic.name}{ic.draft ? ' · draft' : ''}</text>
+        <path transform={`translate(${is.x} ${is.y - 14}) scale(1.4)`} d={live ? COMPONENT_PATH : INSTANCE_PATH} />
+        {isRenaming(ic.id)
+          ? <foreignObject x={is.x + 10} y={is.y - 20} width={Math.max(120, is.w)} height={18}><NameInput id={ic.id} name={ic.name} className="canvas-name" /></foreignObject>
+          : <text x={is.x + 14} y={is.y - 6}>{ic.name}</text>}
       </g>);
       overlay.push(<rect key={'f' + ic.id} className="icon-frame" x={is.x - 0.5} y={is.y - 0.5} width={is.w + 1} height={is.h + 1} />);
       if (grid && k >= GRID_ZOOM) {
@@ -343,6 +384,7 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
   );
 }
 
+const INSTANCE_PATH = 'M3 0H4V1H5V2H6V3H5V4H4V5H3V4H2V3H1V2H2V1H3ZM4 1H3V2H2V3H3V4H4V3H5V2H4Z';
 const COMPONENT_PATH = 'M4 5H3V4H4V5ZM3 3V4H2V3H3ZM5 4H4V3H5V4ZM2 3H1V2H2V3ZM4 3H3V2H4V3ZM6 3H5V2H6V3ZM3 2H2V1H3V2ZM5 2H4V1H5V2ZM4 1H3V0H4V1Z';
 
 function RectEl({ r, ox, oy }: { r: Rect; ox: number; oy: number }) {

@@ -108,3 +108,37 @@ export function sameRects(a: Rect[], b: Rect[]): boolean {
   const k = (rs: Rect[]) => rs.map((r) => `${r.x},${r.y},${r.w},${r.h},${r.fill}`).sort().join('|');
   return k(a) === k(b);
 }
+
+/**
+ * Split an icon's rects into one 1×1 rect per visible pixel, for editing. A rect that was already 1×1 keeps its id.
+ * `idMap` receives, for every original rect id, the ids of the pixels it now shows as.
+ */
+export function splitRects(icon: Icon, uid: () => string, idMap?: Map<string, string[]>): Rect[] {
+  const H = icon.h, W = icon.w;
+  const owner: (Rect | null)[][] = Array.from({ length: H }, () => Array(W).fill(null));
+  for (const r of icon.rects) {
+    for (let y = Math.max(0, r.y); y < Math.min(H, r.y + r.h); y++)
+      for (let x = Math.max(0, r.x); x < Math.min(W, r.x + r.w); x++) owner[y][x] = r;
+  }
+  const out: Rect[] = [];
+  for (const f of fillsOf(icon.rects)) for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const r = owner[y][x];
+    if (!r || r.fill !== f) continue;
+    const id = r.w === 1 && r.h === 1 ? r.id : uid();
+    out.push({ id, x, y, w: 1, h: 1, fill: f });
+    if (idMap) (idMap.get(r.id) ?? idMap.set(r.id, []).get(r.id)!).push(id);
+  }
+  return out;
+}
+
+/** True if every rect is a 1×1 pixel inside the icon and no two share a cell. */
+export function isSplit(icon: Icon): boolean {
+  const seen = new Set<string>();
+  for (const r of icon.rects) {
+    if (r.w !== 1 || r.h !== 1 || r.x < 0 || r.y < 0 || r.x >= icon.w || r.y >= icon.h) return false;
+    const k = r.x + ',' + r.y;
+    if (seen.has(k)) return false;
+    seen.add(k);
+  }
+  return true;
+}
