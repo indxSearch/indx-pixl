@@ -145,7 +145,7 @@ button { font: inherit; color: inherit; }
 .canvas-name.ab { height: 20px; font-size: 11px; }
 
 /* quiet inputs: sidebar fields are a filled box one level up from the panel; the border shows on hover and focus */
-.panel .field input { background: var(--lv1); }
-.panel .field input:not(:hover):not(:focus):not(:disabled):not([class*="_error_"]) { border-color: transparent; }
-.panel .field input:not(:focus):hover { border-color: var(--lv3); }
+.panel .field input, .panel .free input:not([type=color]) { background: var(--lv1); }
+.panel :is(.field, .free) input:not([type=color]):not(:hover):not(:focus):not(:disabled):not([class*="_error_"]) { border-color: transparent; }
+.panel :is(.field, .free) input:not([type=color]):not(:focus):hover { border-color: var(--lv3); }
 .color-editor .field input { background: var(--lv2); }

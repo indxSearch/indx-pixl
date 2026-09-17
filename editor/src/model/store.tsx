@@ -16,7 +16,6 @@ export interface UI {
   grid: boolean;
   expanded: Record<string, boolean>;
   status: string;
-  rename: string | null; // node id whose name field should take focus
   renaming: { id: string; at: 'canvas' | 'layers' } | null; // name being edited inline
   autoMerge: boolean; // merge an icon's rects when leaving it
   dragging: boolean; // a canvas drag is in progress (autosave waits)
@@ -79,7 +78,7 @@ const initial: State = {
   ui: {
     tool: 'select', sel: [], focus: null, hover: null,
     view: load('pixl.view', { x: 80, y: 80, k: 8 }),
-    fill: 'lv8', theme: load('pixl.theme', 'system'), grid: true, expanded: {}, status: '', rename: null, renaming: null, autoMerge: load('pixl.autoMerge', true), dragging: false,
+    fill: 'lv8', theme: load('pixl.theme', 'system'), grid: true, expanded: {}, status: '', renaming: null, autoMerge: load('pixl.autoMerge', true), dragging: false,
   },
 };
 

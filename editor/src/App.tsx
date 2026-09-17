@@ -237,7 +237,7 @@ function Editor() {
     if (one?.kind === 'icon') {
       const ic = one.obj as Icon;
       items.push({ label: 'Edit icon', shortcut: 'Enter', onClick: () => ui({ focus: one.id, sel: [] }) });
-      items.push({ label: 'Rename', onClick: () => ui({ sel: [one.id], rename: one.id }) });
+      items.push({ label: 'Rename', onClick: () => ui({ sel: [one.id], renaming: { id: one.id, at: 'layers' }, expanded: { ...state.ui.expanded, [one.artboardId]: true } }) });
       items.push({ label: ic.export ? 'Exclude from export' : 'Include in export', onClick: () => edit((d) => ops.setProps(d, one.id, { export: !ic.export })) });
       items.push({ label: 'Merge rects (union)', shortcut: '⌥⌘U', onClick: () => merge([one.id]) });
       items.push('sep');
@@ -247,7 +247,7 @@ function Editor() {
     }
     if (one?.kind === 'artboard') {
       const a = one.obj as Artboard;
-      items.push({ label: 'Rename', onClick: () => ui({ sel: [one.id], rename: one.id }) });
+      items.push({ label: 'Rename', onClick: () => ui({ sel: [one.id], renaming: { id: one.id, at: 'layers' }, expanded: { ...state.ui.expanded, [one.artboardId]: true } }) });
       items.push({ label: a.export === false ? 'Include in Export all' : 'Exclude from Export all', onClick: () => edit((d) => ops.setProps(d, one.id, { export: a.export === false })) });
       items.push({ label: 'Arrange icons', onClick: () => edit((d) => ops.arrangeIcons(d, one.id)) });
     }

@@ -39,11 +39,6 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent }: { onCopy
     <Panel title={title}>
       <div className="stack">
         <div className="crumb">{crumb(sel[0])}{!one ? ` › ${sel.length} items` : ''}</div>
-        {one && one.kind !== 'rect' && (
-          <div className="field"><span className="lbl">Name</span>
-            <InputField value={(one.obj as Icon).name} autoFocus={state.ui.rename === one.id} onFocus={(e) => { if (state.ui.rename === one.id) { e.target.select(); ui({ rename: null }); } }} onChange={(e) => edit((d) => ops.setProps(d, one.id, { name: e.target.value }))} />
-          </div>
-        )}
         <div className="fields2"><Num label="X" value={same('x')} onChange={(v) => setGeo('x', v)} /><Num label="Y" value={same('y')} onChange={(v) => setGeo('y', v)} /></div>
         <div className="fields2"><Num label="W" value={same('w')} min={1} onChange={(v) => setGeo('w', v)} /><Num label="H" value={same('h')} min={1} onChange={(v) => setGeo('h', v)} /></div>
         {sel.every((n) => n.kind === 'rect') && (() => {
