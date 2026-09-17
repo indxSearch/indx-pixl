@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useEditor, type View } from '../model/store';
 import { type Artboard, type Box, type Doc, type Icon, type Node, type Rect, bboxOf, fillAttr, intersects, isExported, uid } from '../model/types';
 import * as ops from '../model/ops';
@@ -33,6 +33,17 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
     if (!!d !== !!dragRef.current) ui({ dragging: !!d });
     dragRef.current = d; setDrag(d);
   };
+
+  // Keep the drawing still on screen when the stage moves in the window (⌘. hide UI, the conflict banner).
+  // Runs before paint, so the shift never shows as a jump.
+  const stageAt = useRef<{ left: number; top: number } | null>(null);
+  useLayoutEffect(() => {
+    const b = svgRef.current!.getBoundingClientRect(), prev = stageAt.current;
+    stageAt.current = { left: b.left, top: b.top };
+    if (!prev || (prev.left === b.left && prev.top === b.top)) return;
+    const v = stateRef.current.ui.view;
+    ui({ view: { ...v, x: v.x + prev.left - b.left, y: v.y + prev.top - b.top } });
+  });
 
   // ---- stage size + wheel (non-passive) ----
   useEffect(() => {
@@ -94,6 +105,16 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
     if (e.button === 1 || space) { setDragBoth({ type: 'pan', sx: p.x, sy: p.y, vx: view.x, vy: view.y }); return; }
     if (e.button !== 0) return;
     const hit = hitOf(e.target);
+
+    if (tool === 'eyedropper') {
+      if (hit?.node?.kind === 'rect') {
+        const fill = (hit.node.obj as Rect).fill;
+        const rectIds = state.ui.sel.filter((id) => index.get(id)?.kind === 'rect');
+        if (rectIds.length) edit((d) => ops.setFill(d, rectIds, fill));
+        ui({ fill, tool: 'select' });
+      }
+      return;
+    }
 
     // manual double-click detection (focus into an icon)
     const now = performance.now();
@@ -254,10 +275,21 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
     }
   };
 
-  const onPointerUp = () => {
+  const onPointerUp = (e?: React.PointerEvent) => {
     const d = dragRef.current;
     if (!d) return;
     setDragBoth(null);
+    if (d.type === 'move' && d.moved && e) {
+      const w = toWorld(view, pt(e));
+      // A dragged icon can be dropped over another artboard. Keep the current
+      // preview position, then change only its parent container on release.
+      const target = [...stateRef.current.doc.artboards].reverse().find((a) => w.x >= a.x && w.y >= a.y && w.x <= a.x + a.w && w.y <= a.y + a.h);
+      const icons = d.ids.filter((id) => index.get(id)?.kind === 'icon');
+      if (target && icons.length && icons.some((id) => index.get(id)?.artboardId !== target.id)) {
+        edit((doc) => ops.moveIconsToArtboard(doc, icons, target.id), true);
+      }
+      return;
+    }
     if (d.type === 'draw') {
       const b = norm(d.x0, d.y0, d.x1, d.y1);
       if (d.iconId) {

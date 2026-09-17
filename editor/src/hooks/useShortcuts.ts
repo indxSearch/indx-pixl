@@ -32,6 +32,7 @@ export function useShortcuts(cmd: Commands) {
         else if (k === 'u' && e.altKey) cmd.merge();
         else if (k === '[') edit((d) => ops.reorder(d, ids, -1));
         else if (k === ']') edit((d) => ops.reorder(d, ids, 1));
+        else if (k === '.') ui({ hideUi: !state.ui.hideUi });
         else if (k === '0') cmd.zoomFit();
         else if (k === '=' || k === '+') cmd.zoom(1.25);
         else if (k === '-') cmd.zoom(0.8);
@@ -44,6 +45,7 @@ export function useShortcuts(cmd: Commands) {
         case 'a': ui({ tool: 'artboard' }); break;
         case 'i': ui({ tool: 'icon' }); break;
         case 'r': ui({ tool: 'rect' }); break;
+        case 'p': ui({ tool: 'eyedropper' }); break;
         case 'g': ui({ grid: !state.ui.grid }); break;
         case 'Escape': if (ids.length) ui({ sel: [] }); else ui({ focus: null, tool: 'select' }); break;
         case 'Delete': case 'Backspace': cmd.remove(); break;

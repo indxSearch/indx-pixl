@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useReducer, type ReactNode } from 'react';
 import { type Doc, type Fill, type Node, emptyDoc, indexDoc } from './types';
 
-export type Tool = 'select' | 'artboard' | 'icon' | 'rect';
+export type Tool = 'select' | 'artboard' | 'icon' | 'rect' | 'eyedropper';
 export type Theme = 'system' | 'light' | 'dark';
 export interface View { x: number; y: number; k: number }
 
@@ -17,6 +17,7 @@ export interface UI {
   expanded: Record<string, boolean>;
   status: string;
   renaming: { id: string; at: 'canvas' | 'layers' } | null; // name being edited inline
+  hideUi: boolean; // ⌘. hides toolbar, panels and hints
   autoMerge: boolean; // merge an icon's rects when leaving it
   dragging: boolean; // a canvas drag is in progress (autosave waits)
 }
@@ -78,7 +79,7 @@ const initial: State = {
   ui: {
     tool: 'select', sel: [], focus: null, hover: null,
     view: load('pixl.view', { x: 80, y: 80, k: 8 }),
-    fill: 'lv8', theme: load('pixl.theme', 'system'), grid: true, expanded: {}, status: '', renaming: null, autoMerge: load('pixl.autoMerge', true), dragging: false,
+    fill: 'lv8', theme: load('pixl.theme', 'system'), grid: true, expanded: {}, status: '', renaming: null, hideUi: false, autoMerge: load('pixl.autoMerge', true), dragging: false,
   },
 };
 

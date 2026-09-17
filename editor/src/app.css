@@ -9,6 +9,10 @@ button { font: inherit; color: inherit; }
 .column { width: 250px; flex: none; display: flex; flex-direction: column; gap: var(--spacing); min-height: 0; overflow-y: auto; scrollbar-width: none; }
 .column > * { flex-shrink: 0; }
 .column > .panel.grow { flex-shrink: 1; }
+/* ⌘. hide UI: the canvas fills the window */
+.app.ui-hidden { padding: 0; }
+.app.ui-hidden .surface { padding: 0; border-radius: 0; }
+.app.ui-hidden .stage { border-radius: 0; }
 .filler { flex: 1; background: var(--lv0); border-radius: var(--radius); }
 
 /* toolbar */

@@ -20,6 +20,28 @@ export function moveNodes(doc: Doc, ids: string[], dx: number, dy: number): Doc 
   return d;
 }
 
+/** Move top-level icons into another artboard while preserving their world position. */
+export function moveIconsToArtboard(doc: Doc, iconIds: string[], targetArtboardId: string): Doc {
+  if (!iconIds.length) return doc;
+  const source = indexDoc(doc), target = source.get(targetArtboardId);
+  if (!target || target.kind !== 'artboard') return doc;
+  const set = new Set(iconIds), d = clone(doc), moved: Icon[] = [];
+  for (const a of d.artboards) {
+    const kept: Icon[] = [];
+    for (const ic of a.icons) {
+      if (!set.has(ic.id)) { kept.push(ic); continue; }
+      const n = source.get(ic.id);
+      if (n) moved.push({ ...ic, x: n.ax - target.ax, y: n.ay - target.ay });
+      else kept.push(ic);
+    }
+    a.icons = kept;
+  }
+  const destination = d.artboards.find((a) => a.id === targetArtboardId);
+  if (!destination || !moved.length) return doc;
+  destination.icons.push(...moved);
+  return d;
+}
+
 /** Set local geometry (x,y relative to parent) of one node. */
 export function setGeometry(doc: Doc, id: string, box: Partial<Box>): Doc {
   const d = clone(doc);

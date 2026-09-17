@@ -7,8 +7,8 @@ import { levelOrHex, toHex } from './svg';
 export interface ParsedIcon { name: string | null; x: number; y: number; w: number; h: number; rects: Rect[] }
 export interface ParseResult {
   icons: ParsedIcon[];
-  /** How icons were found: clipped frames, the whole SVG as one icon, or grouping nearby pixels. */
-  mode: 'frames' | 'single' | 'clusters';
+  /** How icons were found: clipped/named frames, the whole SVG as one icon, or grouping nearby pixels. */
+  mode: 'frames' | 'groups' | 'single' | 'clusters';
   skipped: number; // shapes ignored (gradients, images, fully transparent)
 }
 
@@ -56,7 +56,7 @@ const sameBox = (a: Box, b: Box) => Math.abs(a.x - b.x) < 0.01 && Math.abs(a.y -
 
 /** Figma writes layer names as ids when enabled; clip ids are generated and not names. */
 function nameOf(el: Element | null): string | null {
-  const id = el?.getAttribute('id');
+  const id = el?.getAttribute('id') ?? el?.getAttribute('data-name') ?? el?.getAttribute('aria-label');
   if (!id || /^clip\d/i.test(id) || /^(paint|filter|mask|pattern)\d/i.test(id)) return null;
   return (id.includes(' ') ? id : id.replace(/_/g, ' ')).trim() || null;
 }
@@ -148,16 +148,40 @@ export function parseSvg(text: string, colors: ColorToken[] = [], mapColors = tr
       return { icons, mode: 'frames', skipped };
     }
 
+    // ---- 2. named groups: Figma's regular Copy often keeps frame/component groups
+    // but does not add clip paths. Prefer the innermost named groups so an artboard
+    // wrapper does not swallow all of its child components.
+    type NamedGroup = { box: Box; group: SVGGElement; name: string };
+    let groups: NamedGroup[] = [];
+    for (const group of Array.from(root.querySelectorAll<SVGGElement>('g[id],g[data-name],g[aria-label]'))) {
+      if (!nameOf(group) || group.closest(NON_RENDERED) || !group.querySelector(SHAPES)) continue;
+      try {
+        const box = roundBox(boxOfMatrix(ctmOf(group), group.getBBox()));
+        if (box.w >= 1 && box.h >= 1) groups.push({ box, group, name: nameOf(group)! });
+      } catch { /* malformed or non-measurable SVG groups are ignored */ }
+    }
+    groups = groups.filter((g) => !groups.some((o) => o !== g && g.group.contains(o.group) && !sameBox(g.box, o.box)));
+    groups.sort((a, b) => a.box.y - b.box.y || a.box.x - b.box.x);
+    // A single named wrapper is the artboard itself, not an icon.
+    if (groups.length === 1 && (groups[0].box.w > 32 || groups[0].box.h > 32)) groups = [];
+
+    const groupIcons = (items: NamedGroup[]) => items.map((f) => {
+      let list = shapes.filter((s) => f.group.contains(s.el) && s.box.x < f.box.x + f.box.w && s.box.x + s.box.w > f.box.x && s.box.y < f.box.y + f.box.h && s.box.y + s.box.h > f.box.y);
+      if (list.length && isBackground(list[0], f.box, list)) list = list.slice(1);
+      return { name: f.name, ...f.box, rects: toRects(paint(f.box, list)) };
+    });
+    if (groups.length) return { icons: groupIcons(groups), mode: 'groups', skipped };
+
     let all = shapes;
     const rb = roundBox(rootBox);
     if (all.length && isBackground(all[0], rb, all)) all = all.slice(1);
 
-    // ---- 2. a small SVG is one icon ----
+    // ---- 3. a small SVG is one icon ----
     if (rb.w <= 16 && rb.h <= 16) {
       return { icons: [{ name: nameOf(root.querySelector('g[id]')), ...rb, rects: toRects(paint(rb, all)) }], mode: 'single', skipped };
     }
 
-    // ---- 3. group nearby pixels (approximate) ----
+    // ---- 4. group nearby pixels (approximate) ----
     if (rb.w * rb.h > MAX_CELLS) throw new Error('SVG is too large to import');
     const g = paint(rb, all);
     const seen = g.map((row) => row.map(() => false));

@@ -17,6 +17,15 @@ import * as ops from './model/ops';
 import { type Artboard, type Doc, type Icon, type Node, bboxOf, uid } from './model/types';
 import * as api from './api';
 
+/** Figma's normal Copy can put an SVG inside the HTML clipboard flavor. */
+const svgFromHtml = (html: string): string | null => {
+  try {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const svg = doc.querySelector('svg');
+    return svg ? new XMLSerializer().serializeToString(svg) : null;
+  } catch { return null; }
+};
+
 export default function App() {
   return <EditorProvider><Editor /></EditorProvider>;
 }
@@ -193,15 +202,29 @@ function Editor() {
       const text = data.getData('image/svg+xml') || data.getData('text/plain');
       if (text && looksLikeSvg(text)) { e.preventDefault(); pasteRef.fn(text); return; }
       const html = data.getData('text/html');
-      if (html && /figma/i.test(html)) { e.preventDefault(); status('That is a Figma copy. In Figma use right-click › Copy/Paste as › Copy as SVG, then paste here.'); }
+      const htmlSvg = html && svgFromHtml(html);
+      if (htmlSvg && looksLikeSvg(htmlSvg)) { e.preventDefault(); pasteRef.fn(htmlSvg); return; }
+      if (html && /figma/i.test(html)) { e.preventDefault(); status('That is a Figma copy. Use right-click › Copy/Paste as › Copy as SVG, then paste here.'); }
     };
     window.addEventListener('paste', onPaste);
     return () => window.removeEventListener('paste', onPaste);
   }, [pasteRef, status]);
   const pasteFromClipboard = useCallback(async () => {
     try {
+      if (navigator.clipboard.read) {
+        for (const item of await navigator.clipboard.read()) {
+          if (item.types.includes('image/svg+xml')) {
+            const text = await (await item.getType('image/svg+xml')).text();
+            if (looksLikeSvg(text)) return pasteSvg(text);
+          }
+          if (item.types.includes('text/html')) {
+            const text = svgFromHtml(await (await item.getType('text/html')).text());
+            if (text && looksLikeSvg(text)) return pasteSvg(text);
+          }
+        }
+      }
       const text = await navigator.clipboard.readText();
-      if (looksLikeSvg(text)) pasteSvg(text); else status('Clipboard does not contain SVG. In Figma: Copy as SVG.');
+      if (looksLikeSvg(text)) pasteSvg(text); else status('Clipboard does not contain SVG. Use Copy as SVG in Figma, or paste with ⌘V.');
     } catch { status('Clipboard access blocked. Use ⌘V instead.'); }
   }, [pasteSvg, status]);
 
@@ -269,10 +292,10 @@ function Editor() {
   const onLayerMenu = useCallback((x: number, y: number, id: string) => openMenu(x, y, id), [openMenu]);
 
   return (
-    <div className="app">
+    <div className={'app' + (state.ui.hideUi ? ' ui-hidden' : '')}>
       <style>{editorColorCss(state.doc.colors)}</style>
       <div className="surface">
-        <Toolbar dark={dark} onDark={onDark} onExportAll={() => setExportOpen(true)} onImport={importRaw} onZoom={zoom} onZoomFit={zoomFit} saveState={autosave.saveState} />
+        {!state.ui.hideUi && <Toolbar dark={dark} onDark={onDark} onExportAll={() => setExportOpen(true)} onImport={importRaw} onZoom={zoom} onZoomFit={zoomFit} saveState={autosave.saveState} />}
         {autosave.saveState === 'conflict' && (
           <div className="banner">
             <span>pixl.json changed on disk{dirty ? ' while you have unsaved edits' : ''}.</span>
@@ -282,17 +305,19 @@ function Editor() {
           </div>
         )}
         <div className="body">
-          <div className="column"><Layers onMenu={onLayerMenu} /></div>
+          {!state.ui.hideUi && <div className="column"><Layers onMenu={onLayerMenu} /></div>}
           <div className="stage">
             <Canvas onMenu={onCanvasMenu} />
-            <div className="hints"><span>V Select</span><span>A Artboard</span><span>I Icon</span><span>R Rect</span><span>0–8 Level</span><span>⌘V Paste SVG</span><span>⌘-click Deep select</span><span>⌘⌥K Make component</span><span>⌥⌘U Merge</span><span>⌥-drag Duplicate</span><span>⌘D Duplicate</span><span>⌘[ ⌘] Order</span><span>⇧2 Zoom to selection</span><span>⌘Z Undo</span><span>Space + drag Pan</span><span>⌘ + scroll Zoom</span></div>
+            {!state.ui.hideUi && <div className="hints"><span>V Select</span><span>A Artboard</span><span>I Icon</span><span>R Rect</span><span>P Pick color</span><span>0–8 Level</span><span>⌘V Paste SVG</span><span>⌘-click Deep select</span><span>⌘⌥K Make component</span><span>⌥⌘U Merge</span><span>⌥-drag Duplicate</span><span>⌘D Duplicate</span><span>⌘[ ⌘] Order</span><span>⇧2 Zoom to selection</span><span>⌘Z Undo</span><span>Space + drag Pan</span><span>⌘ + scroll Zoom</span><span>⌘. Hide UI</span></div>}
           </div>
-          <div className="column">
-            <Inspector onCopySvg={copySvg} onExportIcon={exportIcon} onMakeComponent={makeComponent} />
-            <FillPanel />
-            <Preview />
-            <div className="filler" />
-          </div>
+          {!state.ui.hideUi && (
+            <div className="column">
+              <Inspector onCopySvg={copySvg} onExportIcon={exportIcon} onMakeComponent={makeComponent} />
+              <FillPanel />
+              <Preview />
+              <div className="filler" />
+            </div>
+          )}
         </div>
       </div>
       <ContextMenu menu={menu} onClose={closeMenu} />

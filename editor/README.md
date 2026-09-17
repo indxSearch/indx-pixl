@@ -81,8 +81,8 @@ The Fill panel offers four kinds of fill:
 
 ## Bringing icons in
 
-- **Paste from Figma:** select a frame in Figma and choose *Copy/Paste as › Copy as SVG*, then press **⌘V** in the editor.
-  - Each 7×5 child frame becomes an icon, and colors close to a level, accent or library color snap to it.
+- **Paste from Figma:** select a frame or artboard in Figma and choose *Copy/Paste as › Copy as SVG*, then press **⌘V** in the editor.
+  - Named child frames/groups become icons, preserving their positions and names. Colors close to a level, accent or library color snap to it.
   - Layer names come through if Figma writes ids into the SVG. Turn on "Include id attribute" in Figma's export settings.
 - **Import** reads every SVG in `raw-icons/` into a new artboard.
 
@@ -108,6 +108,7 @@ The Fill panel offers four kinds of fill:
 | **⌘V** | Paste SVG |
 | **⌘Z** / **⇧⌘Z** | Undo / redo |
 | **⌘S** | Save now |
+| **⌘.** | Hide or show the toolbar and panels |
 | **⇧2** / **⌘0** | Zoom to selection / zoom to fit |
 | **⌘+** / **⌘−** | Zoom in / out |
 | Scroll / **Space**-drag | Pan |
