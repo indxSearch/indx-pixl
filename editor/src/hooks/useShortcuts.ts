@@ -5,6 +5,8 @@ import * as ops from '../model/ops';
 export interface Commands {
   save: () => void;
   copySvg: () => void;
+  copy: () => void;
+  cut: () => void;
   makeComponent: () => void;
   duplicate: () => void;
   remove: () => void;
@@ -30,6 +32,8 @@ export function useShortcuts(cmd: Commands) {
       if (m) {
         if (k === 'z') { dispatch({ type: e.shiftKey ? 'REDO' : 'UNDO' }); }
         else if (k === 'd') cmd.duplicate();
+        else if (k === 'c') cmd.copy();
+        else if (k === 'x') cmd.cut();
         else if (k === 'a') { const f = state.ui.focus; const all = [...index.values()].filter((n) => f ? n.kind === 'rect' && n.iconId === f : n.kind === 'icon' || (n.kind === 'rect' && !n.iconId)); ui({ sel: all.map((n) => n.id) }); }
         else if (k === 's') cmd.save();
         else if (k === 'e') cmd.copySvg();

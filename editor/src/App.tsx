@@ -14,7 +14,7 @@ import { allComponents, exportIconSvg, importSvg, skippedComponents } from './mo
 import { looksLikeSvg, parseSvg } from './model/pasteSvg';
 import { editorColorCss, exportColorCss } from './model/colors';
 import * as ops from './model/ops';
-import { type Artboard, type Doc, type Icon, type Node, type TextNode, bboxOf, uid } from './model/types';
+import { type Artboard, type Doc, type Icon, type Node, type Rect, type TextNode, bboxOf, uid } from './model/types';
 import * as api from './api';
 
 /** Figma's normal Copy can put an SVG inside the HTML clipboard flavor. */
@@ -25,6 +25,13 @@ const svgFromHtml = (html: string): string | null => {
     return svg ? new XMLSerializer().serializeToString(svg) : null;
   } catch { return null; }
 };
+
+const PIXL_CLIPBOARD = 'indx-pixl/editor-nodes/v1';
+type ClipboardNode =
+  | { kind: 'icon'; artboardId: string; icon: Icon }
+  | { kind: 'text'; artboardId: string; text: TextNode }
+  | { kind: 'rect'; artboardId: string; iconId: string | null; rect: Rect };
+interface PixlClipboard { type: typeof PIXL_CLIPBOARD; nodes: ClipboardNode[] }
 
 export default function App() {
   return <EditorProvider><Editor /></EditorProvider>;
@@ -70,10 +77,11 @@ function Editor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, sel]);
   const exportIcon = useCallback(async (ic: Icon) => {
-    try { await api.exportIcons([{ name: ic.name, svg: exportIconSvg(ic, state.doc.colors) }], false, exportColorCss(state.doc.colors)); status(`Wrote raw-icons/${ic.name}.svg`); } catch (e) { status('Export failed: ' + (e as Error).message); }
+    try { await api.exportIcons([{ name: ic.name, svg: exportIconSvg(ic, state.doc.colors) }], false, false, exportColorCss(state.doc.colors)); status(`Wrote raw-icons/${ic.name}.svg`); } catch (e) { status('Export failed: ' + (e as Error).message); }
   }, [status, state.doc.colors]);
   const [exportOpen, setExportOpen] = useState(false);
   const [convert, setConvert] = useState(true);
+  const [buildPackage, setBuildPackage] = useState(true);
   const [exporting, setExporting] = useState(false);
   const icons = allComponents(state.doc);
   const skipped = skippedComponents(state.doc);
@@ -82,13 +90,13 @@ function Editor() {
   const exportAll = useCallback(async () => {
     setExporting(true);
     try {
-      const r = await api.exportIcons(icons.map((i) => ({ name: i.name, svg: exportIconSvg(i, state.doc.colors) })), convert, exportColorCss(state.doc.colors));
-      status(`Exported ${r.written.length} icons${convert ? ' + converted' : ''}`);
-      if (r.convertOutput) console.log(r.convertOutput);
+      const r = await api.exportIcons(icons.map((i) => ({ name: i.name, svg: exportIconSvg(i, state.doc.colors) })), convert, buildPackage, exportColorCss(state.doc.colors));
+      status(`Exported ${r.written.length} icons${convert ? ' + converted' : ''}${buildPackage ? ' + built package' : ''}`);
+      if (r.convertOutput || r.buildOutput) console.log([r.convertOutput, r.buildOutput].filter(Boolean).join('\n'));
       setExportOpen(false);
     } catch (e) { status('Export failed: ' + (e as Error).message); }
     finally { setExporting(false); }
-  }, [icons, convert, status]);
+  }, [icons, convert, buildPackage, status]);
   const makeComponent = useCallback((name?: string) => {
     const rects = sel.filter((n) => n.kind === 'rect' && !n.iconId);
     if (!rects.length || new Set(rects.map((n) => n.artboardId)).size !== 1) return status('Select loose rects on one artboard');
@@ -144,6 +152,70 @@ function Editor() {
     edit((d) => ops.deleteNodes(d, ids));
     ui({ sel: [], focus: nodes.some((n) => n.id === state.ui.focus) ? null : state.ui.focus });
   }, [sel, edit, ui, state.ui.focus]);
+  const clipboardPayload = useCallback((nodes: Node[] = sel): PixlClipboard | null => {
+    const picked = nodes.filter((n) => n.kind === 'icon' || n.kind === 'text' || n.kind === 'rect');
+    if (!picked.length) return null;
+    return {
+      type: PIXL_CLIPBOARD,
+      nodes: picked.map((n): ClipboardNode => {
+        if (n.kind === 'icon') return { kind: 'icon', artboardId: n.artboardId, icon: structuredClone(n.obj as Icon) };
+        if (n.kind === 'text') return { kind: 'text', artboardId: n.artboardId, text: structuredClone(n.obj as TextNode) };
+        return { kind: 'rect', artboardId: n.artboardId, iconId: n.iconId, rect: structuredClone(n.obj as Rect) };
+      }),
+    };
+  }, [sel]);
+  const writeNodeClipboard = useCallback(async (nodes: Node[] = sel) => {
+    const payload = clipboardPayload(nodes);
+    if (!payload) { status('Nothing to copy'); return false; }
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(payload));
+      status(`Copied ${payload.nodes.length} item${payload.nodes.length === 1 ? '' : 's'}`);
+      return true;
+    } catch {
+      status('Clipboard blocked');
+      return false;
+    }
+  }, [clipboardPayload, sel, status]);
+  const copyNodes = useCallback(() => { void writeNodeClipboard(); }, [writeNodeClipboard]);
+  const cutNodes = useCallback(async () => {
+    const nodes = sel;
+    if (!nodes.length) return status('Nothing to cut');
+    if (await writeNodeClipboard(nodes)) remove(nodes);
+  }, [sel, writeNodeClipboard, remove, status]);
+  const pasteNodes = useCallback((payload: PixlClipboard) => {
+    const selected: string[] = [];
+    edit((doc) => {
+      let next = doc;
+      const first = payload.nodes[0];
+      const fallback = first ? (doc.artboards.find((a) => a.id === first.artboardId)?.id ?? doc.artboards[0]?.id) : doc.artboards[0]?.id;
+      if (!fallback) return doc;
+      for (const item of payload.nodes) {
+        const artboardId = doc.artboards.find((a) => a.id === item.artboardId)?.id ?? fallback;
+        if (item.kind === 'icon') {
+          const id = uid();
+          selected.push(id);
+          next = ops.addIcon(next, artboardId, { ...structuredClone(item.icon), id, x: item.icon.x + 1, y: item.icon.y + 1, rects: item.icon.rects.map((r) => ({ ...r, id: uid() })) });
+        } else if (item.kind === 'text') {
+          const id = uid();
+          selected.push(id);
+          next = ops.addText(next, artboardId, { ...structuredClone(item.text), id, x: item.text.x + 1, y: item.text.y + 1 });
+        } else if (item.iconId && next.artboards.some((a) => a.icons.some((ic) => ic.id === item.iconId))) {
+          const id = uid();
+          selected.push(id);
+          next = ops.addRect(next, artboardId, item.iconId, { ...structuredClone(item.rect), id, x: item.rect.x + 1, y: item.rect.y + 1 });
+        } else {
+          const id = uid();
+          selected.push(id);
+          next = ops.addRect(next, artboardId, null, { ...structuredClone(item.rect), id, x: item.rect.x + 1, y: item.rect.y + 1 });
+        }
+      }
+      for (const id of [...new Set(payload.nodes.map((n) => n.artboardId))]) if (next.artboards.find((a) => a.id === id)?.grid?.auto) next = ops.arrangeArtboardItems(next, id);
+      return next;
+    });
+    const firstArtboard = payload.nodes[0]?.artboardId;
+    ui({ sel: selected, focus: null, expanded: selected.length && firstArtboard ? { ...state.ui.expanded, [firstArtboard]: true } : state.ui.expanded });
+    status(`Pasted ${selected.length} item${selected.length === 1 ? '' : 's'}`);
+  }, [edit, ui, state.ui.expanded, status]);
 
   /** Merge (union) the rects of the given icons, or of the current selection / focused icon. */
   const merge = useCallback((iconIds?: string[]) => {
@@ -169,9 +241,6 @@ function Editor() {
     if (idMap.size) ui({ sel: ops.remapSel(state.ui.sel, idMap) });
   }, [state.ui.focus, state.ui.autoMerge, state.doc, state.ui.sel, edit, ui, index, prevFocus]);
 
-  const cmds = useMemo(() => ({ save, copySvg: () => copySvg(), makeComponent: () => makeComponent(), duplicate: () => duplicate(), remove: () => remove(), merge: () => merge(), zoomFit, zoomSel, zoom }), [save, copySvg, makeComponent, duplicate, remove, merge, zoomFit, zoomSel, zoom]);
-  useShortcuts(cmds);
-
   // dev-only handle for debugging in the browser console
   if (import.meta.env.DEV) (window as unknown as { __pixl: unknown }).__pixl = { state, sel };
 
@@ -194,12 +263,20 @@ function Editor() {
   }, [state.doc, state.ui.focus, state.ui.expanded, index, sel, edit, ui, status]);
   const pasteRef = useMemo(() => ({ fn: pasteSvg }), []); // eslint-disable-line react-hooks/exhaustive-deps
   pasteRef.fn = pasteSvg;
+  const parseNodeClipboard = (text: string): PixlClipboard | null => {
+    try {
+      const payload = JSON.parse(text) as Partial<PixlClipboard>;
+      return payload.type === PIXL_CLIPBOARD && Array.isArray(payload.nodes) ? payload as PixlClipboard : null;
+    } catch { return null; }
+  };
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
       if ((e.target as HTMLElement | null)?.closest?.('input,textarea,[contenteditable]')) return;
       const data = e.clipboardData;
       if (!data) return;
       const text = data.getData('image/svg+xml') || data.getData('text/plain');
+      const nodes = text && parseNodeClipboard(text);
+      if (nodes) { e.preventDefault(); pasteNodes(nodes); return; }
       if (text && looksLikeSvg(text)) { e.preventDefault(); pasteRef.fn(text); return; }
       const html = data.getData('text/html');
       const htmlSvg = html && svgFromHtml(html);
@@ -208,9 +285,12 @@ function Editor() {
     };
     window.addEventListener('paste', onPaste);
     return () => window.removeEventListener('paste', onPaste);
-  }, [pasteRef, status]);
+  }, [pasteRef, pasteNodes, status]);
   const pasteFromClipboard = useCallback(async () => {
     try {
+      const plain = await navigator.clipboard.readText();
+      const nodes = parseNodeClipboard(plain);
+      if (nodes) return pasteNodes(nodes);
       if (navigator.clipboard.read) {
         for (const item of await navigator.clipboard.read()) {
           if (item.types.includes('image/svg+xml')) {
@@ -223,10 +303,12 @@ function Editor() {
           }
         }
       }
-      const text = await navigator.clipboard.readText();
-      if (looksLikeSvg(text)) pasteSvg(text); else status('Clipboard does not contain SVG. Use Copy as SVG in Figma, or paste with ⌘V.');
+      if (looksLikeSvg(plain)) pasteSvg(plain); else status('Clipboard does not contain pixl items or SVG.');
     } catch { status('Clipboard access blocked. Use ⌘V instead.'); }
-  }, [pasteSvg, status]);
+  }, [pasteNodes, pasteSvg, status]);
+
+  const cmds = useMemo(() => ({ save, copySvg: () => copySvg(), copy: copyNodes, cut: cutNodes, makeComponent: () => makeComponent(), duplicate: () => duplicate(), remove: () => remove(), merge: () => merge(), zoomFit, zoomSel, zoom }), [save, copySvg, copyNodes, cutNodes, makeComponent, duplicate, remove, merge, zoomFit, zoomSel, zoom]);
+  useShortcuts(cmds);
 
   // ---- context menu ----
   const [menu, setMenu] = useState<MenuState | null>(null);
@@ -336,6 +418,7 @@ function Editor() {
           {dupes.length > 0 && <div className="warn">Duplicate names: {dupes.join(', ')}</div>}
           {badNames.length > 0 && <div className="warn">Invalid names (letters, digits, space, - and _ only): {badNames.join(', ')}</div>}
           <Checkbox label="Run convert-icons.js afterwards (regenerates src/icons)" checked={convert} onChange={(e) => setConvert(e.target.checked)} />
+          <Checkbox label="Build npm package afterwards (updates dist)" checked={buildPackage} onChange={(e) => setBuildPackage(e.target.checked)} />
           <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
             <Button size="micro" variant="ghost" onClick={() => setExportOpen(false)}>Cancel</Button>
             <Button size="micro" variant="primary" disabled={!icons.length || dupes.length > 0 || badNames.length > 0} loading={exporting} onClick={exportAll}>Export</Button>

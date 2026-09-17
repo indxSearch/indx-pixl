@@ -23,6 +23,13 @@ function readBody(req: IncomingMessage): Promise<string> {
 /** Content hash of pixl.json, or null when it does not exist. Used as the document version. */
 const versionOf = (text: string | null) => (text == null ? null : createHash('sha1').update(text).digest('hex').slice(0, 16));
 const readDoc = () => (fs.existsSync(DOC) ? fs.readFileSync(DOC, 'utf8') : null);
+const run = (cmd: string, args: string[]) => new Promise<string>((resolve, reject) =>
+  execFile(cmd, args, { cwd: ROOT }, (err, stdout, stderr) => {
+    const output = (stdout || '') + (stderr || '');
+    if (err) reject(new Error(output || err.message));
+    else resolve(output);
+  }),
+);
 
 function send(res: ServerResponse, status: number, body: unknown) {
   res.statusCode = status;
@@ -73,7 +80,7 @@ export function fileApi(): Plugin {
             return send(res, 200, files.map((f) => ({ name: f.replace(/\.svg$/, ''), svg: fs.readFileSync(path.join(RAW, f), 'utf8') })));
           }
           if (url === '/api/export' && req.method === 'POST') {
-            const { files, convert, colorsCss } = JSON.parse(await readBody(req)) as { files: { name: string; svg: string }[]; convert?: boolean; colorsCss?: string };
+            const { files, convert, build, colorsCss } = JSON.parse(await readBody(req)) as { files: { name: string; svg: string }[]; convert?: boolean; build?: boolean; colorsCss?: string };
             if (typeof colorsCss === 'string') fs.writeFileSync(COLORS_CSS, colorsCss);
             fs.mkdirSync(RAW, { recursive: true });
             const written: string[] = [];
@@ -83,12 +90,10 @@ export function fileApi(): Plugin {
               written.push(f.name);
             }
             let convertOutput = '';
-            if (convert) {
-              convertOutput = await new Promise<string>((resolve) =>
-                execFile('node', ['convert-icons.js'], { cwd: ROOT }, (err, stdout, stderr) => resolve((stdout || '') + (stderr || '') + (err ? `\n${err.message}` : ''))),
-              );
-            }
-            return send(res, 200, { ok: true, written, convertOutput });
+            if (convert) convertOutput = await run('node', ['convert-icons.js']);
+            let buildOutput = '';
+            if (build) buildOutput = await run('npm', ['run', 'build']);
+            return send(res, 200, { ok: true, written, convertOutput, buildOutput });
           }
           return send(res, 404, { error: 'not found' });
         } catch (e) {

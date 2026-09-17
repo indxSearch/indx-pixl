@@ -76,7 +76,7 @@ The Fill panel offers four kinds of fill:
 
 - **Saving is automatic.** Edits are written to `pixl.json` about a second after you stop. **⌘S** saves right away.
 - **If `pixl.json` changes on disk**, from another tab or another program, an idle editor reloads it. If you have unsaved edits, a banner lets you reload from disk or keep your version. The editor never silently overwrites the file.
-- **Export all** writes one SVG per icon to `raw-icons/` and writes `colors.css`. It can also run `convert-icons.js` to regenerate the React components. Icons not included in export are skipped and listed in the dialog.
+- **Export all** writes one SVG per icon to `raw-icons/` and writes `colors.css`. It can also run `convert-icons.js` to regenerate the React components and run the root package build so `dist/` is updated. Icons not included in export are skipped and listed in the dialog.
 - **Copy SVG** and **Export** in the icon inspector handle a single icon.
 - Text labels are stored on their artboard and rendered with the `indx-pixl` font family. New labels use a fixed-width 3px-tall frame with a centered 2px font. Use the **Text** tool to place a label, or choose **Add label** on an icon to place its name 2px to the right. Edit a single label's text in the inspector; select multiple labels to bulk edit font size and fill.
 - Artboards support horizontal wrap auto layout for mixed icons and text labels. Select an artboard, enable **Horizontal wrap**, then set gap and padding in icon pixels. Drag items to reorder; they snap back into wrapped rows on drop.

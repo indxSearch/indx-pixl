@@ -14,15 +14,9 @@ How to add or change icons and publish a new version of `@indxsearch/pixl`.
    The editor works on `pixl.json`, a local file that isn't in git. On a fresh clone it starts empty, so click **Import** to load `raw-icons/`.
 
 2. **Draw or change icons.** New icons are drafts. Turn on "Include in export" when an icon is ready. Changes save to your local `pixl.json` automatically.
-3. **Export.** Click **Export all** and keep "Run convert-icons.js afterwards" checked. This writes `raw-icons/*.svg` and `colors.css`, and regenerates `src/icons/`.
-4. **Build.**
-
-   ```bash
-   npm run build
-   ```
-
-5. **Commit** `raw-icons/`, `colors.css`, `src/icons/` and `dist/` together.
-6. **Publish.** Bump the version in `package.json`, then:
+3. **Export.** Click **Export all** and keep "Run convert-icons.js afterwards" and "Build npm package afterwards" checked. This writes `raw-icons/*.svg` and `colors.css`, regenerates `src/icons/`, and updates `dist/`.
+4. **Commit** `raw-icons/`, `colors.css`, `src/icons/` and `dist/` together.
+5. **Publish.** Bump the version in `package.json`, then:
 
    ```bash
    npm publish
