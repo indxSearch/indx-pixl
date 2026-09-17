@@ -1,5 +1,5 @@
 // Pure document operations. Each returns a new Doc (via structuredClone; docs are small).
-import { type Artboard, type Box, type Doc, type Fill, type Icon, type Rect, indexDoc } from './types';
+import { type Artboard, type Box, type Doc, type Fill, type Icon, type Rect, type TextNode, indexDoc } from './types';
 
 const clone = (d: Doc): Doc => structuredClone(d);
 const find = (d: Doc, artboardId: string) => d.artboards.find((a) => a.id === artboardId);
@@ -12,6 +12,7 @@ export function moveNodes(doc: Doc, ids: string[], dx: number, dy: number): Doc 
   for (const a of d.artboards) {
     if (set.has(a.id)) { a.x += dx; a.y += dy; continue; }
     for (const r of a.rects) if (set.has(r.id)) { r.x += dx; r.y += dy; }
+    for (const t of a.texts ?? []) if (set.has(t.id)) { t.x += dx; t.y += dy; }
     for (const ic of a.icons) {
       if (set.has(ic.id)) { ic.x += dx; ic.y += dy; continue; }
       for (const r of ic.rects) if (set.has(r.id)) { r.x += dx; r.y += dy; }
@@ -51,7 +52,7 @@ export function setGeometry(doc: Doc, id: string, box: Partial<Box>): Doc {
   return d;
 }
 
-export function setProps(doc: Doc, id: string, patch: Partial<Artboard & Icon & Rect>): Doc {
+export function setProps(doc: Doc, id: string, patch: Partial<Artboard & Icon & Rect & TextNode>): Doc {
   const d = clone(doc);
   const n = indexDoc(d).get(id);
   if (!n) return doc;
@@ -61,7 +62,10 @@ export function setProps(doc: Doc, id: string, patch: Partial<Artboard & Icon & 
 
 export function setFill(doc: Doc, ids: string[], fill: Fill): Doc {
   const d = clone(doc), idx = indexDoc(d);
-  for (const id of ids) { const n = idx.get(id); if (n?.kind === 'rect') (n.obj as Rect).fill = fill; }
+  for (const id of ids) {
+    const n = idx.get(id);
+    if (n?.kind === 'rect' || n?.kind === 'text') (n.obj as Rect | TextNode).fill = fill;
+  }
   return d;
 }
 
@@ -70,6 +74,7 @@ export function deleteNodes(doc: Doc, ids: string[]): Doc {
   d.artboards = d.artboards.filter((a) => !set.has(a.id));
   for (const a of d.artboards) {
     a.rects = a.rects.filter((r) => !set.has(r.id));
+    a.texts = (a.texts ?? []).filter((t) => !set.has(t.id));
     a.icons = a.icons.filter((i) => !set.has(i.id));
     for (const ic of a.icons) ic.rects = ic.rects.filter((r) => !set.has(r.id));
   }
@@ -93,10 +98,13 @@ export function duplicateNodes(doc: Doc, ids: string[], idMap: Record<string, st
       copy.id = nid(a.id); copy.name = a.name + ' copy'; copy.x = offset ? a.x + a.w + 10 : a.x;
       copy.icons.forEach((i) => { i.id = nid(i.id) + '_' + Math.random().toString(36).slice(2, 6); i.rects.forEach((r) => (r.id = nid(r.id) + '_' + Math.random().toString(36).slice(2, 6))); });
       copy.rects.forEach((r) => (r.id = nid(r.id) + '_' + Math.random().toString(36).slice(2, 6)));
+      copy.texts?.forEach((t) => (t.id = nid(t.id) + '_' + Math.random().toString(36).slice(2, 6)));
       artboards.push(copy);
       continue;
     }
     a.rects = dupRects(a.rects);
+    const texts = a.texts ?? [];
+    a.texts = texts.flatMap((t) => set.has(t.id) ? [t, { ...t, id: nid(t.id), x: t.x + offset, y: t.y + offset }] : [t]);
     const icons: Icon[] = [];
     for (const ic of a.icons) {
       icons.push(ic);
@@ -118,7 +126,7 @@ export function reorder(doc: Doc, ids: string[], dir: 1 | -1): Doc {
     return dir > 0 ? [...rest, ...sel] : [...sel, ...rest];
   };
   d.artboards = re(d.artboards);
-  for (const a of d.artboards) { a.rects = re(a.rects); a.icons = re(a.icons); for (const ic of a.icons) ic.rects = re(ic.rects); }
+  for (const a of d.artboards) { a.rects = re(a.rects); a.texts = re(a.texts ?? []); a.icons = re(a.icons); for (const ic of a.icons) ic.rects = re(ic.rects); }
   return d;
 }
 
@@ -132,6 +140,12 @@ export function addIcon(doc: Doc, artboardId: string, icon: Icon): Doc {
   const d = clone(doc), a = find(d, artboardId);
   if (!a) return doc;
   a.icons.push(icon);
+  return d;
+}
+export function addText(doc: Doc, artboardId: string, text: TextNode): Doc {
+  const d = clone(doc), a = find(d, artboardId);
+  if (!a) return doc;
+  (a.texts ??= []).push(text);
   return d;
 }
 export function addArtboard(doc: Doc, artboard: Artboard): Doc {
@@ -169,7 +183,7 @@ export function detachComponent(doc: Doc, iconId: string): Doc {
 }
 
 export const nextName = (doc: Doc, base: string) => {
-  const names = new Set(doc.artboards.flatMap((a) => [a.name, ...a.icons.map((i) => i.name)]));
+  const names = new Set(doc.artboards.flatMap((a) => [a.name, ...a.icons.map((i) => i.name), ...(a.texts ?? []).map((t) => t.text)]));
   let i = 1;
   while (names.has(`${base} ${i}`)) i++;
   return `${base} ${i}`;
@@ -294,6 +308,7 @@ import type { ColorToken } from './types';
 const replaceFills = (d: Doc, from: Fill, to: Fill) => {
   for (const a of d.artboards) {
     for (const r of a.rects) if (r.fill === from) r.fill = to;
+    for (const t of a.texts ?? []) if (t.fill === from) t.fill = to;
     for (const ic of a.icons) for (const r of ic.rects) if (r.fill === from) r.fill = to;
   }
 };

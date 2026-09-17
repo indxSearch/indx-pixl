@@ -1,5 +1,5 @@
 import { Button, ToggleSwitch } from '@indxsearch/systm';
-import { Component, Crop, Cursor, Document_or_file, Download, Drop_full, Indx, Maximize, Minus, Plus, Refresh } from '@indxsearch/pixl';
+import { Component, Crop, Cursor, Document_or_file, Download, Drop_full, Indx, Maximize, Minus, Plus, Refresh, Text_cursor } from '@indxsearch/pixl';
 import type { SaveState } from '../hooks/useAutosave';
 
 const SAVE_LABEL: Record<SaveState, string> = { loading: 'Loading…', saved: 'Saved', unsaved: 'Unsaved', saving: 'Saving…', conflict: 'Changed on disk', error: 'Save failed' };
@@ -10,6 +10,7 @@ const TOOLS: { id: Tool; label: string; key: string; icon: React.ReactElement<{ 
   { id: 'artboard', label: 'Artboard', key: 'A', icon: <Maximize /> },
   { id: 'icon', label: 'Icon', key: 'I', icon: <Document_or_file /> },
   { id: 'rect', label: 'Rect', key: 'R', icon: <Crop /> },
+  { id: 'text', label: 'Text', key: 'T', icon: <Text_cursor /> },
   { id: 'eyedropper', label: 'Pick', key: 'P', icon: <Drop_full /> },
 ];
 

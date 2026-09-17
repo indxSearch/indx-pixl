@@ -14,7 +14,7 @@ import { allComponents, exportIconSvg, importSvg, skippedComponents } from './mo
 import { looksLikeSvg, parseSvg } from './model/pasteSvg';
 import { editorColorCss, exportColorCss } from './model/colors';
 import * as ops from './model/ops';
-import { type Artboard, type Doc, type Icon, type Node, bboxOf, uid } from './model/types';
+import { type Artboard, type Doc, type Icon, type Node, type TextNode, bboxOf, uid } from './model/types';
 import * as api from './api';
 
 /** Figma's normal Copy can put an SVG inside the HTML clipboard flavor. */
@@ -259,6 +259,11 @@ function Editor() {
     if (cur.every((n) => n.kind === 'rect' && n.iconId)) items.push({ label: 'Merge icon rects (union)', shortcut: '⌥⌘U', onClick: () => merge([cur[0].iconId!]) });
     if (one?.kind === 'icon') {
       const ic = one.obj as Icon;
+      items.push({ label: 'Add label', shortcut: 'T', onClick: () => {
+        const t: TextNode = { id: uid(), text: ic.name, x: ic.x + ic.w + 2, y: ic.y, w: Math.max(1, ic.name.length * 3), h: 3, size: 3, fill: 'lv8' };
+        edit((d) => ops.addText(d, one.artboardId, t));
+        ui({ sel: [t.id], expanded: { ...state.ui.expanded, [one.artboardId]: true } });
+      } });
       items.push({ label: 'Edit icon', shortcut: 'Enter', onClick: () => ui({ focus: one.id, sel: [] }) });
       items.push({ label: 'Rename', onClick: () => ui({ sel: [one.id], renaming: { id: one.id, at: 'layers' }, expanded: { ...state.ui.expanded, [one.artboardId]: true } }) });
       items.push({ label: ic.export ? 'Exclude from export' : 'Include in export', onClick: () => edit((d) => ops.setProps(d, one.id, { export: !ic.export })) });

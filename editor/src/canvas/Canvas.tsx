@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useEditor, type View } from '../model/store';
-import { type Artboard, type Box, type Doc, type Icon, type Node, type Rect, bboxOf, fillAttr, intersects, isExported, uid } from '../model/types';
+import { type Artboard, type Box, type Doc, type Icon, type Node, type Rect, type TextNode, bboxOf, fillAttr, intersects, isExported, uid } from '../model/types';
 import * as ops from '../model/ops';
 import { NameInput } from '../panels/NameInput';
 import { HANDLES, type Handle, handlePos, norm, resizeBox, screenBox, toWorld } from './geometry';
@@ -109,8 +109,8 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
     if (tool === 'eyedropper') {
       if (hit?.node?.kind === 'rect') {
         const fill = (hit.node.obj as Rect).fill;
-        const rectIds = state.ui.sel.filter((id) => index.get(id)?.kind === 'rect');
-        if (rectIds.length) edit((d) => ops.setFill(d, rectIds, fill));
+        const colorIds = state.ui.sel.filter((id) => { const kind = index.get(id)?.kind; return kind === 'rect' || kind === 'text'; });
+        if (colorIds.length) edit((d) => ops.setFill(d, colorIds, fill));
         ui({ fill, tool: 'select' });
       }
       return;
@@ -145,6 +145,15 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
       const id = uid();
       const name = ops.nextName(doc, 'icon');
       edit((d) => ops.addIcon(d, a.id, { id, name, x: Math.floor(w.x - a.ax), y: Math.floor(w.y - a.ay), w: 7, h: 5, rects: [] }));
+      ui({ sel: [id], focus: null, tool: 'select' });
+      return;
+    }
+    if (tool === 'text') {
+      const a = hit ? index.get(hit.node.artboardId)?.obj as Artboard : [...doc.artboards].reverse().find((ab) => w.x >= ab.x && w.y >= ab.y && w.x <= ab.x + ab.w && w.y <= ab.y + ab.h);
+      if (!a) return;
+      const id = uid(), size = 3, value = 'Label';
+      const text: TextNode = { id, text: value, x: Math.floor(w.x - a.x), y: Math.floor(w.y - a.y), w: value.length * size, h: size, size, fill: state.ui.fill };
+      edit((d) => ops.addText(d, a.id, text));
       ui({ sel: [id], focus: null, tool: 'select' });
       return;
     }
@@ -258,7 +267,7 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
         const box = norm(d.start.x, d.start.y, w.x, w.y);
         const hits: string[] = [];
         for (const n of index.values()) {
-          if (d.level === 'icon' ? !(n.kind === 'rect' && n.iconId === d.iconId) : !(n.kind === 'icon' || (n.kind === 'rect' && !n.iconId))) continue;
+          if (d.level === 'icon' ? !(n.kind === 'rect' && n.iconId === d.iconId) : !(n.kind === 'icon' || n.kind === 'text' || (n.kind === 'rect' && !n.iconId))) continue;
           if (intersects(box, { x: n.ax, y: n.ay, w: n.w, h: n.h })) hits.push(n.id);
         }
         ui({ sel: [...new Set([...d.base, ...hits])] });
@@ -405,6 +414,7 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
           <g key={a.id}>
             <rect className="ab-bg" data-id={a.id} data-kind="artboard" x={a.x} y={a.y} width={a.w} height={a.h} />
             {a.rects.map((r) => <RectEl key={r.id} r={r} ox={a.x} oy={a.y} />)}
+            {(a.texts ?? []).map((t) => <TextEl key={t.id} t={t} ox={a.x} oy={a.y} />)}
             {a.icons.map((ic) => <IconEl key={ic.id} ic={ic} ox={a.x} oy={a.y} />)}
           </g>
         ))}
@@ -429,4 +439,7 @@ function IconEl({ ic, ox, oy }: { ic: Icon; ox: number; oy: number }) {
       {ic.rects.map((r) => <RectEl key={r.id} r={r} ox={ox + ic.x} oy={oy + ic.y} />)}
     </g>
   );
+}
+function TextEl({ t, ox, oy }: { t: TextNode; ox: number; oy: number }) {
+  return <text className="text-node" data-id={t.id} data-kind="text" x={ox + t.x} y={oy + t.y + t.size} fontSize={t.size} fill={fillAttr(t.fill)}>{t.text}</text>;
 }

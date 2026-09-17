@@ -1,6 +1,6 @@
 import { Component, Instance, Plus } from '@indxsearch/pixl';
 import { useEditor } from '../model/store';
-import { type Artboard, type Icon, type Rect, fillAttr, isExported } from '../model/types';
+import { type Artboard, type Icon, type Rect, type TextNode, fillAttr, isExported } from '../model/types';
 import * as ops from '../model/ops';
 import { uid } from '../model/types';
 import { Panel } from './Panel';
@@ -39,6 +39,11 @@ export function Layers({ onMenu }: { onMenu: (x: number, y: number, nodeId: stri
       <span className="dim">{r.x},{r.y} · {r.w}×{r.h}</span>
     </div>
   );
+  const textRow = (t: TextNode) => (
+    <div key={t.id} className={'row' + (sel.includes(t.id) ? ' sel' : '')} style={{ paddingLeft: 24 }} onClick={(e) => pick(e, t.id, null)} onContextMenu={(e) => ctx(e, t.id, null)}>
+      <span className="text-glyph">T</span><span className="name">{t.text || 'Text'}</span><span className="dim">{t.x},{t.y}</span>
+    </div>
+  );
   const iconRow = (a: Artboard, ic: Icon) => {
     const open = isOpen(ic.id, ic.id === focus);
     const live = isExported(a, ic);
@@ -73,6 +78,7 @@ export function Layers({ onMenu }: { onMenu: (x: number, y: number, nodeId: stri
               <>
                 {a.rects.length > 0 && <div className="row dim-row" style={{ paddingLeft: 24 }}>loose rects</div>}
                 {a.rects.slice().reverse().map((r) => rectRow(r, 1, null))}
+                {(a.texts ?? []).slice().reverse().map(textRow)}
                 {a.icons.slice().reverse().map((ic) => iconRow(a, ic))}
               </>
             )}

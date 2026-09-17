@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useReducer, type ReactNode } from 'react';
 import { type Doc, type Fill, type Node, emptyDoc, indexDoc } from './types';
 
-export type Tool = 'select' | 'artboard' | 'icon' | 'rect' | 'eyedropper';
+export type Tool = 'select' | 'artboard' | 'icon' | 'rect' | 'text' | 'eyedropper';
 export type Theme = 'system' | 'light' | 'dark';
 export interface View { x: number; y: number; k: number }
 
@@ -61,7 +61,7 @@ function reducer(s: State, a: Action): State {
     }
     case 'LOAD': {
       // keep selection/focus when the nodes still exist (e.g. reloading after an external change)
-      const ids = new Set(a.doc.artboards.flatMap((ab) => [ab.id, ...ab.rects.map((r) => r.id), ...ab.icons.flatMap((i) => [i.id, ...i.rects.map((r) => r.id)])]));
+      const ids = new Set(a.doc.artboards.flatMap((ab) => [ab.id, ...ab.rects.map((r) => r.id), ...(ab.texts ?? []).map((t) => t.id), ...ab.icons.flatMap((i) => [i.id, ...i.rects.map((r) => r.id)])]));
       return { ...s, doc: a.doc, past: [], future: [], savedDoc: a.doc, ui: { ...s.ui, sel: s.ui.sel.filter((id) => ids.has(id)), focus: s.ui.focus && ids.has(s.ui.focus) ? s.ui.focus : null } };
     }
     case 'MARK_SAVED':

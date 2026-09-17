@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button, InputField, ToggleSwitch } from '@indxsearch/systm';
 import { Component, Copy, Download } from '@indxsearch/pixl';
 import { useEditor } from '../model/store';
-import { type Artboard, DEFAULT_GRID, type Icon, type Node, type Rect, fillAttr, uid } from '../model/types';
+import { type Artboard, DEFAULT_GRID, type Icon, type Node, type Rect, type TextNode, fillAttr, uid } from '../model/types';
 import * as ops from '../model/ops';
 import { Panel } from './Panel';
 
@@ -33,16 +33,23 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent }: { onCopy
     return [a?.name, ic?.name].filter(Boolean).join(' › ');
   };
   const one = sel.length === 1 ? sel[0] : null;
-  const title = one ? ({ artboard: 'Artboard', icon: 'Icon', rect: 'Rect' } as const)[one.kind] : `${sel.length} selected`;
+  const title = one ? ({ artboard: 'Artboard', icon: 'Icon', rect: 'Rect', text: 'Text' } as const)[one.kind] : `${sel.length} selected`;
 
   return (
     <Panel title={title}>
       <div className="stack">
         <div className="crumb">{crumb(sel[0])}{!one ? ` › ${sel.length} items` : ''}</div>
+        {one?.kind === 'text' && (() => {
+          const t = one.obj as TextNode;
+          return <>
+            <div className="field"><span className="lbl">Text</span><InputField value={t.text} onChange={(e) => { const text = e.target.value; edit((d) => ops.setProps(d, one.id, { text, w: Math.max(1, text.length * t.size) })); }} /></div>
+            <Num label="Size" value={t.size} min={1} onChange={(size) => edit((d) => ops.setProps(d, one.id, { size, w: Math.max(1, t.text.length * size), h: size }))} />
+          </>;
+        })()}
         <div className="fields2"><Num label="X" value={same('x')} onChange={(v) => setGeo('x', v)} /><Num label="Y" value={same('y')} onChange={(v) => setGeo('y', v)} /></div>
         <div className="fields2"><Num label="W" value={same('w')} min={1} onChange={(v) => setGeo('w', v)} /><Num label="H" value={same('h')} min={1} onChange={(v) => setGeo('h', v)} /></div>
-        {sel.every((n) => n.kind === 'rect') && (() => {
-          const f = sel.every((n) => (n.obj as Rect).fill === (sel[0].obj as Rect).fill) ? (sel[0].obj as Rect).fill : null;
+        {sel.every((n) => n.kind === 'rect' || n.kind === 'text') && (() => {
+          const f = sel.every((n) => (n.obj as Rect | TextNode).fill === (sel[0].obj as Rect | TextNode).fill) ? (sel[0].obj as Rect | TextNode).fill : null;
           return <div className="field"><span className="lbl">Fill</span><span className="sw lg" style={{ background: f ? fillAttr(f) : 'var(--lv2)' }} /><span className="mono">{f ? (f.startsWith('c:') ? (state.doc.colors?.find((c) => c.id === f.slice(2))?.name ?? 'missing color') : fillAttr(f)) : 'mixed'}</span></div>;
         })()}
         {one?.kind === 'artboard' && (

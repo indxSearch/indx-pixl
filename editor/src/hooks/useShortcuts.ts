@@ -45,6 +45,7 @@ export function useShortcuts(cmd: Commands) {
         case 'a': ui({ tool: 'artboard' }); break;
         case 'i': ui({ tool: 'icon' }); break;
         case 'r': ui({ tool: 'rect' }); break;
+        case 't': ui({ tool: 'text' }); break;
         case 'p': ui({ tool: 'eyedropper' }); break;
         case 'g': ui({ grid: !state.ui.grid }); break;
         case 'Escape': if (ids.length) ui({ sel: [] }); else ui({ focus: null, tool: 'select' }); break;

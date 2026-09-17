@@ -1,8 +1,10 @@
 export type Fill = string; // 'lv0'..'lv8' or '#rrggbb'
 
 export interface Rect { id: string; x: number; y: number; w: number; h: number; fill: Fill }
+/** A small pixel-font label positioned relative to an artboard. `y` is the top edge. */
+export interface TextNode { id: string; text: string; x: number; y: number; w: number; h: number; size: number; fill: Fill }
 export interface Icon { id: string; name: string; x: number; y: number; w: number; h: number; rects: Rect[]; export?: boolean }
-export interface Artboard { id: string; name: string; x: number; y: number; w: number; h: number; icons: Icon[]; rects: Rect[]; export?: boolean; grid?: IconGrid }
+export interface Artboard { id: string; name: string; x: number; y: number; w: number; h: number; icons: Icon[]; rects: Rect[]; texts?: TextNode[]; export?: boolean; grid?: IconGrid }
 
 /** Layout used by Arrange icons: columns, spacing between icons, and padding to the artboard edge (icon pixels). */
 export interface IconGrid { cols: number; gap: number; pad: number }
@@ -14,7 +16,7 @@ export const isExported = (a: Artboard, ic: Icon) => a.export !== false && ic.ex
 export interface ColorToken { id: string; name: string; light: string; dark?: string }
 export interface Doc { version: 1; artboards: Artboard[]; colors?: ColorToken[] }
 
-export type Kind = 'artboard' | 'icon' | 'rect';
+export type Kind = 'artboard' | 'icon' | 'rect' | 'text';
 export interface Box { x: number; y: number; w: number; h: number }
 
 /** A resolved node: what it is, where it lives, and its absolute world position. */
@@ -23,7 +25,7 @@ export interface Node {
   id: string;
   artboardId: string;
   iconId: string | null; // set for rects inside an icon
-  obj: Artboard | Icon | Rect;
+  obj: Artboard | Icon | Rect | TextNode;
   ax: number; // absolute world x
   ay: number;
   w: number;
@@ -53,6 +55,7 @@ export function indexDoc(doc: Doc): Map<string, Node> {
   for (const a of doc.artboards) {
     m.set(a.id, { kind: 'artboard', id: a.id, artboardId: a.id, iconId: null, obj: a, ax: a.x, ay: a.y, w: a.w, h: a.h });
     for (const r of a.rects) m.set(r.id, { kind: 'rect', id: r.id, artboardId: a.id, iconId: null, obj: r, ax: a.x + r.x, ay: a.y + r.y, w: r.w, h: r.h });
+    for (const t of a.texts ?? []) m.set(t.id, { kind: 'text', id: t.id, artboardId: a.id, iconId: null, obj: t, ax: a.x + t.x, ay: a.y + t.y, w: t.w, h: t.h });
     for (const ic of a.icons) {
       m.set(ic.id, { kind: 'icon', id: ic.id, artboardId: a.id, iconId: null, obj: ic, ax: a.x + ic.x, ay: a.y + ic.y, w: ic.w, h: ic.h });
       for (const r of ic.rects) m.set(r.id, { kind: 'rect', id: r.id, artboardId: a.id, iconId: ic.id, obj: r, ax: a.x + ic.x + r.x, ay: a.y + ic.y + r.y, w: r.w, h: r.h });
