@@ -119,7 +119,7 @@ button { font: inherit; color: inherit; }
 .ctx-sep { height: 1px; background: var(--lv3); margin: 5px 0; }
 
 .ab-title, .icon-label text { pointer-events: bounding-box; }
-.text-node { font-family: 'indx-pixl', var(--font-family); dominant-baseline: auto; pointer-events: bounding-box; user-select: none; }
+.text-node { font-family: 'indx-pixl', var(--font-family); dominant-baseline: middle; pointer-events: bounding-box; user-select: none; }
 .text-glyph { width: 12px; color: var(--lv5); font-weight: var(--med); font-family: 'indx-pixl', var(--font-family); }
 .toolbar .status { overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
 

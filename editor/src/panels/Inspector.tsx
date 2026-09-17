@@ -43,7 +43,7 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent }: { onCopy
           const t = one.obj as TextNode;
           return <>
             <div className="field"><span className="lbl">Text</span><InputField value={t.text} onChange={(e) => { const text = e.target.value; edit((d) => ops.setProps(d, one.id, { text, w: Math.max(1, text.length * t.size) })); }} /></div>
-            <Num label="Size" value={t.size} min={1} onChange={(size) => edit((d) => ops.setProps(d, one.id, { size, w: Math.max(1, t.text.length * size), h: size }))} />
+            <Num label="Font" value={t.size} min={1} onChange={(size) => edit((d) => ops.setProps(d, one.id, { size, w: Math.max(1, t.text.length * size) }))} />
           </>;
         })()}
         <div className="fields2"><Num label="X" value={same('x')} onChange={(v) => setGeo('x', v)} /><Num label="Y" value={same('y')} onChange={(v) => setGeo('y', v)} /></div>

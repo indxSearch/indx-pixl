@@ -260,7 +260,7 @@ function Editor() {
     if (one?.kind === 'icon') {
       const ic = one.obj as Icon;
       items.push({ label: 'Add label', shortcut: 'T', onClick: () => {
-        const t: TextNode = { id: uid(), text: ic.name, x: ic.x + ic.w + 2, y: ic.y, w: Math.max(1, ic.name.length * 3), h: 3, size: 3, fill: 'lv8' };
+        const t: TextNode = { id: uid(), text: ic.name, x: ic.x + ic.w + 2, y: ic.y, w: Math.max(1, ic.name.length * 2), h: 3, size: 2, fill: 'lv8' };
         edit((d) => ops.addText(d, one.artboardId, t));
         ui({ sel: [t.id], expanded: { ...state.ui.expanded, [one.artboardId]: true } });
       } });

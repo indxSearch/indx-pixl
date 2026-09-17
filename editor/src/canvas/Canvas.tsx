@@ -151,8 +151,8 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
     if (tool === 'text') {
       const a = hit ? index.get(hit.node.artboardId)?.obj as Artboard : [...doc.artboards].reverse().find((ab) => w.x >= ab.x && w.y >= ab.y && w.x <= ab.x + ab.w && w.y <= ab.y + ab.h);
       if (!a) return;
-      const id = uid(), size = 3, value = 'Label';
-      const text: TextNode = { id, text: value, x: Math.floor(w.x - a.x), y: Math.floor(w.y - a.y), w: value.length * size, h: size, size, fill: state.ui.fill };
+      const id = uid(), size = 2, value = 'Label';
+      const text: TextNode = { id, text: value, x: Math.floor(w.x - a.x), y: Math.floor(w.y - a.y), w: value.length * size, h: 3, size, fill: state.ui.fill };
       edit((d) => ops.addText(d, a.id, text));
       ui({ sel: [id], focus: null, tool: 'select' });
       return;
@@ -441,5 +441,5 @@ function IconEl({ ic, ox, oy }: { ic: Icon; ox: number; oy: number }) {
   );
 }
 function TextEl({ t, ox, oy }: { t: TextNode; ox: number; oy: number }) {
-  return <text className="text-node" data-id={t.id} data-kind="text" x={ox + t.x} y={oy + t.y + t.size} fontSize={t.size} fill={fillAttr(t.fill)}>{t.text}</text>;
+  return <text className="text-node" data-id={t.id} data-kind="text" x={ox + t.x} y={oy + t.y + t.h / 2} fontSize={t.size} fill={fillAttr(t.fill)}>{t.text}</text>;
 }
