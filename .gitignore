@@ -47,5 +47,7 @@ src/icons/index.ts
 *.tgz
 
 # Editor app
+# pixl.json is the editor's local working file (drafts, layout). raw-icons/ is what's published.
+pixl.json
 editor/node_modules/
 editor/dist/

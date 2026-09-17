@@ -11,7 +11,9 @@ How to add or change icons and publish a new version of `@indxsearch/pixl`.
    npm run editor
    ```
 
-2. **Draw or change icons.** New icons are drafts. Turn on "Include in export" when an icon is ready. Changes save to `pixl.json` automatically.
+   The editor works on `pixl.json`, a local file that isn't in git. On a fresh clone it starts empty, so click **Import** to load `raw-icons/`.
+
+2. **Draw or change icons.** New icons are drafts. Turn on "Include in export" when an icon is ready. Changes save to your local `pixl.json` automatically.
 3. **Export.** Click **Export all** and keep "Run convert-icons.js afterwards" checked. This writes `raw-icons/*.svg` and `colors.css`, and regenerates `src/icons/`.
 4. **Build.**
 
@@ -19,7 +21,7 @@ How to add or change icons and publish a new version of `@indxsearch/pixl`.
    npm run build
    ```
 
-5. **Commit** `pixl.json`, `raw-icons/`, `colors.css`, `src/icons/` and `dist/` together.
+5. **Commit** `raw-icons/`, `colors.css`, `src/icons/` and `dist/` together.
 6. **Publish.** Bump the version in `package.json`, then:
 
    ```bash
@@ -30,7 +32,7 @@ Renaming an icon changes its component name, and renaming a color changes its `-
 
 ## By hand
 
-The editor is the source of truth. An SVG added by hand is overwritten by the next Export all unless you also bring it into `pixl.json`, using **Import** or by pasting it into the editor.
+`raw-icons/` is the published source, but Export all rewrites it from the editor. An SVG added by hand is overwritten by the next Export all unless you also bring it into the editor, using **Import** or by pasting it.
 
 1. **Create an SVG** on a 7×5 grid with `viewBox="0 0 7 5"`, made of `<rect>` or `<path>` elements. Fill with `var(--lvN)`, a systm accent such as `var(--CSignal)`, a `var(--pixl-name, #hex)` color, or hex.
 2. **Add it** to `raw-icons/` as `raw-icons/my icon.svg`.

@@ -18,7 +18,7 @@ npm run editor:install   # first time only
 npm run editor           # opens http://localhost:5175
 ```
 
-The editor opens `pixl.json` from the repo root. This file is the source of truth for every icon, so commit it.
+The editor opens `pixl.json` from the repo root. It's your local working file with drafts, artboards and the color library, and it isn't in git. The published icons are `raw-icons/`. If the file is missing, the editor starts empty. Click **Import** to load `raw-icons/`. Back the file up yourself if you want to keep drafts and layout.
 
 ## Concepts
 
@@ -75,7 +75,7 @@ The Fill panel offers four kinds of fill:
 ## Saving and exporting
 
 - **Saving is automatic.** Edits are written to `pixl.json` about a second after you stop. **⌘S** saves right away.
-- **If `pixl.json` changes on disk**, from another tab, `git pull` or a checkout, an idle editor reloads it. If you have unsaved edits, a banner lets you reload from disk or keep your version. The editor never silently overwrites the file.
+- **If `pixl.json` changes on disk**, from another tab or another program, an idle editor reloads it. If you have unsaved edits, a banner lets you reload from disk or keep your version. The editor never silently overwrites the file.
 - **Export all** writes one SVG per icon to `raw-icons/` and writes `colors.css`. It can also run `convert-icons.js` to regenerate the React components. Icons not included in export are skipped and listed in the dialog.
 - **Copy SVG** and **Export** in the icon inspector handle a single icon.
 
