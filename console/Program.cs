@@ -277,12 +277,17 @@ sealed class PixelEditorView : View
     protected override bool OnDrawingContent(DrawContext? context)
     {
         var current = icon;
+        var normal = GetAttributeForRole(Terminal.Gui.Drawing.VisualRole.Normal);
+        var inverted = new Terminal.Gui.Drawing.Attribute(Terminal.Gui.Drawing.StandardColor.Black, Terminal.Gui.Drawing.StandardColor.White);
+
+        SetAttribute(normal);
         Move(0, 0);
         AddStr("Pixel canvas".PadRight(Math.Max(0, Viewport.Width)));
         if (current is null)
         {
             Move(0, 2);
             AddStr("No icon selected.");
+            SetAttribute(normal);
             return true;
         }
 
@@ -290,6 +295,8 @@ sealed class PixelEditorView : View
         AddStr($"{current.Name}  ·  {current.Width}x{current.Height}  ·  click/drag to edit".PadRight(Math.Max(0, Viewport.Width)));
 
         const int originX = 4, originY = 4;
+        SetAttribute(inverted);
+        FillInvertedDrawingArea(originX, originY, current.Width * 2, current.Height);
         for (var y = 0; y < current.Height; y++)
         {
             Move(originX, originY + y);
@@ -302,6 +309,7 @@ sealed class PixelEditorView : View
             AddStr(line.ToString());
         }
 
+        SetAttribute(normal);
         var previewY = originY + current.Height + 2;
         Move(originX, previewY);
         AddStr("Preview");
@@ -313,7 +321,22 @@ sealed class PixelEditorView : View
 
         Move(originX, previewY + IconText.Rows(current) + 2);
         AddStr("left: paint · right: erase · Space: toggle · S: save".PadRight(Math.Max(0, Viewport.Width - originX)));
+        SetAttribute(normal);
         return true;
+    }
+
+    private void FillInvertedDrawingArea(int x, int y, int width, int height)
+    {
+        var left = Math.Max(0, x - 1);
+        var top = Math.Max(0, y - 1);
+        var right = Math.Min(Math.Max(0, Viewport.Width), x + width + 1);
+        var bottom = Math.Min(Math.Max(0, Viewport.Height), y + height + 1);
+        var blank = new string(' ', Math.Max(0, right - left));
+        for (var yy = top; yy < bottom; yy++)
+        {
+            Move(left, yy);
+            AddStr(blank);
+        }
     }
 
     public void ToggleCurrent()
