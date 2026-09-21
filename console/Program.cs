@@ -32,13 +32,7 @@ var logo = new IconPreviewView { X = 3, Y = 1, Icon = library.FindIcon("indx") }
 var heading = new Label { X = Pos.Right(logo) + 3, Y = 1, Text = "indx pixl console" };
 var sub = new Label { X = Pos.Left(heading), Y = 2, Text = "terminal workbench for drawing monochrome icons" };
 
-var toolsFrame = new FrameView { Title = "Tools", X = 0, Y = 5, Width = 15, Height = Dim.Fill() };
-var pencil = new Label { X = 1, Y = 1, Text = "[x] Pencil" };
-var erase = new Label { X = 1, Y = 3, Text = "[ ] Erase" };
-var mouseHint = new Label { X = 1, Y = 6, Width = Dim.Fill(1), Height = 5, Text = "Mouse:\nleft paint\nright erase" };
-toolsFrame.Add(pencil, erase, mouseHint);
-
-var layersFrame = new FrameView { Title = "Layers", X = Pos.Right(toolsFrame), Y = 5, Width = 33, Height = Dim.Fill() };
+var layersFrame = new FrameView { Title = "Layers", X = 0, Y = 5, Width = 36, Height = Dim.Fill() };
 var searchLabel = new Label { Text = "Search", X = 1, Y = 0 };
 var searchBox = new TextField { X = 1, Y = 1, Width = Dim.Fill(1), Height = 1, Text = "" };
 var list = new ListView
@@ -341,7 +335,7 @@ root.KeyDown += (_, key) =>
     }
 };
 
-root.Add(logo, heading, sub, menu, toolsFrame, layersFrame, canvasFrame, inspectorFrame);
+root.Add(logo, heading, sub, menu, layersFrame, canvasFrame, inspectorFrame);
 root.Add(status);
 SelectIcon(icons.FirstOrDefault());
 app.Run(root);
@@ -414,6 +408,7 @@ sealed class PixelEditorView : View
     private IconEntry? icon;
     private int cursorX;
     private int cursorY;
+    private (int X, int Y)? lastMouseToggle;
 
     public event EventHandler<IconEntry>? Saved;
 
@@ -432,6 +427,7 @@ sealed class PixelEditorView : View
             icon = value;
             cursorX = 0;
             cursorY = 0;
+            lastMouseToggle = null;
             SetNeedsDraw();
         }
     }
@@ -456,23 +452,26 @@ sealed class PixelEditorView : View
         Move(0, 1);
         AddStr($"{current.Name}  ·  {current.Width}x{current.Height}  ·  click/drag to edit".PadRight(Math.Max(0, Viewport.Width)));
 
-        const int originX = 4, originY = 4;
+        const int originX = 4, originY = 4, cellW = 4, cellH = 2;
         SetAttribute(inverted);
-        FillInvertedDrawingArea(originX, originY, current.Width * 2, current.Height);
+        FillInvertedDrawingArea(originX, originY, current.Width * cellW, current.Height * cellH);
         for (var y = 0; y < current.Height; y++)
         {
-            Move(originX, originY + y);
-            var line = new StringBuilder();
-            for (var x = 0; x < current.Width; x++)
+            for (var sy = 0; sy < cellH; sy++)
             {
-                if (x == cursorX && y == cursorY) line.Append(current.Pixels[x, y] ? "▓▓" : "░░");
-                else line.Append(current.Pixels[x, y] ? "██" : "  ");
+                Move(originX, originY + y * cellH + sy);
+                var line = new StringBuilder();
+                for (var x = 0; x < current.Width; x++)
+                {
+                    if (x == cursorX && y == cursorY) line.Append(current.Pixels[x, y] ? "▓▓▓▓" : "░░░░");
+                    else line.Append(current.Pixels[x, y] ? "████" : "    ");
+                }
+                AddStr(line.ToString());
             }
-            AddStr(line.ToString());
         }
 
         SetAttribute(normal);
-        var previewY = originY + current.Height + 2;
+        var previewY = originY + current.Height * cellH + 2;
         Move(originX, previewY);
         AddStr("Preview");
         for (var row = 0; row < IconText.Rows(current); row++)
@@ -482,7 +481,7 @@ sealed class PixelEditorView : View
         }
 
         Move(originX, previewY + IconText.Rows(current) + 2);
-        AddStr("left: paint · right: erase · Space: toggle · S: save".PadRight(Math.Max(0, Viewport.Width - originX)));
+        AddStr("click/Space: toggle · S: save".PadRight(Math.Max(0, Viewport.Width - originX)));
         SetAttribute(normal);
         return true;
     }
@@ -521,14 +520,22 @@ sealed class PixelEditorView : View
 
         cursorX = x;
         cursorY = y;
-        if (mouse.Flags.HasFlag(MouseFlags.RightButtonClicked) || mouse.Flags.HasFlag(MouseFlags.RightButtonPressed))
+        if (mouse.Flags.HasFlag(MouseFlags.LeftButtonReleased))
         {
-            icon.Pixels[x, y] = false;
+            lastMouseToggle = null;
             mouse.Handled = true;
+            SetFocus();
+            return;
         }
-        else if (mouse.Flags.HasFlag(MouseFlags.LeftButtonClicked) || mouse.Flags.HasFlag(MouseFlags.LeftButtonPressed))
+
+        if (mouse.Flags.HasFlag(MouseFlags.LeftButtonClicked) || mouse.Flags.HasFlag(MouseFlags.LeftButtonPressed))
         {
-            icon.Pixels[x, y] = true;
+            if (lastMouseToggle != (x, y))
+            {
+                icon.Pixels[x, y] = !icon.Pixels[x, y];
+                lastMouseToggle = (x, y);
+                SetNeedsDraw();
+            }
             mouse.Handled = true;
         }
         else
@@ -536,17 +543,16 @@ sealed class PixelEditorView : View
             mouse.Handled = true;
         }
         SetFocus();
-        SetNeedsDraw();
     }
 
     private bool TryMouseToPixel(Mouse mouse, out int x, out int y)
     {
-        const int originX = 4, originY = 4, cellW = 2;
+        const int originX = 4, originY = 4, cellW = 4, cellH = 2;
         x = 0;
         y = 0;
         if (mouse.Position is not { } point) return false;
         x = (point.X - originX) / cellW;
-        y = point.Y - originY;
+        y = (point.Y - originY) / cellH;
         return icon is not null && x >= 0 && x < icon.Width && y >= 0 && y < icon.Height;
     }
 

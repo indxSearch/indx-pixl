@@ -19,9 +19,8 @@ The app loads `pixl.json` when it exists, so the gallery follows the same artboa
 Layout:
 
 - Menu bar at the top with File, Edit, and View actions, including File > New Icon.
-- Tool strip on the left.
-- Layers/search panel beside the tools.
-- Central canvas with a tight block-grid pixel editor and real-size preview.
+- Layers/search panel on the left.
+- Central canvas with a doubled-scale block-grid pixel editor and real-size preview.
 - Inspector on the right with selected icon metadata.
 - Status bar with the main shortcuts.
 
@@ -33,8 +32,7 @@ Keys and mouse:
 - `F9` opens the icon gallery popup.
 - Arrow keys move the pixel cursor in the selected icon.
 - `Space` or `Enter` toggles the current pixel.
-- Left-click or drag on the canvas paints pixels on.
-- Right-click or drag erases pixels.
+- Click or drag on the canvas toggles each pixel you touch once per gesture.
 - `S` or `Ctrl+S` saves the selected icon back to `pixl.json`.
 - `Esc` or `Ctrl+Q` quits.
 
