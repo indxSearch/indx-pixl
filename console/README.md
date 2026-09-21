@@ -18,7 +18,7 @@ The app loads `pixl.json` when it exists, so the gallery follows the same artboa
 
 Layout:
 
-- Menu bar at the top with File, Edit, and View actions.
+- Menu bar at the top with File, Edit, and View actions, including File > New Icon.
 - Tool strip on the left.
 - Layers/search panel beside the tools.
 - Central canvas with a tight block-grid pixel editor and real-size preview.
@@ -27,6 +27,7 @@ Layout:
 
 Keys and mouse:
 
+- `Ctrl+N` opens the New Icon dialog.
 - `/` or `F3` focuses search.
 - `F4` focuses the pixel canvas.
 - `F9` opens the icon gallery popup.
@@ -38,3 +39,24 @@ Keys and mouse:
 - `Esc` or `Ctrl+Q` quits.
 
 Search uses `IndxSearchLib` v5 RC in memory over icon name, artboard, and combined text fields, with a local fallback if the in-memory index cannot initialize. The gallery is a modal sheet like IndxWorkbench rather than a permanent canvas panel.
+
+
+## New icons and drafts
+
+Use `File > New Icon` or `Ctrl+N` to create a blank 7 x 5 icon. The dialog asks for:
+
+- Name
+- Artboard, including `Drafts`
+- Whether the icon is exportable
+
+The icon is added to the selected artboard in `pixl.json` and selected for editing. Auto-layout artboards use their grid settings (`cols`, `gap`, `pad`) to place the new icon in the next slot. Non-grid artboards use a simple stacked draft placement.
+
+
+## Move existing icons
+
+Use the Edit menu to move the selected icon:
+
+- `Edit > Move to Drafts` moves it to the `Drafts` artboard and turns export off.
+- `Edit > Move to Artboard...` opens an artboard picker and lets you set exportability.
+
+When an icon moves, the JSON object is moved between artboard `icons` arrays, placed in the next destination slot, saved to `pixl.json`, and selected again for editing.

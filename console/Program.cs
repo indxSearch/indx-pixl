@@ -67,6 +67,7 @@ inspectorFrame.Add(inspector);
 
 var status = new StatusBar(new[]
 {
+    new Shortcut(Key.N.WithCtrl, "New", ShowNewIconDialog),
     new Shortcut(Key.F3, "Search", () => searchBox.SetFocus()),
     new Shortcut(Key.F4, "Canvas", () => editor.SetFocus()),
     new Shortcut(Key.S.WithCtrl, "Save", () => editor.Save()),
@@ -79,12 +80,15 @@ var menu = new MenuBar(new[]
 {
     new MenuBarItem("_File", new[]
     {
+        new MenuItem("_New Icon", "Create a draft or exportable icon", ShowNewIconDialog, Key.N.WithCtrl),
         new MenuItem("_Save", "Save selected icon", () => editor.Save(), Key.S.WithCtrl),
         new MenuItem("_Quit", "Quit", () => app.RequestStop(), Key.Q.WithCtrl),
     }),
     new MenuBarItem("_Edit", new[]
     {
         new MenuItem("_Toggle pixel", "Toggle the pixel under the cursor", () => editor.ToggleCurrent(), Key.Space),
+        new MenuItem("Move to _Drafts", "Move selected icon to Drafts", MoveSelectedToDrafts),
+        new MenuItem("Move to _Artboard...", "Move selected icon to another artboard", ShowMoveToArtboardDialog),
     }),
     new MenuBarItem("_View", new[]
     {
@@ -96,6 +100,159 @@ var menu = new MenuBar(new[]
 menu.X = Pos.AnchorEnd(36);
 menu.Y = 1;
 menu.Width = 34;
+
+void ShowNewIconDialog()
+{
+    if (!library.CanEdit)
+    {
+        MessageBox.ErrorQuery(app, "New icon", "New icons can only be created when pixl.json is loaded.", "OK");
+        return;
+    }
+
+    var artboards = new ObservableCollection<string>(library.ArtboardNames);
+    var dialog = new Dialog { Title = "New pixl icon", Width = 56, Height = 18 };
+    var nameLabel = new Label { X = 1, Y = 1, Text = "Name" };
+    var name = new TextField { X = 14, Y = 1, Width = 36, Text = "new icon" };
+    var artboardLabel = new Label { X = 1, Y = 3, Text = "Artboard" };
+    var artboardList = new ListView { X = 14, Y = 3, Width = 36, Height = 7 };
+    artboardList.SetSource(artboards);
+    var draftIndex = Math.Max(0, library.ArtboardNames.FindIndex(value => string.Equals(value, "Drafts", StringComparison.OrdinalIgnoreCase)));
+    artboardList.SelectedItem = draftIndex;
+    var exportable = new CheckBox { X = 14, Y = 11, Text = "Exportable", Value = CheckState.UnChecked };
+    var hint = new Label { X = 1, Y = 13, Width = 50, Text = "Drafts keeps export off by default; library artboards can export." };
+
+    IconEntry? created = null;
+    var create = new Button { Text = "Create", IsDefault = true };
+    create.Accepting += (_, e) =>
+    {
+        var iconName = (name.Text?.ToString() ?? "").Trim();
+        var index = artboardList.SelectedItem ?? draftIndex;
+        if (string.IsNullOrWhiteSpace(iconName))
+        {
+            MessageBox.ErrorQuery(app, "New icon", "Give the icon a name first.", "OK");
+            e.Handled = true;
+            return;
+        }
+        if (index < 0 || index >= artboards.Count)
+        {
+            MessageBox.ErrorQuery(app, "New icon", "Choose an artboard first.", "OK");
+            e.Handled = true;
+            return;
+        }
+
+        created = library.CreateIcon(iconName, artboards[index], exportable.Value == CheckState.Checked, pixlPath);
+        e.Handled = true;
+        app.RequestStop(dialog);
+    };
+    var cancel = new Button { Text = "Cancel" };
+    cancel.Accepting += (_, e) => { e.Handled = true; app.RequestStop(dialog); };
+
+    dialog.Add(nameLabel, name, artboardLabel, artboardList, exportable, hint);
+    dialog.AddButton(cancel);
+    dialog.AddButton(create);
+    app.Run(dialog);
+    dialog.Dispose();
+
+    if (created is null) return;
+    RefreshAfterLibraryChange(created);
+    inspector.Text = $"Created {created.Name}\n\nArtboard  {created.Artboard}\nExport    {(created.Export ? "yes" : "no")}\nPixels    {created.OnPixelCount}";
+}
+
+void MoveSelectedToDrafts()
+{
+    var selected = editor.Icon;
+    if (selected is null) return;
+    if (string.Equals(selected.Artboard, "Drafts", StringComparison.OrdinalIgnoreCase))
+    {
+        MessageBox.Query(app, "Move to Drafts", $"'{selected.Name}' is already in Drafts.", "OK");
+        return;
+    }
+
+    MoveSelectedIcon("Drafts", exportable: false);
+}
+
+void ShowMoveToArtboardDialog()
+{
+    var selected = editor.Icon;
+    if (selected is null) return;
+    if (!library.CanEdit)
+    {
+        MessageBox.ErrorQuery(app, "Move icon", "Icons can only be moved when pixl.json is loaded.", "OK");
+        return;
+    }
+
+    var targets = new ObservableCollection<string>(library.ArtboardNames.Where(name => !string.Equals(name, selected.Artboard, StringComparison.OrdinalIgnoreCase)).ToList());
+    if (targets.Count == 0) return;
+
+    var dialog = new Dialog { Title = $"Move '{selected.Name}'", Width = 48, Height = 14 };
+    var label = new Label { X = 1, Y = 1, Text = "Artboard" };
+    var list = new ListView { X = 12, Y = 1, Width = 30, Height = 7 };
+    list.SetSource(targets);
+    var exportable = new CheckBox { X = 12, Y = 9, Text = "Exportable", Value = selected.Export ? CheckState.Checked : CheckState.UnChecked };
+    list.ValueChanged += (_, _) =>
+    {
+        var index = list.SelectedItem ?? 0;
+        if (index >= 0 && index < targets.Count && string.Equals(targets[index], "Drafts", StringComparison.OrdinalIgnoreCase))
+            exportable.Value = CheckState.UnChecked;
+        else if (index >= 0 && index < targets.Count)
+            exportable.Value = CheckState.Checked;
+    };
+
+    string? target = null;
+    bool targetExport = selected.Export;
+    var move = new Button { Text = "Move", IsDefault = true };
+    move.Accepting += (_, e) =>
+    {
+        var index = list.SelectedItem ?? 0;
+        if (index < 0 || index >= targets.Count)
+        {
+            MessageBox.ErrorQuery(app, "Move icon", "Choose an artboard first.", "OK");
+            e.Handled = true;
+            return;
+        }
+        target = targets[index];
+        targetExport = exportable.Value == CheckState.Checked;
+        e.Handled = true;
+        app.RequestStop(dialog);
+    };
+    var cancel = new Button { Text = "Cancel" };
+    cancel.Accepting += (_, e) => { e.Handled = true; app.RequestStop(dialog); };
+
+    dialog.Add(label, list, exportable);
+    dialog.AddButton(cancel);
+    dialog.AddButton(move);
+    app.Run(dialog);
+    dialog.Dispose();
+
+    if (target is not null) MoveSelectedIcon(target, targetExport);
+}
+
+void MoveSelectedIcon(string targetArtboard, bool exportable)
+{
+    var selected = editor.Icon;
+    if (selected is null) return;
+    try
+    {
+        var moved = library.MoveIcon(selected, targetArtboard, exportable, pixlPath);
+        RefreshAfterLibraryChange(moved);
+        inspector.Text = $"Moved {moved.Name}\n\nArtboard  {moved.Artboard}\nExport    {(moved.Export ? "yes" : "no")}\nPixels    {moved.OnPixelCount}";
+    }
+    catch (Exception ex)
+    {
+        MessageBox.ErrorQuery(app, "Move icon", ex.Message, "OK");
+    }
+}
+
+void RefreshAfterLibraryChange(IconEntry selected)
+{
+    search.Dispose();
+    search = new IndxIconSearch(library.Icons);
+    var text = searchBox.Text?.ToString() ?? "";
+    var visible = string.IsNullOrWhiteSpace(text) ? library.Icons : search.Find(text);
+    icons.Clear();
+    foreach (var icon in visible) icons.Add(icon);
+    SelectIcon(selected);
+}
 
 void ShowGallery()
 {
@@ -125,7 +282,7 @@ void SelectIcon(IconEntry? icon)
 {
     if (icon is null) return;
     editor.Icon = icon;
-    inspector.Text = $"Name      {icon.Name}\nArtboard  {icon.Artboard}\nSize      {icon.Width} x {icon.Height}\nPixels    {icon.OnPixelCount}\nSource    {library.SourceLabel}\n\nF4 focuses canvas\nClick/drag to paint";
+    inspector.Text = $"Name      {icon.Name}\nArtboard  {icon.Artboard}\nExport    {(icon.Export ? "yes" : "no")}\nSize      {icon.Width} x {icon.Height}\nPixels    {icon.OnPixelCount}\nSource    {library.SourceLabel}\n\nF4 focuses canvas\nClick/drag to paint";
     editor.SetNeedsDraw();
 }
 
@@ -165,6 +322,11 @@ root.KeyDown += (_, key) =>
     if (key == Key.Esc)
     {
         Application.RequestStop();
+        key.Handled = true;
+    }
+    else if (key == Key.N.WithCtrl)
+    {
+        ShowNewIconDialog();
         key.Handled = true;
     }
     else if (key == Key.S.WithCtrl)
@@ -560,6 +722,8 @@ sealed class PixlLibrary
 
     public string SourceLabel { get; }
     public List<IconEntry> Icons { get; }
+    public bool CanEdit => document is not null;
+    public List<string> ArtboardNames => document?["artboards"]?.AsArray().OfType<JsonObject>().Select(artboard => artboard["name"]?.GetValue<string>() ?? "Artboard").ToList() ?? ["raw-icons"];
     public IconEntry? FindIcon(string name) => Icons.FirstOrDefault(icon => string.Equals(icon.Name, name, StringComparison.OrdinalIgnoreCase));
 
     public static PixlLibrary Load(string pixlPath, string rawIconDir)
@@ -603,9 +767,96 @@ sealed class PixlLibrary
                 for (var xx = x; xx < x + w && xx < width; xx++)
                     pixels[xx, yy] = true;
             }
-            icons.Add(new IconEntry(Path.GetFileNameWithoutExtension(file), "raw-icons", width, height, pixels, null));
+            icons.Add(new IconEntry(Path.GetFileNameWithoutExtension(file), "raw-icons", width, height, pixels, null, true));
         }
         return new PixlLibrary("raw-icons", icons.OrderBy(i => i.Name).ToList(), null);
+    }
+
+    public IconEntry MoveIcon(IconEntry icon, string targetArtboardName, bool exportable, string pixlPath)
+    {
+        if (document is null) throw new InvalidOperationException("pixl.json is not loaded.");
+        if (icon.Json is null) throw new InvalidOperationException("The selected icon is not backed by pixl.json.");
+
+        var artboards = document["artboards"]!.AsArray().OfType<JsonObject>().ToList();
+        var sourceArtboard = artboards.FirstOrDefault(artboard => string.Equals(artboard["name"]?.GetValue<string>(), icon.Artboard, StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException($"Source artboard '{icon.Artboard}' was not found.");
+        var targetArtboard = artboards.FirstOrDefault(artboard => string.Equals(artboard["name"]?.GetValue<string>(), targetArtboardName, StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException($"Target artboard '{targetArtboardName}' was not found.");
+
+        var sourceIcons = sourceArtboard["icons"]!.AsArray();
+        var targetIcons = targetArtboard["icons"]!.AsArray();
+        var node = icon.Json;
+        sourceIcons.Remove(node);
+        var (x, y) = NextPosition(targetArtboard, targetIcons.Count);
+        node["x"] = x;
+        node["y"] = y;
+        node["export"] = exportable;
+        targetIcons.Add(node);
+        GrowArtboardToFit(targetArtboard, x, y, icon.Width, icon.Height);
+
+        var moved = IconEntry.FromJson(node, targetArtboardName);
+        Icons.Remove(icon);
+        Icons.Add(moved);
+        Icons.Sort((left, right) => string.Compare(left.Artboard + left.Name, right.Artboard + right.Name, StringComparison.OrdinalIgnoreCase));
+        File.WriteAllText(pixlPath, document.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+        return moved;
+    }
+
+    public IconEntry CreateIcon(string name, string artboardName, bool exportable, string pixlPath)
+    {
+        if (document is null) throw new InvalidOperationException("pixl.json is not loaded.");
+        var artboard = document["artboards"]!.AsArray().OfType<JsonObject>().FirstOrDefault(value => string.Equals(value["name"]?.GetValue<string>(), artboardName, StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException($"Artboard '{artboardName}' was not found.");
+        var iconArray = artboard["icons"]!.AsArray();
+        var (x, y) = NextPosition(artboard, iconArray.Count);
+        var iconJson = new JsonObject
+        {
+            ["id"] = NewId(),
+            ["name"] = name,
+            ["w"] = 7,
+            ["h"] = 5,
+            ["rects"] = new JsonArray(),
+            ["x"] = x,
+            ["y"] = y,
+            ["export"] = exportable
+        };
+        iconArray.Add(iconJson);
+        GrowArtboardToFit(artboard, x, y, 7, 5);
+        var icon = IconEntry.FromJson(iconJson, artboardName);
+        Icons.Add(icon);
+        Icons.Sort((left, right) => string.Compare(left.Artboard + left.Name, right.Artboard + right.Name, StringComparison.OrdinalIgnoreCase));
+        File.WriteAllText(pixlPath, document.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+        return icon;
+    }
+
+    private static (int X, int Y) NextPosition(JsonObject artboard, int index)
+    {
+        var grid = artboard["grid"] as JsonObject;
+        if (grid?["auto"]?.GetValue<bool>() == true)
+        {
+            var cols = Math.Max(1, grid["cols"]?.GetValue<int>() ?? 10);
+            var gap = grid["gap"]?.GetValue<int>() ?? 5;
+            var pad = grid["pad"]?.GetValue<int>() ?? 7;
+            var col = index % cols;
+            var row = index / cols;
+            return (pad + col * (7 + 26 + gap), pad + row * (5 + gap));
+        }
+
+        return (14, 12 + index * 8);
+    }
+
+    private static void GrowArtboardToFit(JsonObject artboard, int x, int y, int width, int height)
+    {
+        artboard["w"] = Math.Max(artboard["w"]?.GetValue<int>() ?? 0, x + width + 7);
+        artboard["h"] = Math.Max(artboard["h"]?.GetValue<int>() ?? 0, y + height + 7);
+    }
+
+    private static string NewId()
+    {
+        const string alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
+        Span<char> chars = stackalloc char[8];
+        for (var i = 0; i < chars.Length; i++) chars[i] = alphabet[Random.Shared.Next(alphabet.Length)];
+        return new string(chars);
     }
 
     public bool SaveIcon(IconEntry icon, string pixlPath)
@@ -636,7 +887,7 @@ sealed class PixlLibrary
 
 sealed class IconEntry
 {
-    public IconEntry(string name, string artboard, int width, int height, bool[,] pixels, JsonObject? json)
+    public IconEntry(string name, string artboard, int width, int height, bool[,] pixels, JsonObject? json, bool export)
     {
         Name = name;
         Artboard = artboard;
@@ -644,6 +895,7 @@ sealed class IconEntry
         Height = height;
         Pixels = pixels;
         Json = json;
+        Export = export;
     }
 
     public string Name { get; }
@@ -652,6 +904,7 @@ sealed class IconEntry
     public int Height { get; }
     public bool[,] Pixels { get; }
     public JsonObject? Json { get; }
+    public bool Export { get; private set; }
     public int OnPixelCount
     {
         get
@@ -680,7 +933,7 @@ sealed class IconEntry
             for (var xx = x; xx < x + w && xx < width; xx++)
                 if (xx >= 0 && yy >= 0) pixels[xx, yy] = true;
         }
-        return new IconEntry(name, artboard, width, height, pixels, icon);
+        return new IconEntry(name, artboard, width, height, pixels, icon, icon["export"]?.GetValue<bool>() == true);
     }
 
     public override string ToString() => $"{Name} [{Artboard}]";
