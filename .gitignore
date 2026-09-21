@@ -51,3 +51,7 @@ src/icons/index.ts
 pixl.json
 editor/node_modules/
 editor/dist/
+
+# .NET build output
+bin/
+obj/
