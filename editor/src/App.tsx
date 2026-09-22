@@ -8,6 +8,7 @@ import { Layers } from './panels/Layers';
 import { Inspector } from './panels/Inspector';
 import { FillPanel } from './panels/Fill';
 import { Preview } from './panels/Preview';
+import { Aliases } from './panels/Aliases';
 import { useShortcuts } from './hooks/useShortcuts';
 import { useAutosave } from './hooks/useAutosave';
 import { allComponents, exportIconSvg, importSvg, skippedComponents } from './model/svg';
@@ -406,6 +407,7 @@ function Editor() {
               <Inspector onCopySvg={copySvg} onExportIcon={exportIcon} onMakeComponent={makeComponent} />
               <FillPanel />
               <Preview />
+              <Aliases />
               <div className="filler" />
             </div>
           )}

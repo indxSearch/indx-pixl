@@ -36,7 +36,7 @@ Keys and mouse:
 - `S` or `Ctrl+S` saves the selected icon back to `pixl.json`.
 - `Esc` or `Ctrl+Q` quits.
 
-Search uses `IndxSearchLib` v5 RC in memory over icon name, artboard, and combined text fields, with a local fallback if the in-memory index cannot initialize. The gallery is a modal sheet like IndxWorkbench rather than a permanent canvas panel.
+Search uses `IndxSearchLib` v5 RC in memory over icon name, artboard, and synonyms, with a local fallback if the in-memory index cannot initialize. Synonyms are shown in the Layers rows and Inspector when present. The gallery is a modal sheet like IndxWorkbench rather than a permanent canvas panel.
 
 
 ## New icons and drafts

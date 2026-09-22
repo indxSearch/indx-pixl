@@ -41,6 +41,7 @@ The editor opens `pixl.json` from the repo root. It's your local working file wi
 - Double-click an icon, or select it and press **Enter**, to edit its pixels. **⌘-click** jumps straight to a pixel. **Esc** leaves the icon.
 - **⌥-drag** duplicates. Arrow keys nudge by one pixel.
 - Double-click a name to rename it, either on the canvas or in Layers. Enter saves and Escape cancels.
+- Use the **Synonyms** panel below Preview to add extra searchable terms for an icon, such as `paper`, `docs`, or `catalogue` for `book`. Synonyms are saved in `pixl.json` and do not change exported SVGs or component names.
 - Right-click anything for its actions: edit, rename, include in export, merge, copy SVG, export, duplicate, reorder, delete.
 
 <picture>

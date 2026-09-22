@@ -97,6 +97,13 @@ menu.X = Pos.AnchorEnd(36);
 menu.Y = 1;
 menu.Width = 34;
 
+string IconDetails(IconEntry icon, string? heading = null)
+{
+    var synonyms = icon.Aliases.Count > 0 ? string.Join(", ", icon.Aliases) : "—";
+    var prefix = string.IsNullOrWhiteSpace(heading) ? $"Name      {icon.Name}" : heading;
+    return $"{prefix}\nArtboard  {icon.Artboard}\nExport    {(icon.Export ? "yes" : "no")}\nSize      {icon.Width} x {icon.Height}\nPixels    {icon.OnPixelCount}\nSynonyms  {synonyms}\nSource    {library.SourceLabel}";
+}
+
 void ShowNewIconDialog()
 {
     if (!library.CanEdit)
@@ -151,7 +158,7 @@ void ShowNewIconDialog()
 
     if (created is null) return;
     RefreshAfterLibraryChange(created);
-    inspector.Text = $"Created {created.Name}\n\nArtboard  {created.Artboard}\nExport    {(created.Export ? "yes" : "no")}\nPixels    {created.OnPixelCount}";
+    inspector.Text = IconDetails(created, $"Created {created.Name}");
 }
 
 void MoveSelectedToDrafts()
@@ -231,7 +238,7 @@ void MoveSelectedIcon(string targetArtboard, bool exportable)
     {
         var moved = library.MoveIcon(selected, targetArtboard, exportable, pixlPath);
         RefreshAfterLibraryChange(moved);
-        inspector.Text = $"Moved {moved.Name}\n\nArtboard  {moved.Artboard}\nExport    {(moved.Export ? "yes" : "no")}\nPixels    {moved.OnPixelCount}";
+        inspector.Text = IconDetails(moved, $"Moved {moved.Name}");
     }
     catch (Exception ex)
     {
@@ -278,7 +285,7 @@ void SelectIcon(IconEntry? icon)
 {
     if (icon is null) return;
     editor.Icon = icon;
-    inspector.Text = $"Name      {icon.Name}\nArtboard  {icon.Artboard}\nExport    {(icon.Export ? "yes" : "no")}\nSize      {icon.Width} x {icon.Height}\nPixels    {icon.OnPixelCount}\nSource    {library.SourceLabel}\n\nF4 focuses canvas\nClick/drag to paint";
+    inspector.Text = IconDetails(icon) + "\n\nF4 focuses canvas\nClick/drag to paint";
     editor.SetNeedsDraw();
 }
 
@@ -305,7 +312,7 @@ editor.Saved += (_, icon) =>
 {
     if (library.SaveIcon(icon, pixlPath))
     {
-        inspector.Text = $"Saved {icon.Name}\n\nName      {icon.Name}\nArtboard  {icon.Artboard}\nSize      {icon.Width} x {icon.Height}\nPixels    {icon.OnPixelCount}";
+        inspector.Text = IconDetails(icon, $"Saved {icon.Name}");
     }
     else
     {
@@ -700,7 +707,7 @@ sealed class IndxIconSearch : IDisposable
                 id = (i + 1).ToString(),
                 name = icon.Name,
                 artboard = icon.Artboard,
-                text = icon.Name + " " + icon.Artboard
+                text = icon.Name + " " + icon.Artboard + " " + string.Join(" ", icon.Aliases)
             }).ToArray();
             var json = JsonSerializer.Serialize(docs);
             using var init = new MemoryStream(Encoding.UTF8.GetBytes(json));
@@ -749,7 +756,8 @@ sealed class IndxIconSearch : IDisposable
 
         return all.Where(icon =>
             icon.Name.Contains(text, StringComparison.OrdinalIgnoreCase) ||
-            icon.Artboard.Contains(text, StringComparison.OrdinalIgnoreCase)).ToList();
+            icon.Artboard.Contains(text, StringComparison.OrdinalIgnoreCase) ||
+            icon.Aliases.Any(alias => alias.Contains(text, StringComparison.OrdinalIgnoreCase))).ToList();
     }
 
     public void Dispose() => engine.Dispose();
@@ -1029,7 +1037,7 @@ sealed class PixlLibrary
 
 sealed class IconEntry
 {
-    public IconEntry(string name, string artboard, int width, int height, bool[,] pixels, JsonObject? json, bool export)
+    public IconEntry(string name, string artboard, int width, int height, bool[,] pixels, JsonObject? json, bool export, IReadOnlyList<string>? aliases = null)
     {
         Name = name;
         Artboard = artboard;
@@ -1038,6 +1046,7 @@ sealed class IconEntry
         Pixels = pixels;
         Json = json;
         Export = export;
+        Aliases = aliases ?? [];
     }
 
     public string Name { get; }
@@ -1047,6 +1056,7 @@ sealed class IconEntry
     public bool[,] Pixels { get; }
     public JsonObject? Json { get; }
     public bool Export { get; private set; }
+    public IReadOnlyList<string> Aliases { get; }
     public int OnPixelCount
     {
         get
@@ -1075,8 +1085,9 @@ sealed class IconEntry
             for (var xx = x; xx < x + w && xx < width; xx++)
                 if (xx >= 0 && yy >= 0) pixels[xx, yy] = true;
         }
-        return new IconEntry(name, artboard, width, height, pixels, icon, icon["export"]?.GetValue<bool>() == true);
+        var aliases = icon["aliases"]?.AsArray().Select(value => value?.GetValue<string>() ?? "").Where(value => !string.IsNullOrWhiteSpace(value)).ToList() ?? [];
+        return new IconEntry(name, artboard, width, height, pixels, icon, icon["export"]?.GetValue<bool>() == true, aliases);
     }
 
-    public override string ToString() => $"{Name} [{Artboard}]";
+    public override string ToString() => Aliases.Count > 0 ? $"{Name} [{Artboard}] · {string.Join(", ", Aliases)}" : $"{Name} [{Artboard}]";
 }

@@ -155,3 +155,12 @@ button { font: inherit; color: inherit; }
 .panel :is(.field, .free) input:not([type=color]):not(:hover):not(:focus):not(:disabled):not([class*="_error_"]) { border-color: transparent; }
 .panel :is(.field, .free) input:not([type=color]):not(:focus):hover { border-color: var(--lv3); }
 .color-editor .field input { background: var(--lv2); }
+
+/* icon aliases */
+.alias-panel { gap: 10px; }
+.alias-add { display: flex; gap: 8px; align-items: center; }
+.alias-add .field { flex: 1; }
+.alias-list { display: flex; flex-direction: column; gap: 6px; }
+.alias-row { display: flex; gap: 6px; align-items: center; }
+.alias-row .field { flex: 1; }
+.alias-row button { flex: 0 0 auto; }
