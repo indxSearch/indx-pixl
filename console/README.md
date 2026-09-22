@@ -29,7 +29,7 @@ Keys and mouse:
 - `Ctrl+N` opens the New Icon dialog.
 - `/` or `F3` focuses search.
 - `F4` focuses the pixel canvas.
-- `F9` opens the icon gallery popup.
+- `F9` opens the icon gallery popup. Use `PgUp`/`PgDn` or left/right arrows to page through it.
 - Arrow keys move the pixel cursor in the selected icon.
 - `Space` or `Enter` toggles the current pixel.
 - Click or drag on the canvas toggles each pixel you touch once per gesture.

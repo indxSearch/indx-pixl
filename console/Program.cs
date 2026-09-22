@@ -510,7 +510,7 @@ sealed class PixelEditorView : View
                 var line = new StringBuilder();
                 for (var x = 0; x < current.Width; x++)
                 {
-                    if (x == cursorX && y == cursorY) line.Append(current.Pixels[x, y] ? "▓▓▓▓" : "░░░░");
+                    if (HasFocus && x == cursorX && y == cursorY) line.Append(current.Pixels[x, y] ? "▓▓▓▓" : "░░░░");
                     else line.Append(current.Pixels[x, y] ? "████" : "    ");
                 }
                 AddStr(line.ToString());
@@ -603,6 +603,12 @@ sealed class PixelEditorView : View
         return icon is not null && x >= 0 && x < icon.Width && y >= 0 && y < icon.Height;
     }
 
+    protected override void OnHasFocusChanged(bool newHasFocus, View? previousFocused, View? focused)
+    {
+        base.OnHasFocusChanged(newHasFocus, previousFocused, focused);
+        SetNeedsDraw();
+    }
+
     protected override bool OnKeyDown(Key key)
     {
         if (icon is null) return base.OnKeyDown(key);
@@ -624,6 +630,7 @@ sealed class PixelEditorView : View
 sealed class GallerySheetView : View
 {
     private readonly IReadOnlyList<IconEntry> icons;
+    private int page;
 
     public GallerySheetView(IReadOnlyList<IconEntry> icons)
     {
@@ -639,18 +646,26 @@ sealed class GallerySheetView : View
     protected override bool OnDrawingContent(DrawContext? context)
     {
         const int cellWidth = 22, cellHeight = 4;
-        var cols = Math.Max(1, Math.Max(1, Viewport.Width) / cellWidth);
-        for (var i = 0; i < icons.Count; i++)
+        var cols = Columns(cellWidth);
+        var rows = Rows(cellHeight);
+        var pageSize = PageSize(cols, rows);
+        var pageCount = PageCount(pageSize);
+        page = Math.Clamp(page, 0, pageCount - 1);
+        EnsureSelectedVisible(pageSize);
+
+        var start = page * pageSize;
+        var end = Math.Min(icons.Count, start + pageSize);
+        for (var i = start; i < end; i++)
         {
             var icon = icons[i];
-            var col = i % cols;
-            var row = i / cols;
+            var pageIndex = i - start;
+            var col = pageIndex % cols;
+            var row = pageIndex / cols;
             var x0 = col * cellWidth;
             var y0 = row * cellHeight;
-            if (y0 >= Viewport.Height) break;
             Move(x0, y0);
             AddStr(ReferenceEquals(icon, Selected) ? ">" : " ");
-            for (var y = 0; y < IconText.Rows(icon) && y0 + y < Viewport.Height; y++)
+            for (var y = 0; y < IconText.Rows(icon) && y0 + y < Viewport.Height - 1; y++)
             {
                 Move(x0 + 1, y0 + y);
                 AddStr(IconText.Row(icon, y));
@@ -658,6 +673,9 @@ sealed class GallerySheetView : View
             Move(x0 + 9, y0 + 1);
             AddStr(icon.Name[..Math.Min(icon.Name.Length, Math.Max(0, cellWidth - 10))]);
         }
+
+        Move(0, Math.Max(0, Viewport.Height - 1));
+        AddStr($"Page {page + 1}/{pageCount} · {start + 1}-{end} of {icons.Count} · PgUp/PgDn or ←/→ to page · Enter/click selects".PadRight(Math.Max(0, Viewport.Width)));
         return true;
     }
 
@@ -665,9 +683,10 @@ sealed class GallerySheetView : View
     {
         if (mouse.Position is not { } point) return;
         const int cellWidth = 22, cellHeight = 4;
-        var cols = Math.Max(1, Math.Max(1, Viewport.Width) / cellWidth);
-        var index = Math.Max(0, point.Y) / cellHeight * cols + Math.Max(0, point.X) / cellWidth;
-        if (index < 0 || index >= icons.Count) return;
+        var cols = Columns(cellWidth);
+        var rows = Rows(cellHeight);
+        var index = page * PageSize(cols, rows) + Math.Max(0, point.Y) / cellHeight * cols + Math.Max(0, point.X) / cellWidth;
+        if (point.Y >= rows * cellHeight || index < 0 || index >= icons.Count) return;
         Selected = icons[index];
         SetNeedsDraw();
         if (mouse.IsDoubleClicked || mouse.Flags.HasFlag(MouseFlags.LeftButtonClicked))
@@ -679,13 +698,73 @@ sealed class GallerySheetView : View
 
     protected override bool OnKeyDown(Key key)
     {
+        const int cellWidth = 22, cellHeight = 4;
+        var pageSize = PageSize(Columns(cellWidth), Rows(cellHeight));
         if (key == Key.Enter && Selected is { } selected)
         {
             IconAccepted?.Invoke(this, selected);
             key.Handled = true;
             return true;
         }
+        if (key == Key.PageDown || key == Key.CursorRight)
+        {
+            MovePage(1, pageSize);
+            key.Handled = true;
+            return true;
+        }
+        if (key == Key.PageUp || key == Key.CursorLeft)
+        {
+            MovePage(-1, pageSize);
+            key.Handled = true;
+            return true;
+        }
+        if (key == Key.Home)
+        {
+            page = 0;
+            SelectFirstOnPage(pageSize);
+            key.Handled = true;
+            SetNeedsDraw();
+            return true;
+        }
+        if (key == Key.End)
+        {
+            page = PageCount(pageSize) - 1;
+            SelectFirstOnPage(pageSize);
+            key.Handled = true;
+            SetNeedsDraw();
+            return true;
+        }
         return base.OnKeyDown(key);
+    }
+
+    private int Columns(int cellWidth) => Math.Max(1, Math.Max(1, Viewport.Width) / cellWidth);
+    private int Rows(int cellHeight) => Math.Max(1, Math.Max(1, Viewport.Height - 1) / cellHeight);
+    private static int PageSize(int cols, int rows) => Math.Max(1, cols * rows);
+    private int PageCount(int pageSize) => Math.Max(1, (icons.Count + pageSize - 1) / pageSize);
+
+    private void MovePage(int delta, int pageSize)
+    {
+        page = Math.Clamp(page + delta, 0, PageCount(pageSize) - 1);
+        SelectFirstOnPage(pageSize);
+        SetNeedsDraw();
+    }
+
+    private void SelectFirstOnPage(int pageSize)
+    {
+        if (icons.Count == 0)
+        {
+            Selected = null;
+            return;
+        }
+        Selected = icons[Math.Min(icons.Count - 1, page * pageSize)];
+    }
+
+    private void EnsureSelectedVisible(int pageSize)
+    {
+        if (Selected is null || icons.Count == 0) return;
+        var selectedIndex = icons.IndexOf(Selected);
+        if (selectedIndex < 0) return;
+        page = selectedIndex / pageSize;
     }
 }
 
