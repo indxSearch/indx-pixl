@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -773,6 +774,12 @@ sealed class PixlLibrary
                 for (var xx = x; xx < x + w && xx < width; xx++)
                     pixels[xx, yy] = true;
             }
+            foreach (Match path in Regex.Matches(text, "<path\b[^>]*>"))
+            {
+                var d = Regex.Match(path.Value, "\\sd=\"([^\"]*)\"");
+                if (!d.Success) continue;
+                RasterizePath(pixels, width, height, d.Groups[1].Value, path.Value.Contains("evenodd", StringComparison.OrdinalIgnoreCase));
+            }
             icons.Add(new IconEntry(Path.GetFileNameWithoutExtension(file), "raw-icons", width, height, pixels, null, true));
         }
         return new PixlLibrary("raw-icons", icons.OrderBy(i => i.Name).ToList(), null);
@@ -886,6 +893,96 @@ sealed class PixlLibrary
         icon.Json["rects"] = rects;
         File.WriteAllText(pixlPath, document.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
         return true;
+    }
+
+    private static void RasterizePath(bool[,] pixels, int width, int height, string d, bool evenOdd)
+    {
+        var polygons = ParsePath(d);
+        for (var y = 0; y < height; y++)
+        for (var x = 0; x < width; x++)
+            if (Inside(polygons, x + 0.5, y + 0.5, evenOdd)) pixels[x, y] = true;
+    }
+
+    private static List<List<(double X, double Y)>> ParsePath(string d)
+    {
+        var polygons = new List<List<(double X, double Y)>>();
+        List<(double X, double Y)>? current = null;
+        var x = 0.0;
+        var y = 0.0;
+        var command = 'M';
+        var numbers = new Queue<double>();
+
+        void Flush()
+        {
+            while (numbers.Count > 0)
+            {
+                switch (command)
+                {
+                    case 'M':
+                        if (numbers.Count < 2) { numbers.Clear(); return; }
+                        x = numbers.Dequeue();
+                        y = numbers.Dequeue();
+                        current = [(x, y)];
+                        polygons.Add(current);
+                        command = 'L';
+                        break;
+                    case 'L':
+                        if (numbers.Count < 2) { numbers.Clear(); return; }
+                        x = numbers.Dequeue();
+                        y = numbers.Dequeue();
+                        current?.Add((x, y));
+                        break;
+                    case 'H':
+                        x = numbers.Dequeue();
+                        current?.Add((x, y));
+                        break;
+                    case 'V':
+                        y = numbers.Dequeue();
+                        current?.Add((x, y));
+                        break;
+                    default:
+                        numbers.Clear();
+                        break;
+                }
+            }
+        }
+
+        foreach (Match token in Regex.Matches(d, @"[MmHhVvLlZz]|-?\d+(?:\.\d+)?"))
+        {
+            if (char.IsLetter(token.Value[0]))
+            {
+                Flush();
+                command = char.ToUpperInvariant(token.Value[0]);
+                if (command == 'Z' && current is { Count: > 0 }) (x, y) = current[0];
+            }
+            else
+            {
+                numbers.Enqueue(double.Parse(token.Value, CultureInfo.InvariantCulture));
+            }
+        }
+        Flush();
+        return polygons;
+    }
+
+    private static bool Inside(List<List<(double X, double Y)>> polygons, double px, double py, bool evenOdd)
+    {
+        var winding = 0;
+        var crossings = 0;
+        foreach (var polygon in polygons)
+        {
+            if (polygon.Count < 3) continue;
+            for (var i = 0; i < polygon.Count; i++)
+            {
+                var (x1, y1) = polygon[i];
+                var (x2, y2) = polygon[(i + 1) % polygon.Count];
+                if ((y1 <= py) == (y2 <= py)) continue;
+                var atX = x1 + (py - y1) / (y2 - y1) * (x2 - x1);
+                if (atX <= px) continue;
+                crossings++;
+                winding += y2 > y1 ? 1 : -1;
+            }
+        }
+        return evenOdd ? (crossings & 1) == 1 : winding != 0;
     }
 
     private static int TryInt(string value, int fallback) => int.TryParse(value, out var result) ? result : fallback;
