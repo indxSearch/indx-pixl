@@ -20,7 +20,7 @@ Layout:
 
 - Menu bar at the top with File, Edit, and View actions, including File > New Icon.
 - Layers/search panel on the left.
-- Central canvas with a doubled-scale block-grid pixel editor and real-size preview.
+- Central canvas with a doubled-scale block-grid pixel editor and real-size preview. The drawing surface uses lv-style greys: light grey in light mode, darker grey in dark mode.
 - Inspector on the right with selected icon metadata.
 - Status bar with the main shortcuts.
 

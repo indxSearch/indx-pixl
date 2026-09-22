@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -413,6 +414,44 @@ sealed class PixelEditorView : View
 
     public event EventHandler<IconEntry>? Saved;
 
+    private static readonly bool DarkMode = DetectDarkMode();
+    private static readonly Terminal.Gui.Drawing.Attribute DrawingAttribute = DarkMode
+        ? new Terminal.Gui.Drawing.Attribute(new Terminal.Gui.Drawing.Color(0xF2, 0xF2, 0xF2), new Terminal.Gui.Drawing.Color(0x1A, 0x1A, 0x1A))
+        : new Terminal.Gui.Drawing.Attribute(new Terminal.Gui.Drawing.Color(0x11, 0x11, 0x11), new Terminal.Gui.Drawing.Color(0xE6, 0xE6, 0xE6));
+
+    private static bool DetectDarkMode()
+    {
+        if (OperatingSystem.IsMacOS())
+        {
+            try
+            {
+                using var process = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "/usr/bin/defaults",
+                    ArgumentList = { "read", "-g", "AppleInterfaceStyle" },
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false
+                });
+                process?.WaitForExit(250);
+                return process?.StandardOutput.ReadToEnd().Contains("Dark", StringComparison.OrdinalIgnoreCase) == true;
+            }
+            catch
+            {
+                // Fall through to terminal hints.
+            }
+        }
+
+        var colorFgBg = Environment.GetEnvironmentVariable("COLORFGBG");
+        if (!string.IsNullOrWhiteSpace(colorFgBg))
+        {
+            var last = colorFgBg.Split(';', ':').LastOrDefault();
+            if (int.TryParse(last, out var background)) return background is >= 0 and <= 6;
+        }
+
+        return false;
+    }
+
     public PixelEditorView()
     {
         Title = "Editor";
@@ -437,7 +476,7 @@ sealed class PixelEditorView : View
     {
         var current = icon;
         var normal = GetAttributeForRole(Terminal.Gui.Drawing.VisualRole.Normal);
-        var inverted = new Terminal.Gui.Drawing.Attribute(Terminal.Gui.Drawing.StandardColor.Black, Terminal.Gui.Drawing.StandardColor.White);
+        var drawing = DrawingAttribute;
 
         SetAttribute(normal);
         Move(0, 0);
@@ -454,8 +493,8 @@ sealed class PixelEditorView : View
         AddStr($"{current.Name}  ·  {current.Width}x{current.Height}  ·  click/drag to edit".PadRight(Math.Max(0, Viewport.Width)));
 
         const int originX = 4, originY = 4, cellW = 4, cellH = 2;
-        SetAttribute(inverted);
-        FillInvertedDrawingArea(originX, originY, current.Width * cellW, current.Height * cellH);
+        SetAttribute(drawing);
+        FillDrawingArea(originX, originY, current.Width * cellW, current.Height * cellH);
         for (var y = 0; y < current.Height; y++)
         {
             for (var sy = 0; sy < cellH; sy++)
@@ -487,7 +526,7 @@ sealed class PixelEditorView : View
         return true;
     }
 
-    private void FillInvertedDrawingArea(int x, int y, int width, int height)
+    private void FillDrawingArea(int x, int y, int width, int height)
     {
         var left = Math.Max(0, x - 1);
         var top = Math.Max(0, y - 1);
