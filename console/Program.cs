@@ -401,7 +401,7 @@ root.KeyDown += (_, key) =>
 {
     if (key == Key.Esc)
     {
-        Application.RequestStop();
+        app.RequestStop();
         key.Handled = true;
     }
     else if (key == Key.N.WithCtrl)
