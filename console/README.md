@@ -18,7 +18,7 @@ The app loads `pixl.json` when it exists, so the gallery follows the same artboa
 
 Layout:
 
-- Menu bar at the top with File, Edit, and View actions, including File > New Icon.
+- Menu bar at the top with File, Edit, and View actions, including File > New Icon, File > Reload, and View > Focus Mode.
 - Layers/search panel on the left.
 - Central canvas with a doubled-scale block-grid pixel editor and real-size preview. The drawing surface uses lv-style greys: light grey in light mode, darker grey in dark mode.
 - Inspector on the right with selected icon metadata.
@@ -29,7 +29,9 @@ Keys and mouse:
 - `Ctrl+N` opens the New Icon dialog.
 - `/` or `F3` focuses search.
 - `F4` focuses the pixel canvas.
+- `F8` toggles focus mode, hiding the menu, layers, inspector, and status bar so only the canvas remains.
 - `F9` opens the icon gallery popup. Use `PgUp`/`PgDn` or left/right arrows to page through it.
+- `Ctrl+R` reloads `pixl.json` and `raw-icons`, clears the search filter, and keeps the current icon selected when it still exists.
 - Arrow keys move the pixel cursor in the selected icon.
 - `Space` or `Enter` toggles the current pixel.
 - Click or drag on the canvas toggles each pixel you touch once per gesture.

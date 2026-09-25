@@ -88,6 +88,7 @@ button { font: inherit; color: inherit; }
 .icon-label text { font-size: 10px; fill: var(--lv4); }
 .icon-label.focus path, .icon-label.focus text { fill: var(--CPureBlue); }
 .icon-frame { fill: none; stroke: var(--lv3); pointer-events: none; }
+.icon-frame.exportable { stroke: #7c5cff; stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .icon-grid { stroke: var(--lv2); fill: none; pointer-events: none; }
 .outline { fill: none; stroke: var(--CPureBlue); pointer-events: none; }
 .outline.hover { stroke-opacity: 0.5; }

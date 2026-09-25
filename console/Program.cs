@@ -61,23 +61,17 @@ var inspectorFrame = new FrameView { Title = "Inspector", X = Pos.Right(canvasFr
 var inspector = new Label { X = 1, Y = 1, Width = Dim.Fill(1), Height = 10, Text = "No selection" };
 inspectorFrame.Add(inspector);
 
-var status = new StatusBar(new[]
-{
-    new Shortcut(Key.N.WithCtrl, "New", ShowNewIconDialog),
-    new Shortcut(Key.F3, "Search", () => searchBox.SetFocus()),
-    new Shortcut(Key.F4, "Canvas", () => editor.SetFocus()),
-    new Shortcut(Key.S.WithCtrl, "Save", () => editor.Save()),
-    new Shortcut(Key.Space, "Toggle", () => editor.ToggleCurrent()),
-    new Shortcut(Key.F9, "Gallery", ShowGallery),
-    new Shortcut(Key.Q.WithCtrl, "Quit", () => app.RequestStop()),
-});
+bool focusMode = false;
+MenuBar menu = null!;
+StatusBar status = null!;
 
-var menu = new MenuBar(new[]
+menu = new MenuBar(new[]
 {
     new MenuBarItem("_File", new[]
     {
         new MenuItem("_New Icon", "Create a draft or exportable icon", ShowNewIconDialog, Key.N.WithCtrl),
         new MenuItem("_Save", "Save selected icon", () => editor.Save(), Key.S.WithCtrl),
+        new MenuItem("_Reload", "Reload pixl.json and raw icons", ReloadLibrary, Key.R.WithCtrl),
         new MenuItem("_Quit", "Quit", () => app.RequestStop(), Key.Q.WithCtrl),
     }),
     new MenuBarItem("_Edit", new[]
@@ -90,6 +84,7 @@ var menu = new MenuBar(new[]
     {
         new MenuItem("_Search", "Focus icon search", () => searchBox.SetFocus(), Key.F3),
         new MenuItem("_Canvas", "Focus pixel canvas", () => editor.SetFocus(), Key.F4),
+        new MenuItem("_Focus Mode", "Show only the canvas", ToggleFocusMode, Key.F8),
         new MenuItem("_Gallery", "Open icon gallery", ShowGallery, Key.F9),
     })
 });
@@ -97,11 +92,74 @@ menu.X = Pos.AnchorEnd(36);
 menu.Y = 1;
 menu.Width = 34;
 
+status = new StatusBar(new[]
+{
+    new Shortcut(Key.N.WithCtrl, "New", ShowNewIconDialog),
+    new Shortcut(Key.F3, "Search", () => searchBox.SetFocus()),
+    new Shortcut(Key.F4, "Canvas", () => editor.SetFocus()),
+    new Shortcut(Key.F8, "Focus", ToggleFocusMode),
+    new Shortcut(Key.S.WithCtrl, "Save", () => editor.Save()),
+    new Shortcut(Key.R.WithCtrl, "Reload", ReloadLibrary),
+    new Shortcut(Key.Space, "Toggle", () => editor.ToggleCurrent()),
+    new Shortcut(Key.F9, "Gallery", ShowGallery),
+    new Shortcut(Key.Q.WithCtrl, "Quit", () => app.RequestStop()),
+});
+
 string IconDetails(IconEntry icon, string? heading = null)
 {
     var synonyms = icon.Aliases.Count > 0 ? string.Join(", ", icon.Aliases) : "—";
     var prefix = string.IsNullOrWhiteSpace(heading) ? $"Name      {icon.Name}" : heading;
     return $"{prefix}\nArtboard  {icon.Artboard}\nExport    {(icon.Export ? "yes" : "no")}\nSize      {icon.Width} x {icon.Height}\nPixels    {icon.OnPixelCount}\nSynonyms  {synonyms}\nSource    {library.SourceLabel}";
+}
+
+void ToggleFocusMode()
+{
+    focusMode = !focusMode;
+    ApplyFocusMode();
+}
+
+void ApplyFocusMode()
+{
+    logo.Visible = !focusMode;
+    heading.Visible = !focusMode;
+    sub.Visible = !focusMode;
+    menu.Visible = !focusMode;
+    layersFrame.Visible = !focusMode;
+    inspectorFrame.Visible = !focusMode;
+    status.Visible = !focusMode;
+
+    canvasFrame.X = focusMode ? 0 : Pos.Right(layersFrame);
+    canvasFrame.Y = focusMode ? 0 : 5;
+    canvasFrame.Width = focusMode ? Dim.Fill() : Dim.Fill(31);
+    canvasFrame.Height = focusMode ? Dim.Fill() : Dim.Fill(1);
+    canvasFrame.Title = focusMode ? "Canvas - Focus mode (F8 exits)" : "Canvas";
+    editor.SetFocus();
+    root.SetNeedsDraw();
+}
+
+void ReloadLibrary()
+{
+    var previous = editor.Icon;
+    var previousName = previous?.Name;
+    var previousArtboard = previous?.Artboard;
+    library = PixlLibrary.Load(pixlPath, rawIconDir);
+    root.Title = $"indx-pixl console - {library.SourceLabel}";
+    logo.Icon = library.FindIcon("indx");
+    search.Dispose();
+    search = new IndxIconSearch(library.Icons);
+    searchBox.Text = "";
+
+    var selected = library.Icons.FirstOrDefault(icon =>
+        string.Equals(icon.Name, previousName, StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(icon.Artboard, previousArtboard, StringComparison.OrdinalIgnoreCase))
+        ?? library.Icons.FirstOrDefault(icon => string.Equals(icon.Name, previousName, StringComparison.OrdinalIgnoreCase))
+        ?? library.Icons.FirstOrDefault();
+
+    RefreshListForCurrentSearch(selected);
+    inspector.Text = selected is null
+        ? $"Reloaded {library.SourceLabel}\n\nNo icons found."
+        : IconDetails(selected, $"Reloaded {library.SourceLabel}");
+    root.SetNeedsDraw();
 }
 
 void ShowNewIconDialog()
@@ -250,10 +308,22 @@ void RefreshAfterLibraryChange(IconEntry selected)
 {
     search.Dispose();
     search = new IndxIconSearch(library.Icons);
+    RefreshListForCurrentSearch(selected);
+}
+
+void RefreshListForCurrentSearch(IconEntry? preferred)
+{
     var text = searchBox.Text?.ToString() ?? "";
     var visible = string.IsNullOrWhiteSpace(text) ? library.Icons : search.Find(text);
     icons.Clear();
     foreach (var icon in visible) icons.Add(icon);
+    list.SetSource(icons);
+
+    var selected = preferred is not null && visible.Contains(preferred)
+        ? preferred
+        : visible.FirstOrDefault(icon => preferred is not null && string.Equals(icon.Name, preferred.Name, StringComparison.OrdinalIgnoreCase) && string.Equals(icon.Artboard, preferred.Artboard, StringComparison.OrdinalIgnoreCase))
+        ?? visible.FirstOrDefault();
+    list.SelectedItem = selected is null ? 0 : Math.Max(0, icons.IndexOf(selected));
     SelectIcon(selected);
 }
 
@@ -283,8 +353,13 @@ void ShowGallery()
 
 void SelectIcon(IconEntry? icon)
 {
-    if (icon is null) return;
     editor.Icon = icon;
+    if (icon is null)
+    {
+        inspector.Text = "No selection";
+        editor.SetNeedsDraw();
+        return;
+    }
     inspector.Text = IconDetails(icon) + "\n\nF4 focuses canvas\nClick/drag to paint";
     editor.SetNeedsDraw();
 }
@@ -293,6 +368,8 @@ void RefreshList(IReadOnlyList<IconEntry> filtered)
 {
     icons.Clear();
     foreach (var icon in filtered) icons.Add(icon);
+    list.SetSource(icons);
+    list.SelectedItem = 0;
     SelectIcon(icons.FirstOrDefault());
 }
 
@@ -335,6 +412,16 @@ root.KeyDown += (_, key) =>
     else if (key == Key.S.WithCtrl)
     {
         editor.Save();
+        key.Handled = true;
+    }
+    else if (key == Key.R.WithCtrl)
+    {
+        ReloadLibrary();
+        key.Handled = true;
+    }
+    else if (key == Key.F8)
+    {
+        ToggleFocusMode();
         key.Handled = true;
     }
     else if (key == '/')

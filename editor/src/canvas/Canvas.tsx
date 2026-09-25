@@ -402,7 +402,7 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
           ? <foreignObject x={is.x + 10} y={is.y - 20} width={Math.max(120, is.w)} height={18}><NameInput id={ic.id} name={ic.name} className="canvas-name" /></foreignObject>
           : <text x={is.x + 14} y={is.y - 6}>{ic.name}</text>}
       </g>);
-      overlay.push(<rect key={'f' + ic.id} className="icon-frame" x={is.x - 0.5} y={is.y - 0.5} width={is.w + 1} height={is.h + 1} />);
+      overlay.push(<rect key={'f' + ic.id} className={'icon-frame' + (live ? ' exportable' : '')} x={is.x - (live ? 2.5 : 0.5)} y={is.y - (live ? 2.5 : 0.5)} width={is.w + (live ? 5 : 1)} height={is.h + (live ? 5 : 1)} />);
       if (grid && k >= GRID_ZOOM) {
         let dd = '';
         for (let c = 1; c < ic.w; c++) dd += `M${is.x + c * k + 0.5} ${is.y}v${is.h}`;
