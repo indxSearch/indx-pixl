@@ -18,7 +18,8 @@
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
     "editor": "npm --prefix editor run dev",
-    "editor:install": "npm --prefix editor install"
+    "editor:install": "npm --prefix editor install",
+    "desktop:build": "npm --prefix editor run desktop:build"
   },
   "keywords": [
     "icons",

@@ -20,6 +20,21 @@ npm run editor           # opens http://localhost:5175
 
 The editor opens `pixl.json` from the repo root. It's your local working file with drafts, artboards and the color library, and it isn't in git. The published icons are `raw-icons/`. If the file is missing, the editor starts empty. Click **Import** to load `raw-icons/`. Back the file up yourself if you want to keep drafts and layout.
 
+## macOS app
+
+Build the standalone app from the repository root (Node.js 22.12+):
+
+```bash
+npm run editor:install
+npm run desktop:build
+```
+
+Double-click **Indx Pixl.app** in the repository folder. It bundles the editor and Electron, so it needs neither a browser nor a development server. The build targets the Mac's architecture and downloads Electron on first use. Rebuild after changing editor code. The app icon uses the Indx pixel logo; regenerate its PNG and ICNS assets with `swift editor/desktop/assets/generate-icon.swift` from the repository root. The local app bundle and build staging folders are ignored by Git and excluded from the npm package.
+
+The app opens the project beside it. If moved elsewhere, it uses the last project or asks for a folder. **File → Open Project Folder…** switches projects; **Show Project in Finder** reveals the current folder. Saving and exporting use that project's `pixl.json`, `raw-icons/`, `colors.css`, `src/icons/`, and `dist/`. The app checks for external document edits every two seconds and waits for unsaved edits before closing. Resolve any save conflict before closing or switching projects.
+
+Export conversion uses Electron's bundled Node runtime. Building the icon package uses the project's installed TypeScript compiler, so run `npm install` in the project once if dependencies are missing. Publishing and version changes remain separate. This build is for local use; distribution to other Macs would need signing and notarization.
+
 ## Concepts
 
 - **Artboards** group icons, for example "Core icons" or "Vehicles". They only organize the canvas and don't affect the exported files.
@@ -120,7 +135,7 @@ The Fill panel offers four kinds of fill:
 ## How it works
 
 - **Stack:** Vite, React and TypeScript, with the UI built from `@indxsearch/systm` components and `@indxsearch/pixl` icons.
-- **File access:** a Vite dev-server plugin in `server/fileApi.ts` serves the file API. It reads and writes `pixl.json`, writes `raw-icons/` and `colors.css`, runs the converter, and tells open tabs when `pixl.json` changes on disk. Saves only go through when the file is still the version the tab loaded.
+- **File access:** `server/projectApi.ts` provides the shared file API, served by the Vite plugin in the browser and a private Electron protocol in the desktop app. It reads and writes `pixl.json`, writes `raw-icons/` and `colors.css`, runs the converter, and tells open tabs when `pixl.json` changes on disk. Saves only go through when the file is still the version the tab loaded.
 - **Document model:** `src/model/` holds the pure document operations, SVG import and export, the pixel union (one outline path per color), color handling and Figma paste parsing.
 - **Canvas:** `src/canvas/` is a single SVG with pan and zoom. Selection, handles, drawing and hit testing live here.
 

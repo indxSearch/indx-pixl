@@ -58,15 +58,21 @@ export function useAutosave(status: (s: string) => void) {
 
   // external changes: reload quietly when there is nothing unsaved, otherwise flag a conflict
   useEffect(() => {
-    if (!import.meta.hot) return;
     const onChange = ({ version: v }: { version: string | null }) => {
       if (v === version.current) return; // our own write
       if (inFlight.current) return; // our save may be the cause; a real conflict still surfaces as a 409
       if (!latest.current.dirty) load(true).catch((e) => status('Reload failed: ' + e.message));
       else { setSaveState('conflict'); status('pixl.json changed on disk. Reload or keep your version.'); }
     };
-    import.meta.hot.on('pixl:doc-changed', onChange);
-    return () => import.meta.hot?.off('pixl:doc-changed', onChange);
+    if (import.meta.hot) {
+      import.meta.hot.on('pixl:doc-changed', onChange);
+      return () => import.meta.hot?.off('pixl:doc-changed', onChange);
+    }
+    // Desktop has no Vite websocket. Keep the same external-change behavior.
+    const timer = window.setInterval(() => {
+      if (loaded.current) api.loadDoc().then(onChange).catch(() => {});
+    }, 2000);
+    return () => window.clearInterval(timer);
   }, [load, status]);
 
   // last-chance save when the tab is hidden or closed
@@ -79,7 +85,40 @@ export function useAutosave(status: (s: string) => void) {
     const onVis = () => { if (document.visibilityState === 'hidden') flush(); };
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('pagehide', flush);
-    const warn = (e: BeforeUnloadEvent) => { if (latest.current.dirty && latest.current.conflict) e.preventDefault(); };
+    let closing = false;
+    const warn = (e: BeforeUnloadEvent) => {
+      if (!latest.current.dirty) return;
+      if (location.protocol !== 'pixl:') {
+        if (latest.current.conflict) e.preventDefault();
+        return;
+      }
+      // Wait for an acknowledged save before allowing the desktop window to close.
+      e.preventDefault();
+      e.returnValue = '';
+      if (closing) return;
+      if (latest.current.conflict) {
+        window.alert('Resolve the pixl.json conflict before closing.');
+        return;
+      }
+      closing = true;
+      const finish = async () => {
+        if (inFlight.current) { window.setTimeout(finish, 100); return; }
+        const doc = latest.current.doc;
+        inFlight.current = true;
+        try {
+          version.current = await api.saveDoc(doc, version.current);
+          dispatch({ type: 'MARK_SAVED', doc });
+          if (latest.current.doc === doc) {
+            latest.current.dirty = false;
+            window.close();
+          } else { closing = false; }
+        } catch (error) {
+          closing = false;
+          window.alert('Could not save before closing: ' + (error as Error).message);
+        } finally { inFlight.current = false; }
+      };
+      void finish();
+    };
     window.addEventListener('beforeunload', warn);
     return () => { document.removeEventListener('visibilitychange', onVis); window.removeEventListener('pagehide', flush); window.removeEventListener('beforeunload', warn); };
   }, [dispatch]);

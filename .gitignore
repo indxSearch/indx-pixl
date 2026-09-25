@@ -55,3 +55,8 @@ editor/dist/
 # .NET build output
 bin/
 obj/
+
+# Local macOS editor bundle
+/Indx Pixl.app/
+/editor/desktop-dist/
+/editor/desktop-build/
