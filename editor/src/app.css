@@ -22,6 +22,34 @@ button { font: inherit; color: inherit; }
 .toolbar .meta { font: var(--text-xs); color: var(--lv5); white-space: nowrap; }
 .toolbar .status { font: var(--text-xs); color: var(--lv7); white-space: nowrap; }
 .toolbar .zoom { background: none; border: 0; font: var(--text-xs); color: var(--lv6); font-variant-numeric: tabular-nums; min-width: 44px; cursor: pointer; }
+.zoom-menu { position: relative; }
+.zoom-popover { position: absolute; top: calc(100% + 8px); right: 0; z-index: 10001; width: 260px; padding: 12px; background: var(--lv0); border: 1px solid var(--lv3); border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); }
+.zoom-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font: var(--text-xs); color: var(--lv6); }
+.zoom-slider-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.zoom-actions { justify-content: flex-end; margin-top: 10px; }
+.toolbar-label { white-space: nowrap; }
+
+
+/* floating canvas tools */
+.floating-tools {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px;
+  background: color-mix(in srgb, var(--lv0) 92%, transparent);
+  border: 1px solid var(--lv3);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(10px);
+}
+.floating-tools .sep { width: 1px; height: 20px; background: var(--lv3); margin: 0 2px; }
+.floating-tool-label { white-space: nowrap; }
+.app.ui-hidden .floating-tools { display: none; }
 
 /* panels */
 .panel { display: flex; flex-direction: column; gap: 15px; background: var(--lv0); padding: 15px; border-radius: var(--radius); min-height: 0; }
@@ -79,7 +107,6 @@ button { font: inherit; color: inherit; }
 /* stage */
 .stage { flex: 1; position: relative; min-width: 0; background: var(--lv1); border-radius: var(--radius); overflow: hidden; }
 .canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; font-family: var(--font-family); }
-.hints { position: absolute; bottom: 10px; left: 15px; right: 15px; display: flex; gap: 15px; font: var(--text-2xs); color: var(--lv4); white-space: nowrap; overflow: hidden; pointer-events: none; }
 .ab-bg { fill: var(--lv0); }
 .ab-title { font-size: 11px; fill: var(--lv5); cursor: default; }
 .ab-title:hover { fill: var(--lv7); }

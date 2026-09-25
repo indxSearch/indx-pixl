@@ -400,7 +400,6 @@ function Editor() {
           {!state.ui.hideUi && <div className="column"><Layers onMenu={onLayerMenu} /></div>}
           <div className="stage">
             <Canvas onMenu={onCanvasMenu} />
-            {!state.ui.hideUi && <div className="hints"><span>V Select</span><span>A Artboard</span><span>I Icon</span><span>R Rect</span><span>P Pick color</span><span>0–8 Level</span><span>⌘V Paste SVG</span><span>⌘-click Deep select</span><span>⌘⌥K Make component</span><span>⌥⌘U Merge</span><span>⌥-drag Duplicate</span><span>⌘D Duplicate</span><span>⌘[ ⌘] Order</span><span>⇧2 Zoom to selection</span><span>⌘Z Undo</span><span>Space + drag Pan</span><span>⌘ + scroll Zoom</span><span>⌘. Hide UI</span></div>}
           </div>
           {!state.ui.hideUi && (
             <div className="column">
