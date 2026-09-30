@@ -192,3 +192,8 @@ button { font: inherit; color: inherit; }
 .alias-row { display: flex; gap: 6px; align-items: center; }
 .alias-row .field { flex: 1; }
 .alias-row button { flex: 0 0 auto; }
+
+/* desktop (Electron): the toolbar is the title bar. Traffic lights are ~52px wide at x 27, so the logo starts after them */
+.desktop .toolbar { -webkit-app-region: drag; }
+.desktop .toolbar :is(button, input, select, a, .zoom-popover) { -webkit-app-region: no-drag; }
+.desktop:not(.fullscreen) .toolbar .brand { padding-left: 78px; }

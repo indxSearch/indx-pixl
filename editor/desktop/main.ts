@@ -45,11 +45,17 @@ function createWindow() {
   window = new BrowserWindow({
     title: 'Indx Pixl', width: 1440, height: 960, minWidth: 800, minHeight: 550,
     backgroundColor: '#181818', show: false,
+    // The editor toolbar doubles as the title bar; the traffic lights sit centred in it (see .desktop rules in app.css).
+    titleBarStyle: 'hidden', trafficLightPosition: { x: 27, y: 28 },
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', (event, url) => { if (url !== origin + '/') event.preventDefault(); });
   window.once('ready-to-show', () => window?.show());
+  // Fullscreen hides the traffic lights, so the toolbar can drop the space reserved for them.
+  const setFullscreen = (on: boolean) => { void window?.webContents.executeJavaScript(`document.documentElement.classList.toggle('fullscreen', ${on})`); };
+  window.on('enter-full-screen', () => setFullscreen(true));
+  window.on('leave-full-screen', () => setFullscreen(false));
   window.on('closed', () => {
     window = null;
     if (nextProject) { const folder = nextProject; nextProject = null; remember(folder); createWindow(); }
