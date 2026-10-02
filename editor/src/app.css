@@ -163,6 +163,11 @@ button { font: inherit; color: inherit; }
 .accents { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; }
 
 /* color library */
+.used-by { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.sw-btn.dragging { opacity: 0.35; }
+.sw-btn.drop-before::before, .sw-btn.drop-after::after { content: ''; position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--CPureBlue); }
+.sw-btn.drop-before::before { left: -4px; }
+.sw-btn.drop-after::after { right: -4px; }
 .sw-btn.add { display: flex; align-items: center; justify-content: center; background: transparent; color: var(--lv4); border-style: dashed; }
 .sw-btn.add:hover { color: var(--lv7); border-color: var(--lv5); }
 .color-editor { display: flex; flex-direction: column; gap: 10px; padding: 10px; border: 1px solid var(--lv3); border-radius: var(--radius); background: var(--lv1); }

@@ -436,6 +436,15 @@ export function deleteColor(doc: Doc, id: string, replacement: Fill | null): Doc
   replaceFills(d, `c:${id}`, replacement ?? c.light);
   return d;
 }
+/** Move a color so it sits before the color now at `before` (its index), or last when `before` is past the end. */
+export function moveColorTo(doc: Doc, id: string, before: number): Doc {
+  const list = doc.colors ?? [], i = list.findIndex((c) => c.id === id);
+  if (i < 0 || before === i || before === i + 1) return doc;
+  const d = clone(doc), next = d.colors!;
+  const [c] = next.splice(i, 1);
+  next.splice(before > i ? before - 1 : before, 0, c);
+  return d;
+}
 export function moveColor(doc: Doc, id: string, dir: -1 | 1): Doc {
   const d = clone(doc), list = d.colors ?? [];
   const i = list.findIndex((c) => c.id === id), j = i + dir;

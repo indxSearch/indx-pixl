@@ -43,12 +43,16 @@ export function exportColorCss(colors: ColorToken[] = []): string {
   return `${head}:root {\n${light}\n}\n${dark}`;
 }
 
-/** Count pixels (rects) using a fill across the document. */
-export function usageOf(doc: Doc, fill: Fill): number {
-  let n = 0;
+/** Ids of every rect and text using a fill, across the document. */
+export function idsUsing(doc: Doc, fill: Fill): string[] {
+  const ids: string[] = [];
   for (const a of doc.artboards) {
-    for (const r of a.rects) if (r.fill === fill) n++;
-    for (const ic of a.icons) for (const r of ic.rects) if (r.fill === fill) n++;
+    for (const r of a.rects) if (r.fill === fill) ids.push(r.id);
+    for (const t of a.texts ?? []) if (t.fill === fill) ids.push(t.id);
+    for (const ic of a.icons) for (const r of ic.rects) if (r.fill === fill) ids.push(r.id);
   }
-  return n;
+  return ids;
 }
+
+/** Count rects and texts using a fill. Texts count too: deleting a color recolors them as well. */
+export const usageOf = (doc: Doc, fill: Fill): number => idsUsing(doc, fill).length;

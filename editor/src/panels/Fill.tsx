@@ -5,7 +5,7 @@ import { useEditor } from '../model/store';
 import { ACCENTS, type ColorToken, type Fill as FillT, type Rect, type TextNode, fillAttr, isToken, uid } from '../model/types';
 import * as ops from '../model/ops';
 import { toHex } from '../model/svg';
-import { colorRef, cssVarOf, nameProblem, usageOf } from '../model/colors';
+import { colorIdOf, colorRef, cssVarOf, findColor, idsUsing, nameProblem, usageOf } from '../model/colors';
 import { Panel } from './Panel';
 
 const LEVELS = Array.from({ length: 9 }, (_, i) => `lv${i}`);
@@ -19,6 +19,10 @@ export function FillPanel({ dark }: { dark: boolean }) {
   const apply = (f: FillT) => { ui({ fill: f }); if (colorIds.length) edit((d) => ops.setFill(d, colorIds, f)); };
   const [hex, setHex] = useState(isToken(state.ui.fill) ? '#ff4238' : state.ui.fill);
   const [editing, setEditing] = useState<string | null>(null);
+  // drag to sort the library: the dragged color's id, and the index it would be dropped before
+  const [dragging, setDragging] = useState<string | null>(null);
+  const [dropAt, setDropAt] = useState<number | null>(null);
+  const endDrag = () => { setDragging(null); setDropAt(null); };
   const recent = [...new Set(state.doc.artboards.flatMap((a) => [...a.rects, ...a.icons.flatMap((i) => i.rects)]).map((r) => r.fill).filter((f) => !isToken(f)))].slice(0, 18);
 
   // close the editor if its color disappears (undo, delete)
@@ -48,17 +52,26 @@ export function FillPanel({ dark }: { dark: boolean }) {
         <span className="lbl">Accents <span className="dim">systm</span></span>
         <div className="accents">{ACCENTS.map((a) => swatch(a.token, `var(--${a.token})`))}</div>
 
-        <span className="lbl">Colors <span className="dim">double-click to edit</span></span>
-        <div className="accents">
-          {colors.map((c) => swatch(colorRef(c.id), `${c.name} · ${cssVarOf(c)}${c.dark ? ' · light/dark' : ''}`, undefined, {
+        <span className="lbl">Colors <span className="dim">double-click to edit · drag to sort</span></span>
+        <div className="accents" onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropAt(null); }}>
+          {colors.map((c, i) => swatch(colorRef(c.id), `${c.name} · ${cssVarOf(c)}${c.dark ? ' · light/dark' : ''}`, undefined, {
             onDoubleClick: () => setEditing(c.id),
             onContextMenu: (e) => { e.preventDefault(); setEditing(c.id); },
-            className: 'sw-btn' + (active === colorRef(c.id) ? ' active' : '') + (c.dark && c.dark !== c.light ? ' split' : ''),
+            draggable: true,
+            onDragStart: (e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', c.id); setDragging(c.id); },
+            // the left half of a swatch drops before it, the right half after it
+            onDragOver: (e) => { if (!dragging) return; e.preventDefault(); const r = e.currentTarget.getBoundingClientRect(); setDropAt(e.clientX < r.left + r.width / 2 ? i : i + 1); },
+            onDrop: (e) => { e.preventDefault(); if (dragging && dropAt !== null) edit((d) => ops.moveColorTo(d, dragging, dropAt)); endDrag(); },
+            onDragEnd: endDrag,
+            className: 'sw-btn' + (active === colorRef(c.id) ? ' active' : '') + (c.dark && c.dark !== c.light ? ' split' : '')
+              + (dragging === c.id ? ' dragging' : '') + (dragging && dropAt === i ? ' drop-before' : '') + (dragging && dropAt === i + 1 && i === colors.length - 1 ? ' drop-after' : ''),
             style: { background: c.dark && c.dark !== c.light ? `linear-gradient(135deg, ${c.light} 50%, ${c.dark} 50%)` : fillAttr(colorRef(c.id)) },
           }))}
           <button className="sw-btn add" title="New color" onClick={() => addColor(hex)}><Plus size={14} color="currentColor" /></button>
         </div>
         {editing && <ColorEditor key={editing + (dark ? ':dark' : ':light')} id={editing} dark={dark} onClose={() => setEditing(null)} />}
+
+        <UsedBy fill={active} />
 
         <span className="lbl">Free color</span>
         <div className="free">
@@ -74,6 +87,22 @@ export function FillPanel({ dark }: { dark: boolean }) {
         )}
       </div>
     </Panel>
+  );
+}
+
+/** Find and replace: selects every pixel using the active fill, across all artboards. Clicking another
+ *  swatch then recolors the whole selection, since a swatch click applies to the selected rects. */
+function UsedBy({ fill }: { fill: FillT }) {
+  const { state, ui } = useEditor();
+  const ids = idsUsing(state.doc, fill);
+  const name = findColor(state.doc, colorIdOf(fill))?.name ?? fill;
+  const selected = ids.length > 0 && ids.length === state.ui.sel.length && ids.every((id) => state.ui.sel.includes(id));
+  return (
+    <div className="used-by">
+      <span className="hint">{ids.length ? `${ids.length} pixel${ids.length === 1 ? '' : 's'} use ${name}` : `Nothing uses ${name}`}</span>
+      {ids.length > 0 && !selected && <Button size="micro" variant="ghost" onClick={() => ui({ sel: ids, focus: null })}>Select all</Button>}
+      {selected && <span className="hint">Selected. Click a swatch to replace.</span>}
+    </div>
   );
 }
 
