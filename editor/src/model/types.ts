@@ -4,7 +4,14 @@ export interface Rect { id: string; x: number; y: number; w: number; h: number; 
 /** A small pixel-font label positioned relative to an artboard. `y` is the top edge. */
 export interface TextNode { id: string; text: string; x: number; y: number; w: number; h: number; size: number; fill: Fill }
 export interface Icon { id: string; name: string; x: number; y: number; w: number; h: number; rects: Rect[]; export?: boolean; aliases?: string[] }
-export interface Artboard { id: string; name: string; x: number; y: number; w: number; h: number; icons: Icon[]; rects: Rect[]; texts?: TextNode[]; export?: boolean; grid?: IconGrid }
+/** What an artboard's components export as: 7×5 icons (`raw-icons/`, the package root) or illustrations of any size (`raw-illustrations/`, `@indxsearch/pixl/illustrations`). */
+export type ArtboardKind = 'icons' | 'illustrations';
+export interface Artboard {
+  id: string; name: string; x: number; y: number; w: number; h: number; icons: Icon[]; rects: Rect[]; texts?: TextNode[]; export?: boolean; grid?: IconGrid;
+  /** Absent means 'icons'. */
+  kind?: ArtboardKind;
+}
+export const kindOf = (a: Artboard): ArtboardKind => a.kind ?? 'icons';
 
 /** Layout used by Arrange / Auto layout. Values are in icon pixels. */
 export interface IconGrid { cols: number; gap: number; pad: number; auto?: boolean }

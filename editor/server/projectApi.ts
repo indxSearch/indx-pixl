@@ -36,11 +36,12 @@ export function projectApi(root: string, run: RunScript, changed: (version: stri
         return json(200, files.map(f => ({ name: f.replace(/\.svg$/, ''), svg: fs.readFileSync(path.join(raw, f), 'utf8') })));
       }
       if (url === '/api/export' && request.method === 'POST') {
-        const { files, convert, build, colorsCss } = await request.json() as { files: { name: string; svg: string }[]; convert?: boolean; build?: boolean; colorsCss?: string };
-        if (!Array.isArray(files) || files.some(f => typeof f.name !== 'string' || !/^[\p{L}\p{N}][\p{L}\p{N} \-_]*$/u.test(f.name) || typeof f.svg !== 'string')) return json(400, { error: 'Invalid icon name or SVG' });
+        const { files, convert, build, colorsCss } = await request.json() as { files: { name: string; svg: string; kind?: string }[]; convert?: boolean; build?: boolean; colorsCss?: string };
+        if (!Array.isArray(files) || files.some(f => typeof f.name !== 'string' || !/^[\p{L}\p{N}][\p{L}\p{N} \-_]*$/u.test(f.name) || typeof f.svg !== 'string' || (f.kind !== undefined && f.kind !== 'icons' && f.kind !== 'illustrations'))) return json(400, { error: 'Invalid icon name, kind or SVG' });
         if (typeof colorsCss === 'string') fs.writeFileSync(path.join(root, 'colors.css'), colorsCss);
-        fs.mkdirSync(raw, { recursive: true });
-        for (const f of files) fs.writeFileSync(path.join(raw, f.name + '.svg'), f.svg);
+        // Icons go to raw-icons/ (the package root), illustrations to raw-illustrations/ (@indxsearch/pixl/illustrations).
+        const folderOf = (kind?: string) => (kind === 'illustrations' ? path.join(root, 'raw-illustrations') : raw);
+        for (const f of files) { fs.mkdirSync(folderOf(f.kind), { recursive: true }); fs.writeFileSync(path.join(folderOf(f.kind), f.name + '.svg'), f.svg); }
         const convertOutput = convert ? await run('convert') : '';
         const buildOutput = build ? await run('build') : '';
         return json(200, { ok: true, written: files.map(f => f.name), convertOutput, buildOutput });

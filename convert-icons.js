@@ -1,9 +1,19 @@
 const fs = require('fs');
 const path = require('path');
 
-const inputFolder = path.join(__dirname, 'raw-icons');
-const outputFolder = path.join(__dirname, 'src/icons');
+// Icons (raw-icons/) are the package root. Illustrations (raw-illustrations/) are generated under
+// src/icons/illustrations so that tsc keeps src/icons as its root and the icons stay at dist/*.js;
+// they come out as dist/illustrations/*, published as @indxsearch/pixl/illustrations.
+const sets = [
+  { input: path.join(__dirname, 'raw-icons'), output: path.join(__dirname, 'src/icons'), label: 'icons' },
+  { input: path.join(__dirname, 'raw-illustrations'), output: path.join(__dirname, 'src/icons/illustrations'), label: 'illustrations' },
+];
 
+for (const { input: inputFolder, output: outputFolder, label } of sets) {
+if (!fs.existsSync(inputFolder)) {
+  console.log(`No ${path.basename(inputFolder)}/, skipping ${label}.`);
+  continue;
+}
 if (!fs.existsSync(outputFolder)) {
   fs.mkdirSync(outputFolder, { recursive: true });
 }
@@ -75,7 +85,7 @@ export default ${componentName};
   console.log(`Generated ${componentName}.tsx`);
 });
 
-console.log('✅ All icons converted!');
+console.log(`✅ All ${label} converted!`);
 
 // --- After generating all icons ---
 const exportLines = files.map(file => {
@@ -87,5 +97,6 @@ const exportLines = files.map(file => {
   
   const indexFile = path.join(outputFolder, 'index.ts');
   fs.writeFileSync(indexFile, exportLines.join('\n') + '\n');
-  console.log('✅ index.ts generated!');
+  console.log(`✅ ${label} index.ts generated!`);
+}
   

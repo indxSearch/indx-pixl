@@ -1,4 +1,4 @@
-import { ACCENTS, type ColorToken, type Doc, type Fill, type Icon, type Rect, isAccent, isExported, isLevel, uid } from './types';
+import { ACCENTS, type ArtboardKind, type ColorToken, type Doc, type Fill, type Icon, type Rect, isAccent, isExported, isLevel, kindOf, uid } from './types';
 import { cssVarOf, slugOf } from './colors';
 import { fillsOf, maximalRects, mergedRects, outlinePath, toGrid } from './pixels';
 
@@ -30,6 +30,18 @@ export function exportIconSvg(icon: Icon, colors: ColorToken[] = [], mode: 'unio
 export function allComponents(doc: Doc): Icon[] {
   return doc.artboards.flatMap((a) => a.icons.filter((ic) => isExported(a, ic)));
 }
+/** Components that Export all writes, each with its artboard's kind: icons and illustrations go to
+ *  separate folders and packages, so the same name may appear once in each (a coloured "search"). */
+export function exportedByKind(doc: Doc): { icon: Icon; kind: ArtboardKind }[] {
+  return doc.artboards.flatMap((a) => a.icons.filter((ic) => isExported(a, ic)).map((icon) => ({ icon, kind: kindOf(a) })));
+}
+/** The kind of the artboard an icon sits on. */
+export function kindOfIcon(doc: Doc, icon: Icon): ArtboardKind {
+  const a = doc.artboards.find((x) => x.icons.some((ic) => ic.id === icon.id));
+  return a ? kindOf(a) : 'icons';
+}
+/** Folder an exported component lands in. */
+export const rawFolderOf = (kind: ArtboardKind) => (kind === 'illustrations' ? 'raw-illustrations' : 'raw-icons');
 /** Components skipped by Export all, with the reason. */
 export function skippedComponents(doc: Doc): { icon: Icon; reason: string }[] {
   return doc.artboards.flatMap((a) => a.icons.filter((ic) => !isExported(a, ic)).map((ic) => ({ icon: ic, reason: a.export === false ? `artboard "${a.name}" not exported` : 'not included in export' })));

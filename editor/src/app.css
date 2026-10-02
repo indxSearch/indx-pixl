@@ -169,6 +169,9 @@ button { font: inherit; color: inherit; }
 .color-editor .field .lbl { width: 34px; }
 .color-editor input[type=color] { width: 30px; height: 30px; flex: none; padding: 0; border: 1px solid var(--lv3); border-radius: var(--radius); background: none; }
 .color-editor .btn-row { align-items: center; }
+/* The other mode's value: still editable, but quieter than the one you see on the canvas. */
+.color-editor .other-mode { opacity: 0.6; }
+.color-editor .other-mode input[type=color] { width: 22px; height: 22px; }
 .color-editor .spacer { flex: 1; }
 .mono-hint { font-family: ui-monospace, Menlo, monospace; }
 

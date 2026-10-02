@@ -390,7 +390,7 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
     if (!vis(a)) continue;
     const s = screenBox(view, a);
     if (isRenaming(a.id)) overlay.push(<foreignObject key={'t' + a.id} x={s.x - 4} y={s.y - 22} width={Math.max(160, s.w)} height={20}><NameInput id={a.id} name={a.name} className="canvas-name ab" /></foreignObject>);
-    else overlay.push(<text key={'t' + a.id} className={'ab-title' + (a.export === false ? ' draft' : '')} x={s.x} y={s.y - 6} data-id={a.id} data-kind="artboard" data-role="title">{a.name}{a.export === false ? ' · not exported' : ''}</text>);
+    else overlay.push(<text key={'t' + a.id} className={'ab-title' + (a.export === false ? ' draft' : '')} x={s.x} y={s.y - 6} data-id={a.id} data-kind="artboard" data-role="title">{a.name}{a.kind === 'illustrations' ? ' · illustrations' : ''}{a.export === false ? ' · not exported' : ''}</text>);
     if (k >= LABEL_ZOOM) for (const ic of a.icons) {
       const ib = { x: a.x + ic.x, y: a.y + ic.y, w: ic.w, h: ic.h };
       if (!vis(ib)) continue;

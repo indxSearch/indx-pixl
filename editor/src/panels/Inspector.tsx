@@ -62,6 +62,10 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent }: { onCopy
           <>
             <ToggleSwitch label="Include in Export all" checked={(one.obj as Artboard).export !== false} onChange={(v) => edit((d) => ops.setProps(d, one.id, { export: v }))} />
             {(one.obj as Artboard).export === false && <div className="hint">Icons on this artboard are skipped by Export all, even if included individually.</div>}
+            <ToggleSwitch label="Export as illustrations" checked={(one.obj as Artboard).kind === 'illustrations'} onChange={(v) => edit((d) => ops.setProps(d, one.id, { kind: v ? 'illustrations' : undefined }))} />
+            <div className="hint">{(one.obj as Artboard).kind === 'illustrations'
+              ? 'Components here export to raw-illustrations/ and @indxsearch/pixl/illustrations, at any size.'
+              : 'Components here export to raw-icons/ and the package root, as 7×5 icons.'}</div>
             <div className="rule" />
             <span className="lbl">Auto layout</span>
             {(() => {

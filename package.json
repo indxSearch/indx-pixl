@@ -9,6 +9,18 @@
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./illustrations": {
+      "types": "./dist/illustrations/index.d.ts",
+      "default": "./dist/illustrations/index.js"
+    },
+    "./colors.css": "./colors.css",
+    "./*": "./*"
+  },
   "files": [
     "dist",
     "colors.css",

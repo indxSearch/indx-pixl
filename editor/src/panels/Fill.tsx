@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, InputField, Select, ToggleSwitch } from '@indxsearch/systm';
+import { Button, InputField, Select } from '@indxsearch/systm';
 import { Plus } from '@indxsearch/pixl';
 import { useEditor } from '../model/store';
 import { ACCENTS, type ColorToken, type Fill as FillT, type Rect, type TextNode, fillAttr, isToken, uid } from '../model/types';
@@ -10,7 +10,8 @@ import { Panel } from './Panel';
 
 const LEVELS = Array.from({ length: 9 }, (_, i) => `lv${i}`);
 
-export function FillPanel() {
+/** `dark` is the mode the editor shows: the canvas paints library colors in it, and the color editor edits it. */
+export function FillPanel({ dark }: { dark: boolean }) {
   const { state, sel, edit, ui } = useEditor();
   const colors = state.doc.colors ?? [];
   const colorIds = sel.filter((n) => n.kind === 'rect' || n.kind === 'text').map((n) => n.id);
@@ -57,7 +58,7 @@ export function FillPanel() {
           }))}
           <button className="sw-btn add" title="New color" onClick={() => addColor(hex)}><Plus size={14} color="currentColor" /></button>
         </div>
-        {editing && <ColorEditor key={editing} id={editing} onClose={() => setEditing(null)} />}
+        {editing && <ColorEditor key={editing + (dark ? ':dark' : ':light')} id={editing} dark={dark} onClose={() => setEditing(null)} />}
 
         <span className="lbl">Free color</span>
         <div className="free">
@@ -76,7 +77,11 @@ export function FillPanel() {
   );
 }
 
-function ColorEditor({ id, onClose }: { id: string; onClose: () => void }) {
+/** Edits a library color for the mode the editor is in: in dark mode the top field is the dark value,
+ *  in light mode the light value, so toggling Dark in the toolbar flips the artboard and this field
+ *  together. The other mode's value sits underneath. A color with no dark value is the same in both
+ *  modes until one is set, so editing it in dark mode is what makes it differ. */
+function ColorEditor({ id, dark: inDark, onClose }: { id: string; dark: boolean; onClose: () => void }) {
   const { state, edit, ui } = useEditor();
   const c = state.doc.colors?.find((x) => x.id === id);
   const [name, setName] = useState(c?.name ?? '');
@@ -88,10 +93,22 @@ function ColorEditor({ id, onClose }: { id: string; onClose: () => void }) {
 
   const used = usageOf(state.doc, colorRef(c.id));
   const problem = nameProblem(state.doc, { ...c, name });
-  const hasDark = c.dark !== undefined;
+  const hasDark = c.dark !== undefined && c.dark !== c.light;
   const commitName = () => { if (name !== c.name && !nameProblem(state.doc, { ...c, name })) edit((d) => ops.updateColor(d, c.id, { name })); else setName(c.name); };
+  // Light: while there is no dark value, dark follows it.
   const commitLight = (v: string) => { const h = toHex(v); if (h) { setLight(h); if (!hasDark) setDark(h); edit((d) => ops.updateColor(d, c.id, { light: h })); } };
-  const commitDark = (v: string) => { const h = toHex(v); if (h) { setDark(h); edit((d) => ops.updateColor(d, c.id, { dark: h })); } };
+  // Dark: setting it to the light value again makes the color the same in both modes.
+  const commitDark = (v: string) => { const h = toHex(v); if (h) { setDark(h); edit((d) => ops.updateColor(d, c.id, { dark: h === c.light ? undefined : h })); } };
+  const row = (mode: 'light' | 'dark', current: boolean) => {
+    const value = mode === 'light' ? light : dark, set = mode === 'light' ? setLight : setDark, commit = mode === 'light' ? commitLight : commitDark;
+    return (
+      <div className={'field' + (current ? '' : ' other-mode')}><span className="lbl">{mode === 'light' ? 'Light' : 'Dark'}</span>
+        <input type="color" value={toHex(value) ?? '#000000'} onChange={(e) => commit(e.target.value)} aria-label={`${mode} value`} />
+        <InputField value={value} onChange={(e) => set(e.target.value)} onBlur={(e) => commit(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') commit(value); }} />
+      </div>
+    );
+  };
+  const here: 'light' | 'dark' = inDark ? 'dark' : 'light', there: 'light' | 'dark' = inDark ? 'light' : 'dark';
 
   const replaceOptions = [
     { label: `Plain hex ${c.light}`, value: 'hex' },
@@ -106,18 +123,11 @@ function ColorEditor({ id, onClose }: { id: string; onClose: () => void }) {
         <InputField value={name} autoFocus onChange={(e) => setName(e.target.value)} onBlur={commitName} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} />
       </div>
       {problem ? <div className="warn">{problem}</div> : <div className="hint mono-hint">{cssVarOf({ ...c, name })}</div>}
-      <div className="field"><span className="lbl">Light</span>
-        <input type="color" value={toHex(light) ?? '#000000'} onChange={(e) => commitLight(e.target.value)} />
-        <InputField value={light} onChange={(e) => setLight(e.target.value)} onBlur={(e) => commitLight(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') commitLight(light); }} />
-      </div>
-      <ToggleSwitch label="Different in dark mode" checked={hasDark} onChange={(v) => { if (v) setDark(c.light); edit((d) => ops.updateColor(d, c.id, { dark: v ? c.light : undefined })); }} />
-      {hasDark && (
-        <div className="field"><span className="lbl">Dark</span>
-          <input type="color" value={toHex(dark) ?? '#000000'} onChange={(e) => commitDark(e.target.value)} />
-          <InputField value={dark} onChange={(e) => setDark(e.target.value)} onBlur={(e) => commitDark(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') commitDark(dark); }} />
-        </div>
-      )}
-      <div className="hint">{used ? `Used by ${used} rect${used === 1 ? '' : 's'}.` : 'Not used yet.'}{hasDark ? ' Toggle Dark in the toolbar to preview.' : ''}</div>
+      {row(here, true)}
+      {row(there, false)}
+      {!hasDark && <div className="hint">Same in both modes. Change it while the editor is in {there} mode, or edit {there} above, to make it differ.</div>}
+      {hasDark && <Button size="micro" variant="ghost" onClick={() => { const v = inDark ? dark : light; setLight(v); setDark(v); edit((d) => ops.updateColor(d, c.id, { light: v, dark: undefined })); }}>Use the {here} color in both modes</Button>}
+      <div className="hint">{used ? `Used by ${used} rect${used === 1 ? '' : 's'}.` : 'Not used yet.'} Toggle Dark in the toolbar to see and edit the other mode.</div>
 
       {deleting ? (
         <div className="stack">
