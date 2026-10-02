@@ -943,7 +943,11 @@ sealed class PixlLibrary
     public string SourceLabel { get; }
     public List<IconEntry> Icons { get; }
     public bool CanEdit => document is not null;
-    public List<string> ArtboardNames => document?["artboards"]?.AsArray().OfType<JsonObject>().Select(artboard => artboard["name"]?.GetValue<string>() ?? "Artboard").ToList() ?? ["raw-icons"];
+    public List<string> ArtboardNames => document?["artboards"]?.AsArray().OfType<JsonObject>().Where(IsMonochrome).Select(artboard => artboard["name"]?.GetValue<string>() ?? "Artboard").ToList() ?? ["raw-icons"];
+
+    /// <summary>The TUI drafts monochrome motives. Coloured illustrations belong to the canvas editor:
+    /// a save here writes every pixel as lv8 and would flatten their colours, so they are not shown.</summary>
+    private static bool IsMonochrome(JsonObject artboard) => artboard["kind"]?.GetValue<string>() != "illustrations";
     public IconEntry? FindIcon(string name) => Icons.FirstOrDefault(icon => string.Equals(icon.Name, name, StringComparison.OrdinalIgnoreCase));
 
     public static PixlLibrary Load(string pixlPath, string rawIconDir)
@@ -956,7 +960,7 @@ sealed class PixlLibrary
     {
         var node = JsonNode.Parse(File.ReadAllText(pixlPath))!;
         var icons = new List<IconEntry>();
-        foreach (var artboard in node["artboards"]!.AsArray().OfType<JsonObject>())
+        foreach (var artboard in node["artboards"]!.AsArray().OfType<JsonObject>().Where(IsMonochrome))
         {
             var artboardName = artboard["name"]?.GetValue<string>() ?? "Artboard";
             foreach (var icon in artboard["icons"]?.AsArray().OfType<JsonObject>() ?? Enumerable.Empty<JsonObject>())

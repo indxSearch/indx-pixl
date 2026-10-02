@@ -14,7 +14,7 @@ or, inside `console`:
 dotnet run
 ```
 
-The app loads `pixl.json` when it exists, so the gallery follows the same artboards and categories as the canvas editor. If `pixl.json` is missing it falls back to `raw-icons/*.svg` for a read-only preview.
+The app loads `pixl.json` when it exists, so the gallery follows the same artboards and categories as the canvas editor. Artboards of kind `illustrations` are left out: the console draws and saves monochrome pixels only, so a save here would flatten an illustration's colours. Colour work belongs in the canvas editor. If `pixl.json` is missing it falls back to `raw-icons/*.svg` for a read-only preview.
 
 Layout:
 
