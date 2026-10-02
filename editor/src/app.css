@@ -195,5 +195,9 @@ button { font: inherit; color: inherit; }
 
 /* desktop (Electron): the toolbar is the title bar. Traffic lights are ~52px wide at x 27, so the logo starts after them */
 .desktop .toolbar { -webkit-app-region: drag; }
-.desktop .toolbar :is(button, input, select, a, .zoom-popover) { -webkit-app-region: no-drag; }
+/* Everything clickable in the toolbar opts out of the window drag region, or macOS takes the click as
+   a window drag and the control never sees it. systm's ToggleSwitch is a <label> around a hidden
+   checkbox and its Slider is built from divs, so tag names alone are not enough: labels and anything
+   with a role or a tab stop count as controls too. */
+.desktop .toolbar :is(button, input, select, a, label, [role], [tabindex], .zoom-popover) { -webkit-app-region: no-drag; }
 .desktop:not(.fullscreen) .toolbar .brand { padding-left: 78px; }
