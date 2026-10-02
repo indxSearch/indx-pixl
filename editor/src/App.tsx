@@ -188,40 +188,43 @@ function Editor() {
     if (!nodes.length) return status('Nothing to cut');
     if (await writeNodeClipboard(nodes)) remove(nodes);
   }, [sel, writeNodeClipboard, remove, status]);
+  /** Paste where the user is now: into the focused icon, else the artboard of the current selection
+   *  (an artboard selected after copying counts), else back where the items were copied from. In the
+   *  place they came from, items shift by one pixel so the copy is visible; elsewhere they keep their
+   *  position within the artboard or icon. */
   const pasteNodes = useCallback((payload: PixlClipboard) => {
-    const selected: string[] = [];
+    const selected: string[] = [], touched = new Set<string>();
+    const focusIcon = state.ui.focus ? index.get(state.ui.focus) : undefined;
+    const here = focusIcon?.artboardId ?? sel[0]?.artboardId ?? null;
     edit((doc) => {
       let next = doc;
+      const exists = (id: string | null | undefined) => !!id && doc.artboards.some((a) => a.id === id);
       const first = payload.nodes[0];
-      const fallback = first ? (doc.artboards.find((a) => a.id === first.artboardId)?.id ?? doc.artboards[0]?.id) : doc.artboards[0]?.id;
+      const fallback = exists(here) ? here! : first && exists(first.artboardId) ? first.artboardId : doc.artboards[0]?.id;
       if (!fallback) return doc;
       for (const item of payload.nodes) {
-        const artboardId = doc.artboards.find((a) => a.id === item.artboardId)?.id ?? fallback;
+        const artboardId = exists(here) ? here! : exists(item.artboardId) ? item.artboardId : fallback;
+        const nudge = artboardId === item.artboardId ? 1 : 0;
+        const id = uid();
+        selected.push(id); touched.add(artboardId);
         if (item.kind === 'icon') {
-          const id = uid();
-          selected.push(id);
-          next = ops.addIcon(next, artboardId, { ...structuredClone(item.icon), id, x: item.icon.x + 1, y: item.icon.y + 1, rects: item.icon.rects.map((r) => ({ ...r, id: uid() })) });
+          next = ops.addIcon(next, artboardId, { ...structuredClone(item.icon), id, x: item.icon.x + nudge, y: item.icon.y + nudge, rects: item.icon.rects.map((r) => ({ ...r, id: uid() })) });
         } else if (item.kind === 'text') {
-          const id = uid();
-          selected.push(id);
-          next = ops.addText(next, artboardId, { ...structuredClone(item.text), id, x: item.text.x + 1, y: item.text.y + 1 });
-        } else if (item.iconId && next.artboards.some((a) => a.icons.some((ic) => ic.id === item.iconId))) {
-          const id = uid();
-          selected.push(id);
-          next = ops.addRect(next, artboardId, item.iconId, { ...structuredClone(item.rect), id, x: item.rect.x + 1, y: item.rect.y + 1 });
+          next = ops.addText(next, artboardId, { ...structuredClone(item.text), id, x: item.text.x + nudge, y: item.text.y + nudge });
         } else {
-          const id = uid();
-          selected.push(id);
-          next = ops.addRect(next, artboardId, null, { ...structuredClone(item.rect), id, x: item.rect.x + 1, y: item.rect.y + 1 });
+          // a pixel goes into the focused icon, or back into its own icon when that is on the target artboard
+          const into = focusIcon ? focusIcon.id : item.iconId && next.artboards.find((a) => a.id === artboardId)?.icons.some((ic) => ic.id === item.iconId) ? item.iconId : null;
+          const shift = into === item.iconId && artboardId === item.artboardId ? 1 : 0;
+          next = ops.addRect(next, artboardId, into, { ...structuredClone(item.rect), id, x: item.rect.x + shift, y: item.rect.y + shift });
         }
       }
-      for (const id of [...new Set(payload.nodes.map((n) => n.artboardId))]) if (next.artboards.find((a) => a.id === id)?.grid?.auto) next = ops.arrangeArtboardItems(next, id);
+      for (const id of touched) if (next.artboards.find((a) => a.id === id)?.grid?.auto) next = ops.arrangeArtboardItems(next, id);
       return next;
     });
-    const firstArtboard = payload.nodes[0]?.artboardId;
-    ui({ sel: selected, focus: null, expanded: selected.length && firstArtboard ? { ...state.ui.expanded, [firstArtboard]: true } : state.ui.expanded });
+    const firstArtboard = here ?? payload.nodes[0]?.artboardId;
+    ui({ sel: selected, focus: focusIcon ? focusIcon.id : null, expanded: selected.length && firstArtboard ? { ...state.ui.expanded, [firstArtboard]: true } : state.ui.expanded });
     status(`Pasted ${selected.length} item${selected.length === 1 ? '' : 's'}`);
-  }, [edit, ui, state.ui.expanded, status]);
+  }, [edit, ui, state.ui.expanded, state.ui.focus, index, sel, status]);
 
   /** Merge (union) the rects of the given icons, or of the current selection / focused icon. */
   const merge = useCallback((iconIds?: string[]) => {
