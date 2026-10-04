@@ -7,6 +7,7 @@ import { Toolbar } from './panels/Toolbar';
 import { Layers } from './panels/Layers';
 import { Inspector } from './panels/Inspector';
 import { FillPanel } from './panels/Fill';
+import { SelectionColors } from './panels/SelectionColors';
 import { Preview } from './panels/Preview';
 import { Aliases } from './panels/Aliases';
 import { useShortcuts } from './hooks/useShortcuts';
@@ -412,6 +413,7 @@ function Editor() {
           {!state.ui.hideUi && (
             <div className="column">
               <Inspector onCopySvg={copySvg} onExportIcon={exportIcon} onMakeComponent={makeComponent} />
+              <SelectionColors />
               <FillPanel dark={dark} />
               <Preview />
               <Aliases />

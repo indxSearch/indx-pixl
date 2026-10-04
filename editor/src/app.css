@@ -119,6 +119,7 @@ button { font: inherit; color: inherit; }
 .icon-grid { stroke: var(--lv2); fill: none; pointer-events: none; }
 .outline { fill: none; stroke: var(--CPureBlue); pointer-events: none; }
 .outline.hover { stroke-opacity: 0.5; }
+.outline.highlight { stroke: var(--CSignal); stroke-width: 2; }
 .bbox { fill: none; stroke: var(--CPureBlue); stroke-dasharray: 3 3; pointer-events: none; }
 .handle { fill: var(--lv0); stroke: var(--CPureBlue); }
 .handle[data-h=nw], .handle[data-h=se] { cursor: nwse-resize; }
@@ -163,6 +164,11 @@ button { font: inherit; color: inherit; }
 .accents { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; }
 
 /* color library */
+.sel-colors { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+.sel-color { display: grid; grid-template-columns: 22px 1fr auto auto; align-items: center; gap: 8px; }
+.sel-color .sw-btn { width: 22px; height: 22px; }
+.sel-color-name { justify-content: flex-start; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fill-picker { width: 240px; padding: 10px; background: var(--lv1); border: 1px solid var(--lv3); border-radius: var(--radius); }
 .used-by { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
 .sw-btn.dragging { opacity: 0.35; }
 .sw-btn.drop-before::before, .sw-btn.drop-after::after { content: ''; position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--CPureBlue); }

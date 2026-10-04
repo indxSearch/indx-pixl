@@ -413,6 +413,7 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
   }
   const hoverNode = hover && !state.ui.sel.includes(hover) ? index.get(hover) : null;
   if (hoverNode && !drag) { const s = screenBox(view, { x: hoverNode.ax, y: hoverNode.ay, w: hoverNode.w, h: hoverNode.h }); overlay.push(<rect key="hover" className="outline hover" x={s.x + .5} y={s.y + .5} width={Math.max(0, s.w - 1)} height={Math.max(0, s.h - 1)} />); }
+  for (const id of state.ui.highlight) { const n = index.get(id); if (!n) continue; const s = screenBox(view, { x: n.ax, y: n.ay, w: n.w, h: n.h }); overlay.push(<rect key={'hl' + id} className="outline highlight" x={s.x + .5} y={s.y + .5} width={Math.max(0, s.w - 1)} height={Math.max(0, s.h - 1)} />); }
   for (const n of sel) { const s = screenBox(view, { x: n.ax, y: n.ay, w: n.w, h: n.h }); overlay.push(<rect key={'s' + n.id} className="outline" x={s.x + .5} y={s.y + .5} width={Math.max(0, s.w - 1)} height={Math.max(0, s.h - 1)} />); }
   if (sel.length > 1) { const b = bboxOf(sel)!; const s = screenBox(view, b); overlay.push(<rect key="bbox" className="bbox" x={s.x + .5} y={s.y + .5} width={s.w - 1} height={s.h - 1} />); }
   if (sel.length === 1 && !drag) {

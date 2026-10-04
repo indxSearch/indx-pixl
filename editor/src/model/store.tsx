@@ -10,6 +10,7 @@ export interface UI {
   sel: string[];
   focus: string | null; // icon id being edited
   hover: string | null;
+  highlight: string[]; // pixels outlined while a selection color is hovered
   view: View;
   fill: Fill;
   theme: Theme;
@@ -77,7 +78,7 @@ export const persist = (k: string, v: unknown) => { try { localStorage.setItem(k
 const initial: State = {
   doc: emptyDoc(), past: [], future: [], savedDoc: null,
   ui: {
-    tool: 'select', sel: [], focus: null, hover: null,
+    tool: 'select', sel: [], focus: null, hover: null, highlight: [],
     view: load('pixl.view', { x: 80, y: 80, k: 8 }),
     fill: 'lv8', theme: load('pixl.theme', 'system'), grid: true, expanded: {}, status: '', renaming: null, hideUi: false, autoMerge: load('pixl.autoMerge', true), dragging: false,
   },
