@@ -1,4 +1,4 @@
-import { ACCENTS, type ArtboardKind, type ColorToken, type Doc, type Fill, type Icon, type Rect, isAccent, isExported, isLevel, kindOf, uid } from './types';
+import { ACCENTS, type ArtboardKind, type ColorToken, type Doc, type Fill, type Icon, type Rect, type Variant, isAccent, isExported, isLevel, kindOf, uid } from './types';
 import { cssVarOf, slugOf } from './colors';
 import { fillsOf, maximalRects, mergedRects, outlinePath, toGrid } from './pixels';
 
@@ -35,6 +35,23 @@ export function allComponents(doc: Doc): Icon[] {
 export function exportedByKind(doc: Doc): { icon: Icon; kind: ArtboardKind }[] {
   return doc.artboards.flatMap((a) => a.icons.filter((ic) => isExported(a, ic)).map((icon) => ({ icon, kind: kindOf(a) })));
 }
+/** An icon as one of its variants looks: the same rects with the variant's fills swapped in. */
+export function variantIcon(icon: Icon, v: Variant): Icon {
+  return { ...icon, name: `${icon.name} ${v.name}`, variants: undefined, rects: icon.rects.map((r) => ({ ...r, fill: v.swaps[r.fill] ?? r.fill })) };
+}
+/** Every file Export all writes: each component, then each of its variants as "<name> <variant>". */
+export function exportedFiles(doc: Doc): { icon: Icon; kind: ArtboardKind; base: string; variant?: string }[] {
+  return exportedByKind(doc).flatMap(({ icon, kind }) => [
+    { icon, kind, base: icon.name },
+    ...(icon.variants ?? []).map((v) => ({ icon: variantIcon(icon, v), kind, base: icon.name, variant: v.name })),
+  ]);
+}
+/** Per kind, which components have variants and what they are called: written as variants.json for convert-icons.js. */
+export function variantManifest(doc: Doc): Record<ArtboardKind, Record<string, string[]>> {
+  const out: Record<ArtboardKind, Record<string, string[]>> = { icons: {}, illustrations: {} };
+  for (const { icon, kind } of exportedByKind(doc)) if (icon.variants?.length) out[kind][icon.name] = icon.variants.map((v) => v.name);
+  return out;
+}
 /** The kind of the artboard an icon sits on. */
 export function kindOfIcon(doc: Doc, icon: Icon): ArtboardKind {
   const a = doc.artboards.find((x) => x.icons.some((ic) => ic.id === icon.id));
@@ -44,7 +61,7 @@ export function kindOfIcon(doc: Doc, icon: Icon): ArtboardKind {
 export const rawFolderOf = (kind: ArtboardKind) => (kind === 'illustrations' ? 'raw-illustrations' : 'raw-icons');
 /** Components skipped by Export all, with the reason. */
 export function skippedComponents(doc: Doc): { icon: Icon; reason: string }[] {
-  return doc.artboards.flatMap((a) => a.icons.filter((ic) => !isExported(a, ic)).map((ic) => ({ icon: ic, reason: a.export === false ? `artboard "${a.name}" not exported` : 'not included in export' })));
+  return doc.artboards.flatMap((a) => a.icons.filter((ic) => !isExported(a, ic) && !ic.instance).map((ic) => ({ icon: ic, reason: a.export === false ? `artboard "${a.name}" not exported` : 'not included in export' })));
 }
 
 // ---- import ----

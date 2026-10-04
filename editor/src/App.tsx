@@ -12,7 +12,7 @@ import { Preview } from './panels/Preview';
 import { Aliases } from './panels/Aliases';
 import { useShortcuts } from './hooks/useShortcuts';
 import { useAutosave } from './hooks/useAutosave';
-import { allComponents, exportIconSvg, exportedByKind, importSvg, kindOfIcon, rawFolderOf, skippedComponents } from './model/svg';
+import { allComponents, exportIconSvg, exportedByKind, exportedFiles, importSvg, kindOfIcon, rawFolderOf, skippedComponents, variantManifest } from './model/svg';
 import { looksLikeSvg, parseSvg } from './model/pasteSvg';
 import { editorColorCss, exportColorCss } from './model/colors';
 import * as ops from './model/ops';
@@ -91,19 +91,20 @@ function Editor() {
   const illustrationCount = byKind.filter((c) => c.kind === 'illustrations').length;
   const skipped = skippedComponents(state.doc);
   // A name must be unique within its kind; an icon and its coloured illustration share one on purpose.
-  const keys = byKind.map((c) => `${c.kind}\u0000${c.icon.name}`);
+  const files = exportedFiles(state.doc);
+  const keys = files.map((c) => `${c.kind}\u0000${c.icon.name}`);
   const dupes = [...new Set(keys.filter((k, i) => keys.indexOf(k) !== i).map((k) => k.replace('\u0000', ': ')))];
-  const badNames = icons.map((i) => i.name).filter((n) => !/^[\p{L}\p{N}][\p{L}\p{N} \-_]*$/u.test(n));
+  const badNames = files.map((f) => f.icon.name).filter((n) => !/^[\p{L}\p{N}][\p{L}\p{N} \-_]*$/u.test(n));
   const exportAll = useCallback(async () => {
     setExporting(true);
     try {
-      const r = await api.exportIcons(byKind.map(({ icon, kind }) => ({ name: icon.name, svg: exportIconSvg(icon, state.doc.colors), kind })), convert, buildPackage, exportColorCss(state.doc.colors));
+      const r = await api.exportIcons(files.map(({ icon, kind }) => ({ name: icon.name, svg: exportIconSvg(icon, state.doc.colors), kind })), convert, buildPackage, exportColorCss(state.doc.colors), variantManifest(state.doc));
       status(`Exported ${r.written.length} components${convert ? ' + converted' : ''}${buildPackage ? ' + built package' : ''}`);
       if (r.convertOutput || r.buildOutput) console.log([r.convertOutput, r.buildOutput].filter(Boolean).join('\n'));
       setExportOpen(false);
     } catch (e) { status('Export failed: ' + (e as Error).message); }
     finally { setExporting(false); }
-  }, [byKind, convert, buildPackage, status]);
+  }, [files, convert, buildPackage, status, state.doc]);
   const makeComponent = useCallback((name?: string) => {
     const rects = sel.filter((n) => n.kind === 'rect' && !n.iconId);
     if (!rects.length || new Set(rects.map((n) => n.artboardId)).size !== 1) return status('Select loose rects on one artboard');

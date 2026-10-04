@@ -78,11 +78,11 @@ export function Layers({ onMenu, onReveal }: { onMenu: (x: number, y: number, no
       <div key={ic.id}>
         <div className={'row' + (sel.includes(ic.id) ? ' sel' : '') + (focus === ic.id ? ' focus' : '') + (live ? '' : ' draft')} style={{ paddingLeft: 24 }} onClick={(e) => pick(e, ic.id, null)} onDoubleClick={() => ui({ focus: ic.id, sel: [] })} onContextMenu={(e) => ctx(e, ic.id, null)}>
           <span className="caret" onClick={(e) => { e.stopPropagation(); toggle(ic.id, ic.id === focus); }}>{open ? '▾' : '▸'}</span>
-          {live ? <Component size={12} color="var(--CPureBlue)" /> : <Instance size={12} color="var(--lv4)" />}
+          {ic.instance ? <Instance size={12} color="var(--sel)" /> : <Component size={12} color={live ? 'var(--sel)' : 'var(--lv4)'} />}
           {nameOf(ic.id, ic.name)}
           <span className="dim">{ic.w}×{ic.h}</span>
         </div>
-        {open && ic.rects.slice().reverse().map((r) => rectRow(r, 2, ic.id))}
+        {open && !ic.instance && ic.rects.slice().reverse().map((r) => rectRow(r, 2, ic.id))}
       </div>
     );
   };

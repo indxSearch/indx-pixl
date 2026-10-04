@@ -19,6 +19,11 @@ if (!fs.existsSync(outputFolder)) {
 }
 
 const files = fs.readdirSync(inputFolder).filter(file => file.endsWith('.svg'));
+// Colour variants (written by the editor's Export all): { "heart": ["red", "amber"] } gives Heart a
+// `variant` prop that renders Heart_red, Heart_amber. Each variant is also its own file and component.
+const manifestFile = path.join(inputFolder, 'variants.json');
+const variantsOf = fs.existsSync(manifestFile) ? JSON.parse(fs.readFileSync(manifestFile, 'utf8')) : {};
+const nameOf = (base) => base.replace(/\s+/g, '_').replace(/(^\w|-\w)/g, clear => clear.replace('-', '').toUpperCase());
 
 files.forEach(file => {
   const componentName = path.basename(file, '.svg')
@@ -46,19 +51,24 @@ files.forEach(file => {
   const height = heightMatch ? parseFloat(heightMatch[1]) : 5;
   const aspectRatio = height / width;
 
-  const component = `import React from "react";
+  const variants = (variantsOf[path.basename(file, '.svg')] || []).filter(v => files.includes(`${path.basename(file, '.svg')} ${v}.svg`));
+  const variantImports = variants.map(v => `import ${nameOf(`${path.basename(file, '.svg')} ${v}`)} from "./${nameOf(`${path.basename(file, '.svg')} ${v}`)}";\n`).join('');
+  const variantProp = variants.length ? `\n  /** A colour variant of the same drawing. Omit for the original. */\n  variant?: ${variants.map(v => JSON.stringify(v)).join(' | ')};` : '';
+  const variantSwitch = variants.map(v => `  if (variant === ${JSON.stringify(v)}) return <${nameOf(`${path.basename(file, '.svg')} ${v}`)} color={color} size={size} />;\n`).join('');
 
+  const component = `import React from "react";
+${variantImports}
 type IconProps = {
   /** Overrides every fill. Omit to keep the icon's own level fills (var(--lvN)). */
   color?: string;
-  size?: number | string;
+  size?: number | string;${variantProp}
 };
 
 const ${componentName}: React.FC<IconProps> = ({
   color,
-  size = ${width * 3},
+  size = ${width * 3},${variants.length ? '\n  variant,' : ''}
 }) => {
-  const aspectRatio = ${aspectRatio};
+${variantSwitch}  const aspectRatio = ${aspectRatio};
   const width = size;
   const height = typeof size === "number" ? size * aspectRatio : \`calc(\${size} * ${aspectRatio})\`;
 

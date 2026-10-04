@@ -5,6 +5,7 @@ import * as ops from '../model/ops';
 import { NameInput } from '../panels/NameInput';
 import { HANDLES, type Handle, handlePos, norm, resizeBox, screenBox, toWorld } from './geometry';
 import { type Guide, measure, movingEdges, snap } from './guides';
+import { drawnRects } from '../model/instances';
 
 type Drag =
   | { type: 'pan'; sx: number; sy: number; vx: number; vy: number }
@@ -423,8 +424,8 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
       if (!vis(ib)) continue;
       const is = screenBox(view, ib);
       const isFocus = ic.id === focus, live = isExported(a, ic);
-      overlay.push(<g key={'l' + ic.id} className={'icon-label' + (isFocus ? ' focus' : '') + (live ? '' : ' draft')} data-id={ic.id} data-kind="icon" data-role="title">
-        <path transform={`translate(${is.x} ${is.y - 14}) scale(1.4)`} d={live ? COMPONENT_PATH : INSTANCE_PATH} />
+      overlay.push(<g key={'l' + ic.id} className={'icon-label' + (isFocus ? ' focus' : '') + (ic.instance ? ' instance' : live ? '' : ' draft')} data-id={ic.id} data-kind="icon" data-role="title">
+        <path transform={`translate(${is.x} ${is.y - 14}) scale(1.4)`} d={ic.instance ? INSTANCE_PATH : COMPONENT_PATH} />
         {isRenaming(ic.id)
           ? <foreignObject x={is.x + 10} y={is.y - 20} width={Math.max(120, is.w)} height={18}><NameInput id={ic.id} name={ic.name} className="canvas-name" /></foreignObject>
           : <text x={is.x + 14} y={is.y - 6}>{ic.name}</text>}
@@ -483,7 +484,7 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
             <rect className="ab-bg" data-id={a.id} data-kind="artboard" x={a.x} y={a.y} width={a.w} height={a.h} />
             {a.rects.map((r) => <RectEl key={r.id} r={r} ox={a.x} oy={a.y} />)}
             {(a.texts ?? []).map((t) => <TextEl key={t.id} t={t} ox={a.x} oy={a.y} />)}
-            {a.icons.map((ic) => <IconEl key={ic.id} ic={ic} ox={a.x} oy={a.y} />)}
+            {a.icons.map((ic) => <IconEl key={ic.id} ic={ic} rects={drawnRects(doc, ic)} ox={a.x} oy={a.y} swaps={state.ui.preview?.icon === ic.id ? ic.variants?.find((v) => v.id === state.ui.preview!.variant)?.swaps : undefined} />)}
           </g>
         ))}
         {drag?.type === 'draw' && (() => { const b = norm(drag.x0, drag.y0, drag.x1, drag.y1); return <rect className="drawing" x={drag.ox + b.x} y={drag.oy + b.y} width={b.w + 1} height={b.h + 1} fill={fillAttr(state.ui.fill)} />; })()}
@@ -497,14 +498,18 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
 const INSTANCE_PATH = 'M3 0H4V1H5V2H6V3H5V4H4V5H3V4H2V3H1V2H2V1H3ZM4 1H3V2H2V3H3V4H4V3H5V2H4Z';
 const COMPONENT_PATH = 'M4 5H3V4H4V5ZM3 3V4H2V3H3ZM5 4H4V3H5V4ZM2 3H1V2H2V3ZM4 3H3V2H4V3ZM6 3H5V2H6V3ZM3 2H2V1H3V2ZM5 2H4V1H5V2ZM4 1H3V0H4V1Z';
 
-function RectEl({ r, ox, oy }: { r: Rect; ox: number; oy: number }) {
-  return <rect data-id={r.id} data-kind="rect" x={ox + r.x} y={oy + r.y} width={r.w} height={r.h} fill={fillAttr(r.fill)} shapeRendering="crispEdges" />;
+function RectEl({ r, ox, oy, swaps }: { r: Rect; ox: number; oy: number; swaps?: Record<string, string> }) {
+  return <rect data-id={r.id} data-kind="rect" x={ox + r.x} y={oy + r.y} width={r.w} height={r.h} fill={fillAttr(swaps?.[r.fill] ?? r.fill)} shapeRendering="crispEdges" />;
 }
-function IconEl({ ic, ox, oy }: { ic: Icon; ox: number; oy: number }) {
+/** `swaps` set while one of the icon's colour variants is previewed. */
+function IconEl({ ic, rects, ox, oy, swaps }: { ic: Icon; rects: Rect[]; ox: number; oy: number; swaps?: Record<string, string> }) {
+  const frame = <rect data-id={ic.id} data-kind="icon" x={ox + ic.x} y={oy + ic.y} width={ic.w} height={ic.h} fill="transparent" />;
+  // an instance's pixels belong to its component: draw them without ids, under a frame that takes the clicks
+  if (ic.instance) return <g className="instance">{rects.map((r, i) => <rect key={i} x={ox + ic.x + r.x} y={oy + ic.y + r.y} width={r.w} height={r.h} fill={fillAttr(r.fill)} shapeRendering="crispEdges" pointerEvents="none" />)}{frame}</g>;
   return (
     <g>
-      <rect data-id={ic.id} data-kind="icon" x={ox + ic.x} y={oy + ic.y} width={ic.w} height={ic.h} fill="transparent" />
-      {ic.rects.map((r) => <RectEl key={r.id} r={r} ox={ox + ic.x} oy={oy + ic.y} />)}
+      {frame}
+      {rects.map((r) => <RectEl key={r.id} r={r} ox={ox + ic.x} oy={oy + ic.y} swaps={swaps} />)}
     </g>
   );
 }

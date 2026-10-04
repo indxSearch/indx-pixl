@@ -3,7 +3,12 @@ export type Fill = string; // 'lv0'..'lv8' or '#rrggbb'
 export interface Rect { id: string; x: number; y: number; w: number; h: number; fill: Fill }
 /** A small pixel-font label positioned relative to an artboard. `y` is the top edge. */
 export interface TextNode { id: string; text: string; x: number; y: number; w: number; h: number; size: number; fill: Fill }
-export interface Icon { id: string; name: string; x: number; y: number; w: number; h: number; rects: Rect[]; export?: boolean; aliases?: string[] }
+export interface Icon { id: string; name: string; x: number; y: number; w: number; h: number; rects: Rect[]; export?: boolean; aliases?: string[]; variants?: Variant[];
+  /** Set on an instance: it draws another icon's pixels, optionally in one of its variants, and has no rects of its own. */
+  instance?: { of: string; variant?: string } }
+/** A colour variant of an icon: the same pixels with some fills swapped, like a red heart drawn from the violet
+ *  one. It exports as "<icon> <variant>" and as a `variant` prop on the icon's component. */
+export interface Variant { id: string; name: string; swaps: Record<string, Fill> }
 /** What an artboard's components export as: 7×5 icons (`raw-icons/`, the package root) or illustrations of any size (`raw-illustrations/`, `@indxsearch/pixl/illustrations`). */
 export type ArtboardKind = 'icons' | 'illustrations';
 export interface Artboard {
@@ -18,7 +23,7 @@ export interface IconGrid { cols: number; gap: number; pad: number; auto?: boole
 export const DEFAULT_GRID: IconGrid = { cols: 10, gap: 7, pad: 7, auto: false };
 
 /** Is this icon part of Export all? Icons are drafts unless `export` is true, and icons on non-exported artboards are skipped. */
-export const isExported = (a: Artboard, ic: Icon) => a.export !== false && ic.export === true;
+export const isExported = (a: Artboard, ic: Icon) => a.export !== false && ic.export === true && !ic.instance;
 /** A named document color. `dark` is optional; without it the color is the same in both modes. */
 export interface ColorToken { id: string; name: string; light: string; dark?: string }
 export interface Doc { version: 1; artboards: Artboard[]; colors?: ColorToken[] }

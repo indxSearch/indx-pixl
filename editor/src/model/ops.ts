@@ -452,3 +452,41 @@ export function moveColor(doc: Doc, id: string, dir: -1 | 1): Doc {
   [list[i], list[j]] = [list[j], list[i]];
   return d;
 }
+
+// ---- colour variants ----
+import type { Variant } from './types';
+const findIconIn = (d: Doc, iconId: string) => d.artboards.flatMap((a) => a.icons).find((i) => i.id === iconId);
+export function addVariant(doc: Doc, iconId: string, v: Variant): Doc {
+  const d = clone(doc), ic = findIconIn(d, iconId);
+  if (!ic) return doc;
+  ic.variants = [...(ic.variants ?? []), v];
+  return d;
+}
+export function updateVariant(doc: Doc, iconId: string, variantId: string, patch: Partial<Omit<Variant, 'id'>>): Doc {
+  const d = clone(doc), v = findIconIn(d, iconId)?.variants?.find((x) => x.id === variantId);
+  if (!v) return doc;
+  Object.assign(v, patch);
+  return d;
+}
+export function deleteVariant(doc: Doc, iconId: string, variantId: string): Doc {
+  const d = clone(doc), ic = findIconIn(d, iconId);
+  if (!ic?.variants) return doc;
+  ic.variants = ic.variants.filter((v) => v.id !== variantId);
+  if (!ic.variants.length) delete ic.variants;
+  return d;
+}
+/** Swap `from` for `to` in one variant; swapping a fill for itself removes the swap. */
+export function setSwap(doc: Doc, iconId: string, variantId: string, from: Fill, to: Fill): Doc {
+  const d = clone(doc), v = findIconIn(d, iconId)?.variants?.find((x) => x.id === variantId);
+  if (!v) return doc;
+  if (to === from) delete v.swaps[from]; else v.swaps[from] = to;
+  return d;
+}
+/** Recolour the icon itself, carrying every variant's swap for the old fill over to the new one. */
+export function recolorIcon(doc: Doc, iconId: string, from: Fill, to: Fill): Doc {
+  const d = clone(doc), ic = findIconIn(d, iconId);
+  if (!ic || from === to) return doc;
+  for (const r of ic.rects) if (r.fill === from) r.fill = to;
+  for (const v of ic.variants ?? []) if (from in v.swaps) { v.swaps[to] = v.swaps[from]; delete v.swaps[from]; if (v.swaps[to] === to) delete v.swaps[to]; }
+  return d;
+}

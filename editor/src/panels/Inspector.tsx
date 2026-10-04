@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Button, InputField, ToggleSwitch } from '@indxsearch/systm';
+import { Button, InputField, Select, ToggleSwitch } from '@indxsearch/systm';
 import { Component, Copy, Download } from '@indxsearch/pixl';
 import { useEditor } from '../model/store';
 import { type Artboard, DEFAULT_GRID, type Icon, type Node, type Rect, type TextNode, fillAttr, uid } from '../model/types';
 import * as ops from '../model/ops';
 import { Panel } from './Panel';
+import { Variants } from './Variants';
+import { detachInstance, masterOf, placeVariants } from '../model/instances';
 
 const Num = ({ label, value, onChange, min }: { label: string; value: number | ''; onChange: (v: number) => void; min?: number }) => (
   <div className="field">
@@ -85,7 +87,27 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent }: { onCopy
             })()}
           </>
         )}
-        {one?.kind === 'icon' && (
+        {one?.kind === 'icon' && (one.obj as Icon).instance && (() => {
+          const ic = one.obj as Icon, m = masterOf(state.doc, ic);
+          if (!m) return <div className="warn">Its component was deleted. Detach to keep these pixels, or delete the instance.</div>;
+          const options = [{ label: `${m.name} (base)`, value: '' }, ...(m.variants ?? []).map((v) => ({ label: v.name, value: v.id }))];
+          return (
+            <>
+              <div className="field"><span className="lbl">Instance of</span><span className="mono">{m.name}</span></div>
+              {(m.variants?.length ?? 0) > 0 && (
+                <div className="field"><span className="lbl">Variant</span>
+                  <Select size="micro" value={ic.instance!.variant ?? ''} onValueChange={(v) => edit((d) => ops.setProps(d, ic.id, { instance: { of: m.id, variant: v || undefined } }))} options={options} aria-label="Variant" />
+                </div>
+              )}
+              <div className="btn-row">
+                <Button size="micro" variant="secondary" onClick={() => ui({ sel: [m.id], focus: null })}>Go to component</Button>
+                <Button size="micro" variant="ghost" onClick={() => edit((d) => detachInstance(d, ic.id))}>Detach</Button>
+              </div>
+              <div className="hint">Draws its component's pixels and follows every change to it. Not exported: its variant exports with the component.</div>
+            </>
+          );
+        })()}
+        {one?.kind === 'icon' && !(one.obj as Icon).instance && (
           <>
             <ToggleSwitch label="Include in export" checked={(one.obj as Icon).export === true} onChange={(v) => edit((d) => ops.setProps(d, one.id, { export: v }))} />
             <div className="field"><span className="lbl">File</span><span className="mono dim">raw-icons/{(one.obj as Icon).name}.svg</span></div>
@@ -94,6 +116,11 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent }: { onCopy
               <Button size="micro" variant="secondary" iconLeft={<Download />} onClick={() => onExportIcon(one.obj as Icon)}>Export</Button>
             </div>
             <Button size="micro" variant="ghost" onClick={() => { edit((d) => ops.detachComponent(d, one.id)); ui({ sel: [] }); }}>Detach component</Button>
+            <div className="rule" />
+            <Variants icon={one.obj as Icon} />
+            {((one.obj as Icon).variants?.length ?? 0) > 0 && (
+              <Button size="micro" variant="secondary" onClick={() => { const r = placeVariants(state.doc, one.id); if (r.ids.length) { edit(() => r.doc); ui({ sel: r.ids }); } }}>Place variants</Button>
+            )}
           </>
         )}
         {looseOnly && (

@@ -26,7 +26,7 @@ function idsInScope(sel: Node[], focusIcon: Node | undefined, doc: Doc): string[
 }
 
 /** A swatch's background: library colors that differ per mode show both halves, like the Fill panel. */
-function swatchStyle(f: FillT, colors: ColorToken[]) {
+export function swatchStyle(f: FillT, colors: ColorToken[]) {
   const c = colors.find((x) => x.id === colorIdOf(f));
   return c?.dark && c.dark !== c.light ? { background: `linear-gradient(135deg, ${c.light} 50%, ${c.dark} 50%)` } : { background: fillAttr(f) };
 }
@@ -38,7 +38,7 @@ export function labelOf(f: FillT, doc: Doc): string {
 }
 
 /** Every swatch the document offers, plus a hex field: what a selection color can be changed to. */
-function FillPicker({ current, onPick }: { current: FillT; onPick: (f: FillT) => void }) {
+export function FillPicker({ current, onPick }: { current: FillT; onPick: (f: FillT) => void }) {
   const { state } = useEditor();
   const colors = state.doc.colors ?? [];
   const [hex, setHex] = useState(current.startsWith('#') ? current : '');

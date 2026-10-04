@@ -11,6 +11,7 @@ export interface UI {
   focus: string | null; // icon id being edited
   hover: string | null;
   highlight: string[]; // pixels outlined while a selection color is hovered
+  preview: { icon: string; variant: string } | null; // a colour variant shown on the canvas in place of the icon
   view: View;
   fill: Fill;
   theme: Theme;
@@ -67,8 +68,12 @@ function reducer(s: State, a: Action): State {
     }
     case 'MARK_SAVED':
       return { ...s, savedDoc: a.doc }; // the doc that was written, which may be older than the current one
-    case 'UI':
+    case 'UI': {
+      // an instance has no pixels to edit: entering one selects its component instead
+      const inst = a.patch.focus ? s.doc.artboards.flatMap((ab) => ab.icons).find((i) => i.id === a.patch.focus && i.instance) : undefined;
+      if (inst) return { ...s, ui: { ...s.ui, ...a.patch, focus: null, sel: [inst.instance!.of], status: 'An instance draws its component: edit the component instead' } };
       return { ...s, ui: { ...s.ui, ...a.patch } };
+    }
   }
 }
 
@@ -78,7 +83,7 @@ export const persist = (k: string, v: unknown) => { try { localStorage.setItem(k
 const initial: State = {
   doc: emptyDoc(), past: [], future: [], savedDoc: null,
   ui: {
-    tool: 'select', sel: [], focus: null, hover: null, highlight: [],
+    tool: 'select', sel: [], focus: null, hover: null, highlight: [], preview: null,
     view: load('pixl.view', { x: 80, y: 80, k: 8 }),
     fill: 'lv8', theme: load('pixl.theme', 'system'), grid: true, expanded: {}, status: '', renaming: null, hideUi: false, autoMerge: load('pixl.autoMerge', true), dragging: false,
   },
