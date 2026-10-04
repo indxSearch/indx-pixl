@@ -1,3 +1,9 @@
+/* Selection marks: systm's pure blue reads well on light, its light blue on dark. */
+:root { --sel: var(--CPureBlue); }
+@media (prefers-color-scheme: dark) { :root:not(.theme-light) { --sel: var(--CLightBlue); } }
+html.theme-light { --sel: var(--CPureBlue); }
+html.theme-dark { --sel: var(--CLightBlue); }
+
 /* Manual theme override on top of systm's prefers-color-scheme rule. Values copied from @indxsearch/systm globals.css. */
 html.theme-light {
   --lv0: #FFFFFF; --lv1: #FBFBFB; --lv2: #EFEFEF; --lv3: #CFCFCF; --lv4: #757575; --lv5: #4A4A50; --lv6: #1A1A21; --lv7: #121215; --lv8: #080809;

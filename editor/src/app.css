@@ -93,7 +93,7 @@ button { font: inherit; color: inherit; }
 /* fill */
 .swatches { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; margin-bottom: 14px; }
 .sw-btn { aspect-ratio: 1; border-radius: var(--radius); border: 1px solid var(--lv3); cursor: pointer; position: relative; padding: 0; }
-.sw-btn.active { outline: 2px solid var(--CPureBlue); outline-offset: 1px; }
+.sw-btn.active { outline: 2px solid var(--sel); outline-offset: 1px; }
 .sw-btn span { position: absolute; left: 0; right: 0; bottom: -14px; font: var(--text-2xs); color: var(--lv5); text-align: center; }
 .free { display: flex; gap: 7px; align-items: center; }
 .free > div { flex: 1; min-width: 0; }
@@ -113,21 +113,26 @@ button { font: inherit; color: inherit; }
 .icon-label { cursor: default; }
 .icon-label path { fill: var(--lv4); }
 .icon-label text { font-size: 10px; fill: var(--lv4); }
-.icon-label.focus path, .icon-label.focus text { fill: var(--CPureBlue); }
+.icon-label.focus path, .icon-label.focus text { fill: var(--sel); }
 .icon-frame { fill: none; stroke: var(--lv3); pointer-events: none; }
 .icon-frame.exportable { stroke: #7c5cff; stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .icon-grid { stroke: var(--lv2); fill: none; pointer-events: none; }
-.outline { fill: none; stroke: var(--CPureBlue); pointer-events: none; }
+.outline { fill: none; stroke: var(--sel); pointer-events: none; }
 .outline.hover { stroke-opacity: 0.5; }
+.guide { stroke: var(--CSignal); pointer-events: none; }
+.measure { pointer-events: none; }
+.measure line { stroke: var(--CSignal); }
+.measure rect { fill: var(--CSignal); }
+.measure text { fill: #FFFFFF; font: 600 10px var(--font-family, sans-serif); }
 .outline.highlight { stroke: var(--CSignal); stroke-width: 2; }
-.bbox { fill: none; stroke: var(--CPureBlue); stroke-dasharray: 3 3; pointer-events: none; }
-.handle { fill: var(--lv0); stroke: var(--CPureBlue); }
+.bbox { fill: none; stroke: var(--sel); stroke-dasharray: 3 3; pointer-events: none; }
+.handle { fill: var(--lv0); stroke: var(--sel); }
 .handle[data-h=nw], .handle[data-h=se] { cursor: nwse-resize; }
 .handle[data-h=ne], .handle[data-h=sw] { cursor: nesw-resize; }
 .handle[data-h=n], .handle[data-h=s] { cursor: ns-resize; }
 .handle[data-h=e], .handle[data-h=w] { cursor: ew-resize; }
-.marquee { fill: rgba(0, 0, 255, 0.06); stroke: var(--CPureBlue); }
-.drawing { fill-opacity: 0.7; stroke: var(--CPureBlue); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.marquee { fill: color-mix(in srgb, var(--sel) 8%, transparent); stroke: var(--sel); }
+.drawing { fill-opacity: 0.7; stroke: var(--sel); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .drawing.ab { fill: var(--lv0); fill-opacity: 0.6; }
 
 .warn { font: var(--text-xs); color: var(--CSignal); line-height: 1.4; }
@@ -175,7 +180,7 @@ button { font: inherit; color: inherit; }
 .fill-picker { width: 240px; padding: 10px; background: var(--lv1); border: 1px solid var(--lv3); border-radius: var(--radius); }
 .used-by { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
 .sw-btn.dragging { opacity: 0.35; }
-.sw-btn.drop-before::before, .sw-btn.drop-after::after { content: ''; position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--CPureBlue); }
+.sw-btn.drop-before::before, .sw-btn.drop-after::after { content: ''; position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--sel); }
 .sw-btn.drop-before::before { left: -4px; }
 .sw-btn.drop-after::after { right: -4px; }
 .sw-btn.add { display: flex; align-items: center; justify-content: center; background: transparent; color: var(--lv4); border-style: dashed; }
@@ -191,7 +196,7 @@ button { font: inherit; color: inherit; }
 .mono-hint { font-family: ui-monospace, Menlo, monospace; }
 
 /* inline rename */
-.name-input { flex: 1; min-width: 0; height: 20px; margin: 0 -4px; padding: 0 3px; border: 1px solid var(--CPureBlue); border-radius: 3px; background: var(--lv0); color: var(--lv8); font: inherit; outline: none; }
+.name-input { flex: 1; min-width: 0; height: 20px; margin: 0 -4px; padding: 0 3px; border: 1px solid var(--sel); border-radius: 3px; background: var(--lv0); color: var(--lv8); font: inherit; outline: none; }
 .row.ab .name-input { font-weight: var(--med); }
 .canvas-name { box-sizing: border-box; width: auto; min-width: 60px; max-width: 100%; height: 18px; margin: 0; font-size: 10px; }
 .canvas-name.ab { height: 20px; font-size: 11px; }

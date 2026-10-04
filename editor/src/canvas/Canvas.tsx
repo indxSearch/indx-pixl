@@ -4,6 +4,7 @@ import { type Artboard, type Box, type Doc, type Icon, type Node, type Rect, typ
 import * as ops from '../model/ops';
 import { NameInput } from '../panels/NameInput';
 import { HANDLES, type Handle, handlePos, norm, resizeBox, screenBox, toWorld } from './geometry';
+import { type Guide, measure, movingEdges, snap } from './guides';
 
 type Drag =
   | { type: 'pan'; sx: number; sy: number; vx: number; vy: number }
@@ -26,6 +27,15 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
   const dragRef = useRef<Drag | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null); // mirrored for rendering marquee/draw previews
   const [space, setSpace] = useState(false);
+  const [guides, setGuides] = useState<Guide[]>([]); // smart guides while an artboard is dragged or resized
+  const [alt, setAlt] = useState(false); // Alt held: measure from the selection to what the pointer is over
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => { if (e.key === 'Alt') setAlt(true); };
+    const up = (e: KeyboardEvent) => { if (e.key === 'Alt') setAlt(false); };
+    const off = () => setAlt(false);
+    window.addEventListener('keydown', down); window.addEventListener('keyup', up); window.addEventListener('blur', off);
+    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); window.removeEventListener('blur', off); };
+  }, []);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const lastDown = useRef<{ t: number; id: string | null }>({ t: 0, id: null });
 
@@ -251,21 +261,37 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
       const hit = hitOf(e.target);
       let id = hit?.node?.id ?? null;
       if (hit?.node && hit.node.kind === 'rect' && hit.node.iconId && hit.node.iconId !== focus) id = hit.node.iconId;
-      if (hit?.node?.kind === 'artboard' && hit.role !== 'title') id = null;
+      if (hit?.node?.kind === 'artboard' && hit.role !== 'title' && !e.altKey) id = null;
       if (id !== hover) ui({ hover: id });
       return;
     }
     switch (d.type) {
       case 'pan': ui({ view: { ...view, x: d.vx + p.x - d.sx, y: d.vy + p.y - d.sy } }); return;
       case 'move': {
-        const dx = Math.round(w.x - d.sw.x), dy = Math.round(w.y - d.sw.y);
+        let dx = Math.round(w.x - d.sw.x), dy = Math.round(w.y - d.sw.y);
         if (!d.moved && !dx && !dy) return;
         if (!d.moved) { dispatch({ type: 'CHECKPOINT' }); d.moved = true; }
+        // artboards snap to the edges and centres of the other artboards
+        const moved = d.orig.artboards.filter((a) => d.ids.includes(a.id));
+        if (moved.length === d.ids.length && !e.metaKey) {
+          const x0 = Math.min(...moved.map((a) => a.x)), y0 = Math.min(...moved.map((a) => a.y));
+          const box = { x: x0 + dx, y: y0 + dy, w: Math.max(...moved.map((a) => a.x + a.w)) - x0, h: Math.max(...moved.map((a) => a.y + a.h)) - y0 };
+          const s = snap(box, d.orig.artboards.filter((a) => !d.ids.includes(a.id)), 6 / view.k, movingEdges(null));
+          dx += s.dx; dy += s.dy; setGuides(s.guides);
+        }
         edit(() => ops.moveNodes(d.orig, d.ids, dx, dy), true);
         return;
       }
       case 'resize': {
         const box = resizeBox(d.box, d.h, w.x - d.px, w.y - d.py, d.minW, d.minH);
+        if (d.orig.artboards.some((a) => a.id === d.id) && !e.metaKey) {
+          // the dragged side of an artboard snaps to the other artboards
+          const s = snap(box, d.orig.artboards.filter((a) => a.id !== d.id), 6 / view.k, movingEdges(d.h));
+          if (d.h.includes('w')) { box.x += s.dx; box.w -= s.dx; } else if (d.h.includes('e')) box.w += s.dx;
+          if (d.h.includes('n')) { box.y += s.dy; box.h -= s.dy; } else if (d.h.includes('s')) box.h += s.dy;
+          box.w = Math.max(d.minW, box.w); box.h = Math.max(d.minH, box.h);
+          setGuides(s.guides);
+        }
         edit(() => ops.setGeometry(d.orig, d.id, box), true);
         return;
       }
@@ -294,6 +320,7 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
     const d = dragRef.current;
     if (!d) return;
     setDragBoth(null);
+    setGuides([]);
     if (d.type === 'move' && d.moved && e) {
       const w = toWorld(view, pt(e));
       // A dragged icon can be dropped over another artboard. Keep the current
@@ -419,6 +446,26 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
   if (sel.length === 1 && !drag) {
     const n = sel[0]; const s = screenBox(view, { x: n.ax, y: n.ay, w: n.w, h: n.h });
     for (const h of HANDLES) { const [hx, hy] = handlePos(h); overlay.push(<rect key={'h' + h} className="handle" data-h={h} x={s.x + s.w * hx - 3.5} y={s.y + s.h * hy - 3.5} width={7} height={7} />); }
+  }
+  const sx = (x: number) => view.x + x * view.k, sy = (y: number) => view.y + y * view.k;
+  guides.forEach((g, i) => overlay.push(g.axis === 'x'
+    ? <line key={'gd' + i} className="guide" x1={sx(g.at) + .5} y1={sy(g.from)} x2={sx(g.at) + .5} y2={sy(g.to)} />
+    : <line key={'gd' + i} className="guide" x1={sx(g.from)} y1={sy(g.at) + .5} x2={sx(g.to)} y2={sy(g.at) + .5} />));
+  if (alt && sel.length && !drag) {
+    const a = bboxOf(sel)!;
+    const over = hover && !state.ui.sel.includes(hover) ? index.get(hover) : null;
+    // nothing under the pointer: measure to the artboard the selection sits in
+    const parent = !over && sel.every((n) => n.kind !== 'artboard' && n.artboardId === sel[0].artboardId) ? index.get(sel[0].artboardId) : null;
+    const b = over ?? parent;
+    if (b) measure(a, { x: b.ax, y: b.ay, w: b.w, h: b.h }).forEach((m, i) => {
+      const x1 = sx(m.x1), y1 = sy(m.y1), x2 = sx(m.x2), y2 = sy(m.y2), label = String(Math.round(m.value));
+      const lx = (x1 + x2) / 2, ly = (y1 + y2) / 2, lw = 6 + label.length * 6;
+      overlay.push(<g key={'ms' + i} className="measure">
+        <line x1={x1 + .5} y1={y1 + .5} x2={x2 + .5} y2={y2 + .5} />
+        <rect x={lx - lw / 2} y={ly - 8} width={lw} height={16} rx={3} />
+        <text x={lx} y={ly + 4} textAnchor="middle">{label}</text>
+      </g>);
+    });
   }
   if (drag?.type === 'marquee') {
     const b = screenBox(view, norm(drag.start.x, drag.start.y, drag.end.x, drag.end.y));
