@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useState } from 'react';
+import { SearchField } from '@indxsearch/systm';
 import { Component, Instance, Plus } from '@indxsearch/pixl';
 import { useEditor } from '../model/store';
 import { type Artboard, type Icon, type Rect, type TextNode, fillAttr, isExported } from '../model/types';
@@ -5,9 +7,34 @@ import * as ops from '../model/ops';
 import { uid } from '../model/types';
 import { Panel } from './Panel';
 import { NameInput } from './NameInput';
+import { type FindHit, findLayers } from '../model/find';
 
-export function Layers({ onMenu }: { onMenu: (x: number, y: number, nodeId: string) => void }) {
+export function Layers({ onMenu, onReveal }: { onMenu: (x: number, y: number, nodeId: string) => void; onReveal: (id: string) => void }) {
   const { state, ui, edit } = useEditor();
+  // layer search: ⌘F focuses it, typing turns the tree into a ranked list, Enter or a click reveals the hit
+  const [query, setQuery] = useState('');
+  const [active, setActive] = useState(0);
+  // SearchField does not forward a ref, so the field is found by id
+  const field = { get current() { return document.getElementById('layer-find') as HTMLInputElement | null; } };
+  const hits = useMemo(() => (query.trim() ? findLayers(state.doc, query) : []), [state.doc, query]);
+  useEffect(() => setActive(0), [query]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') { e.preventDefault(); field.current?.focus(); field.current?.select(); } };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, []);
+  const reveal = (h: FindHit | undefined) => { if (h) onReveal(h.id); };
+  const onFieldKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActive((i) => Math.min(hits.length - 1, i + 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((i) => Math.max(0, i - 1)); }
+    else if (e.key === 'Enter') { e.preventDefault(); reveal(hits[active]); }
+    else if (e.key === 'Escape') { e.preventDefault(); setQuery(''); field.current?.blur(); }
+    e.stopPropagation(); // keep editor shortcuts (A, R, digits) out of the field
+  };
+  const marked = (h: FindHit) => {
+    const set = new Set(h.marks);
+    return [...h.name].map((ch, i) => (set.has(i) ? <b key={i}>{ch}</b> : <span key={i}>{ch}</span>));
+  };
   const { doc } = state;
   const { sel, focus, expanded, renaming } = state.ui;
   const nameOf = (id: string, name: string) => renaming?.at === 'layers' && renaming.id === id
@@ -62,6 +89,22 @@ export function Layers({ onMenu }: { onMenu: (x: number, y: number, nodeId: stri
 
   return (
     <Panel title="Layers" grow right={<button className="icon-btn" title="Add artboard" onClick={addArtboard}><Plus size={14} color="currentColor" /></button>}>
+      <div className="layer-search">
+        <SearchField id="layer-find" inputSize="micro" placeholder="Find layers  ⌘F" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={onFieldKey} aria-label="Find layers" />
+      </div>
+      {query.trim() ? (
+        <div className="find-results">
+          {!hits.length && <div className="hint">Nothing called that.</div>}
+          {hits.map((h, i) => (
+            <div key={h.id} className={'row find-hit' + (i === active ? ' active' : '') + (sel.includes(h.id) ? ' sel' : '')} style={{ paddingLeft: 10 }}
+              onMouseEnter={() => setActive(i)} onClick={() => reveal(h)} onContextMenu={(e) => ctx(e, h.id, null)}>
+              {h.kind === 'artboard' ? <span className="frame-glyph" /> : h.kind === 'text' ? <span className="text-glyph">T</span> : <Instance size={12} color="var(--lv4)" />}
+              <span className="name">{marked(h)}</span>
+              {h.where && <span className="dim">{h.where}</span>}
+            </div>
+          ))}
+        </div>
+      ) : <>
       {!doc.artboards.length && <div className="hint">No artboards yet. Press A and drag on the canvas, or click +.</div>}
       {doc.artboards.slice().reverse().map((a) => {
         const open = isOpen(a.id, true);
@@ -85,6 +128,7 @@ export function Layers({ onMenu }: { onMenu: (x: number, y: number, nodeId: stri
           </div>
         );
       })}
+      </>}
     </Panel>
   );
 }

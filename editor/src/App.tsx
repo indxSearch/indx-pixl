@@ -147,10 +147,22 @@ function Editor() {
     if (b) zoomToBox(b, 240);
   }, [sel, state.ui.focus, index, zoomToBox]);
 
+  /** Select a layer found by search and centre it, opening its artboard in the tree, like Figma's find. */
+  const reveal = useCallback((id: string) => {
+    const n = index.get(id);
+    if (!n) return;
+    ui({ sel: [id], focus: null, expanded: { ...state.ui.expanded, [n.artboardId]: true } });
+    if (n.kind === 'artboard') return zoomToBox({ x: n.ax, y: n.ay, w: n.w, h: n.h }, 80);
+    // an icon or label is shown with its neighbours: about three grid columns by six rows around it
+    const W = 120, H = 60;
+    zoomToBox({ x: n.ax + n.w / 2 - W / 2, y: n.ay + n.h / 2 - H / 2, w: W, h: H }, 40);
+  }, [index, ui, state.ui.expanded, zoomToBox]);
   const duplicate = useCallback((nodes: Node[] = sel) => {
     if (!nodes.length) return;
     const ids = nodes.map((n) => n.id), map = ops.duplicateIdMap(nodes, uid);
-    edit((d) => ops.duplicateNodes(d, ids, map));
+    // in an auto-layout artboard the copy takes its slot right away (one pixel off the original reads as right after it)
+    const auto = [...new Set(nodes.filter((n) => n.kind !== 'artboard').map((n) => n.artboardId))];
+    edit((d) => auto.reduce((acc, id) => (acc.artboards.find((a) => a.id === id)?.grid?.auto ? ops.arrangeArtboardItems(acc, id) : acc), ops.duplicateNodes(d, ids, map)));
     ui({ sel: ids.map((i) => map[i]) });
   }, [sel, edit, ui]);
   const remove = useCallback((nodes: Node[] = sel) => {
@@ -406,7 +418,7 @@ function Editor() {
           </div>
         )}
         <div className="body">
-          {!state.ui.hideUi && <div className="column"><Layers onMenu={onLayerMenu} /></div>}
+          {!state.ui.hideUi && <div className="column"><Layers onMenu={onLayerMenu} onReveal={reveal} /></div>}
           <div className="stage">
             <Canvas onMenu={onCanvasMenu} />
           </div>

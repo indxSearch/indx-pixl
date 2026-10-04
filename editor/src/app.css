@@ -164,6 +164,10 @@ button { font: inherit; color: inherit; }
 .accents { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; }
 
 /* color library */
+.layer-search { padding: 6px 8px 8px; position: sticky; top: 0; background: var(--lv1); z-index: 1; }
+.find-hit .name b { font-weight: 650; color: var(--lv8); }
+.find-hit .name span { color: var(--lv5); }
+.find-hit.active { background: var(--lv2); }
 .sel-colors { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
 .sel-color { display: grid; grid-template-columns: 22px 1fr auto auto; align-items: center; gap: 8px; }
 .sel-color .sw-btn { width: 22px; height: 22px; }
