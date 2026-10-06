@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useEditor } from '../model/store';
+import { persist, useEditor } from '../model/store';
 import * as ops from '../model/ops';
 
 export interface Commands {
@@ -56,7 +56,9 @@ export function useShortcuts(cmd: Commands) {
         case 'r': ui({ tool: 'rect' }); break;
         case 't': ui({ tool: 'text' }); break;
         case 'p': ui({ tool: 'eyedropper' }); break;
-        case 'g': ui({ grid: !state.ui.grid }); break;
+        case 'g': ui({ grid: !state.ui.grid }); persist('pixl.grid', !state.ui.grid); break;
+        case 'o': ui({ outlines: !state.ui.outlines }); persist('pixl.outlines', !state.ui.outlines); break;
+        case 'e': if (ids.length) edit((d) => ops.toggleExport(d, ids)); break;
         case 'Escape': if (ids.length) ui({ sel: [] }); else ui({ focus: null, tool: 'select' }); break;
         case 'Delete': case 'Backspace': cmd.remove(); break;
         case 'ArrowLeft': arrow(-1, 0, -1); break;

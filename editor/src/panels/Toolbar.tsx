@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, Modal, Slider, ToggleSwitch } from '@indxsearch/systm';
-import { Component, Crop, Cursor, Document_or_file, Download, Drop_full, Indx, Maximize, Minus, Options_menu, Plus, Refresh, Text_cursor } from '@indxsearch/pixl';
+import { Component, Instance, Crop, Cursor, Document_or_file, Download, Drop_full, Indx, Maximize, Minus, Options_menu, Plus, Refresh, Text_cursor } from '@indxsearch/pixl';
 import type { SaveState } from '../hooks/useAutosave';
 
 const SAVE_LABEL: Record<SaveState, string> = { loading: 'Loading…', saved: 'Saved', unsaved: 'Unsaved', saving: 'Saving…', conflict: 'Changed on disk', error: 'Save failed' };
@@ -51,7 +51,8 @@ export function Toolbar({ dark, onDark, onExportAll, onImport, onZoom, onZoomFit
         )}
       </div>
       <span className="sep" />
-      <Button size="micro" variant={state.ui.grid ? 'secondary' : 'ghost'} iconLeft={<Component />} title="Pixel grid (G)" onClick={() => ui({ grid: !state.ui.grid })}><span className="toolbar-label">Grid</span></Button>
+      <Button size="micro" variant={state.ui.grid ? 'secondary' : 'ghost'} iconLeft={<Component />} title="Pixel grid (G)" onClick={() => { ui({ grid: !state.ui.grid }); persist('pixl.grid', !state.ui.grid); }}><span className="toolbar-label">Grid</span></Button>
+      <Button size="micro" variant={state.ui.outlines ? 'secondary' : 'ghost'} iconLeft={<Instance />} title="Icon outlines (O)" onClick={() => { ui({ outlines: !state.ui.outlines }); persist('pixl.outlines', !state.ui.outlines); }}><span className="toolbar-label">Outlines</span></Button>
       <Button size="micro" variant="ghost" iconLeft={<Options_menu />} aria-label="Settings" title="Settings" onClick={() => setSettingsOpen(true)} />
       <ToggleSwitch checked={dark} onChange={onDark} label="Dark" />
       <span className="sep" />

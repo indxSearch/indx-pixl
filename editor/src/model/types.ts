@@ -24,8 +24,10 @@ export const DEFAULT_GRID: IconGrid = { cols: 10, gap: 7, pad: 7, auto: false };
 
 /** Is this icon part of Export all? Icons are drafts unless `export` is true, and icons on non-exported artboards are skipped. */
 export const isExported = (a: Artboard, ic: Icon) => a.export !== false && ic.export === true && !ic.instance;
-/** A named document color. `dark` is optional; without it the color is the same in both modes. */
-export interface ColorToken { id: string; name: string; light: string; dark?: string }
+/** A named document color. `dark` is optional; without it the color is the same in both modes.
+ *  Either value may be a hex or a link to another color (`c:<id>`), taken as that color looks in the same
+ *  mode: a palette of tones, and named colors that pick a tone per mode. `keep` keeps it out of Tidy. */
+export interface ColorToken { id: string; name: string; light: string; dark?: string; keep?: boolean }
 export interface Doc { version: 1; artboards: Artboard[]; colors?: ColorToken[] }
 
 export type Kind = 'artboard' | 'icon' | 'rect' | 'text';

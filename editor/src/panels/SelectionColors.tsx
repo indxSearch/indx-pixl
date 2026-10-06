@@ -3,7 +3,7 @@ import { Button, InputField, Popover } from '@indxsearch/systm';
 import { useEditor } from '../model/store';
 import { ACCENTS, type ColorToken, type Doc, type Fill as FillT, type Node, fillAttr, isLevel, uid } from '../model/types';
 import * as ops from '../model/ops';
-import { colorIdOf, colorRef, findColor } from '../model/colors';
+import { colorIdOf, colorRef, differsByMode, findColor, resolveColor } from '../model/colors';
 import { toHex } from '../model/svg';
 import { Panel } from './Panel';
 
@@ -28,7 +28,7 @@ function idsInScope(sel: Node[], focusIcon: Node | undefined, doc: Doc): string[
 /** A swatch's background: library colors that differ per mode show both halves, like the Fill panel. */
 export function swatchStyle(f: FillT, colors: ColorToken[]) {
   const c = colors.find((x) => x.id === colorIdOf(f));
-  return c?.dark && c.dark !== c.light ? { background: `linear-gradient(135deg, ${c.light} 50%, ${c.dark} 50%)` } : { background: fillAttr(f) };
+  return c && differsByMode(colors, c) ? { background: `linear-gradient(135deg, ${resolveColor(colors, c, 'light')} 50%, ${resolveColor(colors, c, 'dark')} 50%)` } : { background: fillAttr(f) };
 }
 
 export function labelOf(f: FillT, doc: Doc): string {

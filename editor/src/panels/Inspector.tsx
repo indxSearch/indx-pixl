@@ -8,6 +8,19 @@ import { Panel } from './Panel';
 import { Variants } from './Variants';
 import { detachInstance, masterOf, placeVariants } from '../model/instances';
 
+/** Name of an artboard or icon, saved on Enter or when the field loses focus: one undo step per rename. */
+function NameField({ id, name }: { id: string; name: string }) {
+  const { edit } = useEditor();
+  const [value, setValue] = useState(name);
+  useEffect(() => setValue(name), [name, id]);
+  const commit = () => { const v = value.trim(); if (v && v !== name) edit((d) => ops.setProps(d, id, { name: v })); else setValue(name); };
+  return (
+    <div className="field"><span className="lbl">Name</span>
+      <InputField value={value} onChange={(e) => setValue(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') { setValue(name); } }} />
+    </div>
+  );
+}
+
 const Num = ({ label, value, onChange, min }: { label: string; value: number | ''; onChange: (v: number) => void; min?: number }) => (
   <div className="field">
     <span className="lbl">{label}</span>
@@ -47,6 +60,16 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent }: { onCopy
     <Panel title={title}>
       <div className="stack">
         <div className="crumb">{crumb(sel[0])}{!one ? ` › ${sel.length} items` : ''}</div>
+        {(one?.kind === 'artboard' || one?.kind === 'icon') && <NameField id={one.id} name={(one.obj as Artboard | Icon).name} />}
+        {!one && (() => {
+          const icons = sel.filter((n) => n.kind === 'icon' && !(n.obj as Icon).instance);
+          if (icons.length < 2) return null;
+          const inc = icons.filter((n) => (n.obj as Icon).export === true).length;
+          return <>
+            <ToggleSwitch label={`Include in export  E`} checked={inc === icons.length} onChange={() => edit((d) => ops.toggleExport(d, icons.map((n) => n.id)))} />
+            <div className="hint">{inc === icons.length ? `All ${icons.length} icons are included.` : inc === 0 ? `None of the ${icons.length} icons are included.` : `${inc} of ${icons.length} icons are included. Switching includes them all.`}</div>
+          </>;
+        })()}
         {one?.kind === 'text' && (() => {
           const t = one.obj as TextNode;
           return <>
@@ -109,7 +132,7 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent }: { onCopy
         })()}
         {one?.kind === 'icon' && !(one.obj as Icon).instance && (
           <>
-            <ToggleSwitch label="Include in export" checked={(one.obj as Icon).export === true} onChange={(v) => edit((d) => ops.setProps(d, one.id, { export: v }))} />
+            <ToggleSwitch label="Include in export  E" checked={(one.obj as Icon).export === true} onChange={(v) => edit((d) => ops.setProps(d, one.id, { export: v }))} />
             <div className="field"><span className="lbl">File</span><span className="mono dim">raw-icons/{(one.obj as Icon).name}.svg</span></div>
             <div className="btn-row">
               <Button size="micro" variant="secondary" iconLeft={<Copy />} onClick={() => onCopySvg(one.obj as Icon)}>Copy SVG</Button>

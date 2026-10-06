@@ -1,5 +1,5 @@
 import { ACCENTS, type ArtboardKind, type ColorToken, type Doc, type Fill, type Icon, type Rect, type Variant, isAccent, isExported, isLevel, kindOf, uid } from './types';
-import { cssVarOf, slugOf } from './colors';
+import { cssVarOf, resolveColor, slugOf } from './colors';
 import { fillsOf, maximalRects, mergedRects, outlinePath, toGrid } from './pixels';
 
 export const LEVELS_LIGHT = ['#FFFFFF', '#FBFBFB', '#EFEFEF', '#CFCFCF', '#757575', '#4A4A50', '#1A1A21', '#121215', '#080809'];
@@ -9,7 +9,7 @@ export function exportFill(f: Fill, colors: ColorToken[] = []): string {
   if (isLevel(f) || isAccent(f)) return `var(--${f})`;
   if (f.startsWith('c:')) {
     const c = colors.find((x) => x.id === f.slice(2));
-    return c ? `var(${cssVarOf(c)}, ${c.light})` : '#000000';
+    return c ? `var(${cssVarOf(c)}, ${resolveColor(colors, c, 'light')})` : '#000000';
   }
   return f;
 }
@@ -79,7 +79,7 @@ export function levelOrHex(hex: string, colors: ColorToken[] = [], tolerance = 1
   const candidates: [Fill, string][] = [
     ...LEVELS_LIGHT.map((c, i) => [`lv${i}`, c] as [Fill, string]),
     ...ACCENTS.map((a) => [a.token, a.hex] as [Fill, string]),
-    ...colors.flatMap((c) => { const h = toHex(c.light); return h ? [[`c:${c.id}`, h] as [Fill, string]] : []; }),
+    ...colors.flatMap((c) => { const h = toHex(resolveColor(colors, c, 'light')); return h ? [[`c:${c.id}`, h] as [Fill, string]] : []; }),
   ];
   let best: Fill = hex, bd = Infinity;
   for (const [token, c] of candidates) { const [cr, cg, cb] = rgb(c); const d = Math.hypot(r - cr, g - cg, b - cb); if (d < bd) { bd = d; best = token; } }

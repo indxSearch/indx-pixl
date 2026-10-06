@@ -406,6 +406,7 @@ export function placePasted(
 }
 
 import type { ColorToken } from './types';
+import { resolveColor } from './colors';
 const replaceFills = (d: Doc, from: Fill, to: Fill) => {
   for (const a of d.artboards) {
     for (const r of a.rects) if (r.fill === from) r.fill = to;
@@ -432,8 +433,14 @@ export function deleteColor(doc: Doc, id: string, replacement: Fill | null): Doc
   const d = clone(doc);
   const c = d.colors?.find((x) => x.id === id);
   if (!c) return doc;
+  // colors linked to this one keep how they look: the link becomes the hex it pointed at
+  const light = resolveColor(d.colors, c, 'light'), dark = resolveColor(d.colors, c, 'dark');
+  for (const o of d.colors!) {
+    if (o.light === `c:${id}`) o.light = light;
+    if (o.dark === `c:${id}`) o.dark = dark;
+  }
   d.colors = d.colors!.filter((x) => x.id !== id);
-  replaceFills(d, `c:${id}`, replacement ?? c.light);
+  replaceFills(d, `c:${id}`, replacement ?? light);
   return d;
 }
 /** Move a color so it sits before the color now at `before` (its index), or last when `before` is past the end. */
@@ -488,5 +495,28 @@ export function recolorIcon(doc: Doc, iconId: string, from: Fill, to: Fill): Doc
   if (!ic || from === to) return doc;
   for (const r of ic.rects) if (r.fill === from) r.fill = to;
   for (const v of ic.variants ?? []) if (from in v.swaps) { v.swaps[to] = v.swaps[from]; delete v.swaps[from]; if (v.swaps[to] === to) delete v.swaps[to]; }
+  return d;
+}
+
+/** Merge colors into `keepId`: their pixels, texts and links move to it, and they are deleted. */
+export function mergeColors(doc: Doc, keepId: string, ids: string[]): Doc {
+  const d = clone(doc), drop = ids.filter((x) => x !== keepId);
+  for (const id of drop) replaceFills(d, `c:${id}`, `c:${keepId}`);
+  for (const o of d.colors ?? []) {
+    if (drop.some((id) => o.light === `c:${id}`)) o.light = `c:${keepId}`;
+    if (drop.some((id) => o.dark === `c:${id}`)) o.dark = `c:${keepId}`;
+  }
+  d.colors = (d.colors ?? []).filter((c) => !drop.includes(c.id));
+  return d;
+}
+
+/** "Include in export" for several icons at once, the way Figma toggles a mixed selection: if any is
+ *  left out, include them all; if all are in, leave them all out. Instances never export and are skipped. */
+export function toggleExport(doc: Doc, ids: string[]): Doc {
+  const d = clone(doc), set = new Set(ids);
+  const icons = d.artboards.flatMap((a) => a.icons).filter((i) => set.has(i.id) && !i.instance);
+  if (!icons.length) return doc;
+  const on = icons.some((i) => i.export !== true);
+  for (const i of icons) i.export = on;
   return d;
 }

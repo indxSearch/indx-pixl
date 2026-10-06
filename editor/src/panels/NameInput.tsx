@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useEditor } from '../model/store';
 import * as ops from '../model/ops';
 
-/** Inline name editor. Enter or blur commits as one undo step, Escape cancels. */
-export function NameInput({ id, name, className, style }: { id: string; name: string; className?: string; style?: React.CSSProperties }) {
+/** Inline name editor. Enter or blur commits as one undo step, Escape cancels. `field` is what it edits:
+ *  an artboard's or icon's name, or a text layer's text. */
+export function NameInput({ id, name, className, style, field = 'name' }: { id: string; name: string; className?: string; style?: React.CSSProperties; field?: 'name' | 'text' }) {
   const { edit, ui } = useEditor();
   const [value, setValue] = useState(name);
   const cancelled = useRef(false);
@@ -11,7 +12,7 @@ export function NameInput({ id, name, className, style }: { id: string; name: st
   useEffect(() => { ref.current?.focus(); ref.current?.select(); }, []);
   const done = () => {
     const v = value.trim();
-    if (!cancelled.current && v && v !== name) edit((d) => ops.setProps(d, id, { name: v }));
+    if (!cancelled.current && v && v !== name) edit((d) => ops.setProps(d, id, { [field]: v }));
     ui({ renaming: null });
   };
   return (

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Button, InputField, Select } from '@indxsearch/systm';
+import { Button, InputField, Popover, Select } from '@indxsearch/systm';
 import { Plus } from '@indxsearch/pixl';
 import { useEditor } from '../model/store';
 import { ACCENTS, type ColorToken, type Fill as FillT, type Rect, type TextNode, fillAttr, isToken, uid } from '../model/types';
 import * as ops from '../model/ops';
 import { toHex } from '../model/svg';
-import { colorIdOf, colorRef, cssVarOf, findColor, idsUsing, nameProblem, usageOf } from '../model/colors';
+import { colorIdOf, colorRef, cssVarOf, differsByMode, findColor, idsUsing, isLink, linksTo, nameProblem, rawOf, resolveColor, usageOf } from '../model/colors';
 import { Panel } from './Panel';
+import { TidyColors } from './TidyColors';
 
 const LEVELS = Array.from({ length: 9 }, (_, i) => `lv${i}`);
 
@@ -19,6 +20,7 @@ export function FillPanel({ dark }: { dark: boolean }) {
   const apply = (f: FillT) => { ui({ fill: f }); if (colorIds.length) edit((d) => ops.setFill(d, colorIds, f)); };
   const [hex, setHex] = useState(isToken(state.ui.fill) ? '#ff4238' : state.ui.fill);
   const [editing, setEditing] = useState<string | null>(null);
+  const [tidying, setTidying] = useState(false);
   // drag to sort the library: the dragged color's id, and the index it would be dropped before
   const [dragging, setDragging] = useState<string | null>(null);
   const [dropAt, setDropAt] = useState<number | null>(null);
@@ -52,9 +54,10 @@ export function FillPanel({ dark }: { dark: boolean }) {
         <span className="lbl">Accents <span className="dim">systm</span></span>
         <div className="accents">{ACCENTS.map((a) => swatch(a.token, `var(--${a.token})`))}</div>
 
-        <span className="lbl">Colors <span className="dim">double-click to edit · drag to sort</span></span>
+        <div className="lbl-row"><span className="lbl">Colors <span className="dim">double-click to edit · drag to sort</span></span><Button size="micro" variant="ghost" onClick={() => setTidying(true)}>Tidy…</Button></div>
+        <TidyColors open={tidying} onOpenChange={setTidying} />
         <div className="accents" onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropAt(null); }}>
-          {colors.map((c, i) => swatch(colorRef(c.id), `${c.name} · ${cssVarOf(c)}${c.dark ? ' · light/dark' : ''}`, undefined, {
+          {colors.map((c, i) => swatch(colorRef(c.id), `${c.name} · ${cssVarOf(c)}${differsByMode(colors, c) ? ' · light/dark' : ''}${isLink(c.light) || isLink(c.dark) ? ' · linked' : ''}`, undefined, {
             onDoubleClick: () => setEditing(c.id),
             onContextMenu: (e) => { e.preventDefault(); setEditing(c.id); },
             draggable: true,
@@ -63,9 +66,9 @@ export function FillPanel({ dark }: { dark: boolean }) {
             onDragOver: (e) => { if (!dragging) return; e.preventDefault(); const r = e.currentTarget.getBoundingClientRect(); setDropAt(e.clientX < r.left + r.width / 2 ? i : i + 1); },
             onDrop: (e) => { e.preventDefault(); if (dragging && dropAt !== null) edit((d) => ops.moveColorTo(d, dragging, dropAt)); endDrag(); },
             onDragEnd: endDrag,
-            className: 'sw-btn' + (active === colorRef(c.id) ? ' active' : '') + (c.dark && c.dark !== c.light ? ' split' : '')
+            className: 'sw-btn' + (active === colorRef(c.id) ? ' active' : '') + (differsByMode(colors, c) ? ' split' : '') + (isLink(c.light) || isLink(c.dark) ? ' linked' : '')
               + (dragging === c.id ? ' dragging' : '') + (dragging && dropAt === i ? ' drop-before' : '') + (dragging && dropAt === i + 1 && i === colors.length - 1 ? ' drop-after' : ''),
-            style: { background: c.dark && c.dark !== c.light ? `linear-gradient(135deg, ${c.light} 50%, ${c.dark} 50%)` : fillAttr(colorRef(c.id)) },
+            style: { background: differsByMode(colors, c) ? `linear-gradient(135deg, ${resolveColor(colors, c, 'light')} 50%, ${resolveColor(colors, c, 'dark')} 50%)` : fillAttr(colorRef(c.id)) },
           }))}
           <button className="sw-btn add" title="New color" onClick={() => addColor(hex)}><Plus size={14} color="currentColor" /></button>
         </div>
@@ -106,6 +109,36 @@ function UsedBy({ fill }: { fill: FillT }) {
   );
 }
 
+/** Pick a color to link to, seeing each one as it looks in the mode being linked. */
+function LinkPicker({ mode, current, options, onPick }: { mode: 'light' | 'dark'; current: string | null; options: ColorToken[]; onPick: (v: string | null) => void }) {
+  const { state } = useEditor();
+  const colors = state.doc.colors ?? [];
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const shown = options.filter((o) => o.name.toLowerCase().includes(q.trim().toLowerCase()));
+  const target = current ? colors.find((o) => colorRef(o.id) === current) : undefined;
+  const pick = (v: string | null) => { setOpen(false); setQ(''); onPick(v); };
+  return (
+    <Popover open={open} onOpenChange={setOpen} side="left" align="start" aria-label={`Link the ${mode} value`}
+      trigger={<Button size="micro" variant="secondary">{target ? <><span className="sw" style={{ background: resolveColor(colors, target, mode) }} />{target.name}</> : 'Choose a color…'}</Button>}>
+      <div className="link-picker stack">
+        <InputField value={q} placeholder="Filter colors" autoFocus onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && shown[0]) pick(colorRef(shown[0].id)); }} />
+        <div className="link-list">
+          {current && <button className="link-row" onClick={() => pick(null)}><span className="sw" /><span>Own value (unlink)</span></button>}
+          {shown.map((o) => (
+            <button key={o.id} className={'link-row' + (colorRef(o.id) === current ? ' on' : '')} onClick={() => pick(colorRef(o.id))} title={`${o.name} in ${mode} mode: ${resolveColor(colors, o, mode)}`}>
+              <span className="sw" style={{ background: resolveColor(colors, o, mode) }} />
+              <span className="name">{o.name}</span>
+              <span className="dim mono">{resolveColor(colors, o, mode).toUpperCase()}</span>
+            </button>
+          ))}
+          {!shown.length && <div className="hint">No color called that.</div>}
+        </div>
+      </div>
+    </Popover>
+  );
+}
+
 /** Edits a library color for the mode the editor is in: in dark mode the top field is the dark value,
  *  in light mode the light value, so toggling Dark in the toolbar flips the artboard and this field
  *  together. The other mode's value sits underneath. A color with no dark value is the same in both
@@ -114,8 +147,10 @@ function ColorEditor({ id, dark: inDark, onClose }: { id: string; dark: boolean;
   const { state, edit, ui } = useEditor();
   const c = state.doc.colors?.find((x) => x.id === id);
   const [name, setName] = useState(c?.name ?? '');
-  const [light, setLight] = useState(c?.light ?? '');
-  const [dark, setDark] = useState(c?.dark ?? c?.light ?? '');
+  const colors = state.doc.colors ?? [];
+  // the text fields hold hex; a linked value shows the linked color instead
+  const [light, setLight] = useState(c && !isLink(c.light) ? c.light : '');
+  const [dark, setDark] = useState(c && !isLink(rawOf(c, 'dark')) ? rawOf(c, 'dark') : '');
   const [deleting, setDeleting] = useState(false);
   const [replaceWith, setReplaceWith] = useState('hex');
   if (!c) return null;
@@ -124,23 +159,43 @@ function ColorEditor({ id, dark: inDark, onClose }: { id: string; dark: boolean;
   const problem = nameProblem(state.doc, { ...c, name });
   const hasDark = c.dark !== undefined && c.dark !== c.light;
   const commitName = () => { if (name !== c.name && !nameProblem(state.doc, { ...c, name })) edit((d) => ops.updateColor(d, c.id, { name })); else setName(c.name); };
-  // Light: while there is no dark value, dark follows it.
-  const commitLight = (v: string) => { const h = toHex(v); if (h) { setLight(h); if (!hasDark) setDark(h); edit((d) => ops.updateColor(d, c.id, { light: h })); } };
+  // A value is a hex or a link (`c:<id>`). Light: while there is no dark value, dark follows it.
+  const commitLight = (v: string) => { const h = isLink(v) ? v : toHex(v); if (h) { if (!isLink(h)) { setLight(h); if (!hasDark) setDark(h); } edit((d) => ops.updateColor(d, c.id, { light: h })); } };
   // Dark: setting it to the light value again makes the color the same in both modes.
-  const commitDark = (v: string) => { const h = toHex(v); if (h) { setDark(h); edit((d) => ops.updateColor(d, c.id, { dark: h === c.light ? undefined : h })); } };
+  const commitDark = (v: string) => { const h = isLink(v) ? v : toHex(v); if (h) { if (!isLink(h)) setDark(h); edit((d) => ops.updateColor(d, c.id, { dark: h === c.light ? undefined : h })); } };
+  // a color may link to any other, except one that already links back to it
+  const loop = linksTo(colors, c.id);
+  const linkable = colors.filter((o) => !loop.has(o.id));
   const row = (mode: 'light' | 'dark', current: boolean) => {
+    const raw = rawOf(c, mode), linked = isLink(raw), target = linked ? findColor(state.doc, raw.slice(2)) : undefined;
     const value = mode === 'light' ? light : dark, set = mode === 'light' ? setLight : setDark, commit = mode === 'light' ? commitLight : commitDark;
+    const unlink = () => commit(resolveColor(colors, c, mode));
     return (
-      <div className={'field' + (current ? '' : ' other-mode')}><span className="lbl">{mode === 'light' ? 'Light' : 'Dark'}</span>
-        <input type="color" value={toHex(value) ?? '#000000'} onChange={(e) => commit(e.target.value)} aria-label={`${mode} value`} />
-        <InputField value={value} onChange={(e) => set(e.target.value)} onBlur={(e) => commit(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') commit(value); }} />
+      <div className={'stack color-mode' + (current ? '' : ' other-mode')}>
+        <div className="field"><span className="lbl">{mode === 'light' ? 'Light' : 'Dark'}</span>
+          {linked ? (
+            <>
+              <span className="sw lg" style={{ background: resolveColor(colors, c, mode) }} />
+              <span className="mono link-name" title="Follows this color">→ {target?.name ?? 'missing color'}</span>
+              <Button size="micro" variant="ghost" onClick={unlink}>Unlink</Button>
+            </>
+          ) : (
+            <>
+              <input type="color" value={toHex(value) ?? '#000000'} onChange={(e) => commit(e.target.value)} aria-label={`${mode} value`} />
+              <InputField value={value} onChange={(e) => set(e.target.value)} onBlur={(e) => commit(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') commit(value); }} />
+            </>
+          )}
+        </div>
+        <div className="field"><span className="lbl">Link</span>
+          <LinkPicker mode={mode} current={linked ? raw : null} options={linkable} onPick={(v) => (v ? commit(v) : linked && unlink())} />
+        </div>
       </div>
     );
   };
   const here: 'light' | 'dark' = inDark ? 'dark' : 'light', there: 'light' | 'dark' = inDark ? 'light' : 'dark';
 
   const replaceOptions = [
-    { label: `Plain hex ${c.light}`, value: 'hex' },
+    { label: `Plain hex ${resolveColor(colors, c, 'light')}`, value: 'hex' },
     ...LEVELS.map((f) => ({ label: `Level ${f.slice(2)}`, value: f })),
     ...ACCENTS.map((a) => ({ label: a.token, value: a.token })),
     ...(state.doc.colors ?? []).filter((o) => o.id !== c.id).map((o) => ({ label: o.name, value: colorRef(o.id) })),
@@ -155,7 +210,8 @@ function ColorEditor({ id, dark: inDark, onClose }: { id: string; dark: boolean;
       {row(here, true)}
       {row(there, false)}
       {!hasDark && <div className="hint">Same in both modes. Change it while the editor is in {there} mode, or edit {there} above, to make it differ.</div>}
-      {hasDark && <Button size="micro" variant="ghost" onClick={() => { const v = inDark ? dark : light; setLight(v); setDark(v); edit((d) => ops.updateColor(d, c.id, { light: v, dark: undefined })); }}>Use the {here} color in both modes</Button>}
+      {hasDark && <Button size="micro" variant="ghost" onClick={() => { const v = rawOf(c, here); if (!isLink(v)) { setLight(v); setDark(v); } edit((d) => ops.updateColor(d, c.id, { light: v, dark: undefined })); }}>Use the {here} value in both modes</Button>}
+      <div className="hint">Link a mode to another color to take its value there, like a palette tone: “error background” as red 50 in light and red 900 in dark.</div>
       <div className="hint">{used ? `Used by ${used} rect${used === 1 ? '' : 's'}.` : 'Not used yet.'} Toggle Dark in the toolbar to see and edit the other mode.</div>
 
       {deleting ? (

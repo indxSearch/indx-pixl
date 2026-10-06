@@ -8,6 +8,7 @@ import { Layers } from './panels/Layers';
 import { Inspector } from './panels/Inspector';
 import { FillPanel } from './panels/Fill';
 import { SelectionColors } from './panels/SelectionColors';
+import { FastTip } from './panels/FastTip';
 import { Preview } from './panels/Preview';
 import { Aliases } from './panels/Aliases';
 import { useShortcuts } from './hooks/useShortcuts';
@@ -391,6 +392,11 @@ function Editor() {
     if (cur.length) {
       items.push('sep');
       items.push({ label: 'Zoom to selection', shortcut: '⇧2', onClick: zoomSel });
+      const exportable = cur.filter((n) => n.kind === 'icon' && !(n.obj as Icon).instance);
+      if (exportable.length) {
+        const allIn = exportable.every((n) => (n.obj as Icon).export === true);
+        items.push({ label: allIn ? 'Leave out of export' : 'Include in export', shortcut: 'E', onClick: () => edit((d) => ops.toggleExport(d, exportable.map((n) => n.id))) });
+      }
       items.push({ label: 'Duplicate', shortcut: '⌘D', onClick: () => duplicate(cur) });
       if (one?.kind !== 'artboard') {
         items.push({ label: 'Bring to front', shortcut: '⌘]', onClick: () => edit((d) => ops.reorder(d, ids, 1)) });
@@ -436,6 +442,7 @@ function Editor() {
         </div>
       </div>
       <ContextMenu menu={menu} onClose={closeMenu} />
+      <FastTip />
       <Modal open={exportOpen} onOpenChange={setExportOpen} title="Export all" description={`Write ${icons.length - illustrationCount} icon${icons.length - illustrationCount === 1 ? '' : 's'} to raw-icons/${illustrationCount ? ` and ${illustrationCount} illustration${illustrationCount === 1 ? '' : 's'} to raw-illustrations/` : ''} as SVG.`}>
         <div className="stack" style={{ paddingTop: 10 }}>
           {skipped.length > 0 && <div className="hint">Skipping {skipped.length} icon{skipped.length === 1 ? '' : 's'} not included in export: {skipped.slice(0, 12).map((s) => s.icon.name).join(', ')}{skipped.length > 12 ? ', …' : ''}</div>}

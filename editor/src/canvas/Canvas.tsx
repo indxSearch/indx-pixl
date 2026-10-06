@@ -403,6 +403,8 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
     const n = hit.node;
     // double-click a canvas title to rename the artboard or icon inline
     if (hit.role === 'title') { ui({ sel: [n.id], renaming: { id: n.id, at: 'canvas' } }); return; }
+    // double-click a text layer to edit its text in place
+    if (n.kind === 'text') { ui({ sel: [n.id], renaming: { id: n.id, at: 'canvas' } }); return; }
     const iconId = n.kind === 'icon' ? n.id : n.iconId;
     if (iconId && iconId !== focus) ui({ focus: iconId, sel: n.kind === 'rect' ? [enterAt(iconId, toWorld(view, pt(e)))].filter(Boolean) : [] });
   };
@@ -424,13 +426,14 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
       if (!vis(ib)) continue;
       const is = screenBox(view, ib);
       const isFocus = ic.id === focus, live = isExported(a, ic);
-      overlay.push(<g key={'l' + ic.id} className={'icon-label' + (isFocus ? ' focus' : '') + (ic.instance ? ' instance' : live ? '' : ' draft')} data-id={ic.id} data-kind="icon" data-role="title">
+      // with Outlines off the canvas shows only the drawing: no frame and no name (except while renaming)
+      if (state.ui.outlines || isRenaming(ic.id)) overlay.push(<g key={'l' + ic.id} className={'icon-label' + (isFocus ? ' focus' : '') + (ic.instance ? ' instance' : live ? '' : ' draft')} data-id={ic.id} data-kind="icon" data-role="title">
         <path transform={`translate(${is.x} ${is.y - 14}) scale(1.4)`} d={ic.instance ? INSTANCE_PATH : COMPONENT_PATH} />
         {isRenaming(ic.id)
           ? <foreignObject x={is.x + 10} y={is.y - 20} width={Math.max(120, is.w)} height={18}><NameInput id={ic.id} name={ic.name} className="canvas-name" /></foreignObject>
           : <text x={is.x + 14} y={is.y - 6}>{ic.name}</text>}
       </g>);
-      overlay.push(<rect key={'f' + ic.id} className={'icon-frame' + (live ? ' exportable' : '')} x={is.x - (live ? 2.5 : 0.5)} y={is.y - (live ? 2.5 : 0.5)} width={is.w + (live ? 5 : 1)} height={is.h + (live ? 5 : 1)} />);
+      if (state.ui.outlines) overlay.push(<rect key={'f' + ic.id} className={'icon-frame' + (live ? ' exportable' : '')} x={is.x - (live ? 2.5 : 0.5)} y={is.y - (live ? 2.5 : 0.5)} width={is.w + (live ? 5 : 1)} height={is.h + (live ? 5 : 1)} />);
       if (grid && k >= GRID_ZOOM) {
         let dd = '';
         for (let c = 1; c < ic.w; c++) dd += `M${is.x + c * k + 0.5} ${is.y}v${is.h}`;
@@ -447,6 +450,11 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
   if (sel.length === 1 && !drag) {
     const n = sel[0]; const s = screenBox(view, { x: n.ax, y: n.ay, w: n.w, h: n.h });
     for (const h of HANDLES) { const [hx, hy] = handlePos(h); overlay.push(<rect key={'h' + h} className="handle" data-h={h} x={s.x + s.w * hx - 3.5} y={s.y + s.h * hy - 3.5} width={7} height={7} />); }
+  }
+  const editingText = state.ui.renaming?.at === 'canvas' ? index.get(state.ui.renaming.id) : undefined;
+  if (editingText?.kind === 'text') {
+    const t = editingText.obj as TextNode, b = screenBox(view, { x: editingText.ax, y: editingText.ay, w: editingText.w, h: editingText.h });
+    overlay.push(<foreignObject key="edit-text" x={b.x - 4} y={b.y + b.h / 2 - 11} width={Math.max(160, b.w + 8)} height={22}><NameInput id={t.id} name={t.text} field="text" className="canvas-name" /></foreignObject>);
   }
   const sx = (x: number) => view.x + x * view.k, sy = (y: number) => view.y + y * view.k;
   guides.forEach((g, i) => overlay.push(g.axis === 'x'
@@ -478,15 +486,18 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
       onDoubleClick={onDoubleClick} onContextMenu={onContextMenu}
       onPointerLeave={() => { if (!dragRef.current && hover) ui({ hover: null }); }}>
+      {/* Pixels are drawn in screen space, each edge rounded to the device-pixel grid, so rects that touch in
+          the drawing share one rounded edge and no hairline shows between them at any zoom (as in Figma).
+          Artboard backgrounds and text keep the world transform. */}
+      {doc.artboards.map((a) => vis(a) && (
+        <g key={a.id}>
+          <rect className="ab-bg" data-id={a.id} data-kind="artboard" {...snapBox(view, a.x, a.y, a.w, a.h)} />
+          {a.rects.map((r) => <RectEl key={r.id} r={r} ox={a.x} oy={a.y} v={view} />)}
+          <g transform={`translate(${view.x} ${view.y}) scale(${k})`}>{(a.texts ?? []).map((t) => <TextEl key={t.id} t={t} ox={a.x} oy={a.y} />)}</g>
+          {a.icons.map((ic) => <IconEl key={ic.id} ic={ic} rects={drawnRects(doc, ic)} ox={a.x} oy={a.y} v={view} swaps={state.ui.preview?.icon === ic.id ? ic.variants?.find((v) => v.id === state.ui.preview!.variant)?.swaps : undefined} />)}
+        </g>
+      ))}
       <g transform={`translate(${view.x} ${view.y}) scale(${k})`}>
-        {doc.artboards.map((a) => vis(a) && (
-          <g key={a.id}>
-            <rect className="ab-bg" data-id={a.id} data-kind="artboard" x={a.x} y={a.y} width={a.w} height={a.h} />
-            {a.rects.map((r) => <RectEl key={r.id} r={r} ox={a.x} oy={a.y} />)}
-            {(a.texts ?? []).map((t) => <TextEl key={t.id} t={t} ox={a.x} oy={a.y} />)}
-            {a.icons.map((ic) => <IconEl key={ic.id} ic={ic} rects={drawnRects(doc, ic)} ox={a.x} oy={a.y} swaps={state.ui.preview?.icon === ic.id ? ic.variants?.find((v) => v.id === state.ui.preview!.variant)?.swaps : undefined} />)}
-          </g>
-        ))}
         {drag?.type === 'draw' && (() => { const b = norm(drag.x0, drag.y0, drag.x1, drag.y1); return <rect className="drawing" x={drag.ox + b.x} y={drag.oy + b.y} width={b.w + 1} height={b.h + 1} fill={fillAttr(state.ui.fill)} />; })()}
         {drag?.type === 'drawArtboard' && (() => { const b = norm(drag.x0, drag.y0, drag.x1, drag.y1); return <rect className="drawing ab" x={b.x} y={b.y} width={b.w} height={b.h} />; })()}
       </g>
@@ -498,18 +509,24 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
 const INSTANCE_PATH = 'M3 0H4V1H5V2H6V3H5V4H4V5H3V4H2V3H1V2H2V1H3ZM4 1H3V2H2V3H3V4H4V3H5V2H4Z';
 const COMPONENT_PATH = 'M4 5H3V4H4V5ZM3 3V4H2V3H3ZM5 4H4V3H5V4ZM2 3H1V2H2V3ZM4 3H3V2H4V3ZM6 3H5V2H6V3ZM3 2H2V1H3V2ZM5 2H4V1H5V2ZM4 1H3V0H4V1Z';
 
-function RectEl({ r, ox, oy, swaps }: { r: Rect; ox: number; oy: number; swaps?: Record<string, string> }) {
-  return <rect data-id={r.id} data-kind="rect" x={ox + r.x} y={oy + r.y} width={r.w} height={r.h} fill={fillAttr(swaps?.[r.fill] ?? r.fill)} shapeRendering="crispEdges" />;
+/** A world box in screen pixels, its edges rounded to the device-pixel grid: shared edges round the same way. */
+function snapBox(v: View, x: number, y: number, w: number, h: number) {
+  const dpr = window.devicePixelRatio || 1, snap = (n: number) => Math.round(n * dpr) / dpr;
+  const x0 = snap(v.x + x * v.k), y0 = snap(v.y + y * v.k), x1 = snap(v.x + (x + w) * v.k), y1 = snap(v.y + (y + h) * v.k);
+  return { x: x0, y: y0, width: Math.max(0, x1 - x0), height: Math.max(0, y1 - y0) };
+}
+function RectEl({ r, ox, oy, v, swaps }: { r: Rect; ox: number; oy: number; v: View; swaps?: Record<string, string> }) {
+  return <rect data-id={r.id} data-kind="rect" {...snapBox(v, ox + r.x, oy + r.y, r.w, r.h)} fill={fillAttr(swaps?.[r.fill] ?? r.fill)} shapeRendering="crispEdges" />;
 }
 /** `swaps` set while one of the icon's colour variants is previewed. */
-function IconEl({ ic, rects, ox, oy, swaps }: { ic: Icon; rects: Rect[]; ox: number; oy: number; swaps?: Record<string, string> }) {
-  const frame = <rect data-id={ic.id} data-kind="icon" x={ox + ic.x} y={oy + ic.y} width={ic.w} height={ic.h} fill="transparent" />;
+function IconEl({ ic, rects, ox, oy, v, swaps }: { ic: Icon; rects: Rect[]; ox: number; oy: number; v: View; swaps?: Record<string, string> }) {
+  const frame = <rect data-id={ic.id} data-kind="icon" {...snapBox(v, ox + ic.x, oy + ic.y, ic.w, ic.h)} fill="transparent" />;
   // an instance's pixels belong to its component: draw them without ids, under a frame that takes the clicks
-  if (ic.instance) return <g className="instance">{rects.map((r, i) => <rect key={i} x={ox + ic.x + r.x} y={oy + ic.y + r.y} width={r.w} height={r.h} fill={fillAttr(r.fill)} shapeRendering="crispEdges" pointerEvents="none" />)}{frame}</g>;
+  if (ic.instance) return <g className="instance">{rects.map((r, i) => <rect key={i} {...snapBox(v, ox + ic.x + r.x, oy + ic.y + r.y, r.w, r.h)} fill={fillAttr(r.fill)} shapeRendering="crispEdges" pointerEvents="none" />)}{frame}</g>;
   return (
     <g>
       {frame}
-      {rects.map((r) => <RectEl key={r.id} r={r} ox={ox + ic.x} oy={oy + ic.y} swaps={swaps} />)}
+      {rects.map((r) => <RectEl key={r.id} r={r} ox={ox + ic.x} oy={oy + ic.y} v={v} swaps={swaps} />)}
     </g>
   );
 }
