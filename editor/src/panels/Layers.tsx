@@ -8,6 +8,8 @@ import { uid } from '../model/types';
 import { Panel } from './Panel';
 import { NameInput } from './NameInput';
 import { type FindHit, findLayers } from '../model/find';
+import { type Pairing, allPairings } from '../model/pairing';
+import { Button } from '@indxsearch/systm';
 
 export function Layers({ onMenu, onReveal }: { onMenu: (x: number, y: number, nodeId: string) => void; onReveal: (id: string) => void }) {
   const { state, ui, edit } = useEditor();
@@ -16,8 +18,16 @@ export function Layers({ onMenu, onReveal }: { onMenu: (x: number, y: number, no
   const [active, setActive] = useState(0);
   // SearchField does not forward a ref, so the field is found by id
   const field = { get current() { return document.getElementById('layer-find') as HTMLInputElement | null; } };
-  const hits = useMemo(() => (query.trim() ? findLayers(state.doc, query) : []), [state.doc, query]);
-  useEffect(() => setActive(0), [query]);
+  const [filter, setFilter] = useState<Pairing | null>(null);
+  // a pairing filter narrows to motifs of that kind, alone or together with the typed name
+  const hits = useMemo(() => {
+    if (!filter) return query.trim() ? findLayers(state.doc, query) : [];
+    const keep = new Map(allPairings(state.doc).filter((p) => p.pairing === filter).map((p) => [p.ic.id, p]));
+    if (query.trim()) return findLayers(state.doc, query).filter((h) => keep.has(h.id));
+    return [...keep.values()].map((p): FindHit => ({ id: p.ic.id, kind: 'icon', name: p.ic.name, where: p.artboard, artboardId: p.artboardId, score: 0, marks: [] }))
+      .sort((a, b) => a.where.localeCompare(b.where) || a.name.localeCompare(b.name));
+  }, [state.doc, query, filter]);
+  useEffect(() => setActive(0), [query, filter]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') { e.preventDefault(); field.current?.focus(); field.current?.select(); } };
     window.addEventListener('keydown', onKey, true);
@@ -28,7 +38,7 @@ export function Layers({ onMenu, onReveal }: { onMenu: (x: number, y: number, no
     if (e.key === 'ArrowDown') { e.preventDefault(); setActive((i) => Math.min(hits.length - 1, i + 1)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((i) => Math.max(0, i - 1)); }
     else if (e.key === 'Enter') { e.preventDefault(); reveal(hits[active]); }
-    else if (e.key === 'Escape') { e.preventDefault(); setQuery(''); field.current?.blur(); }
+    else if (e.key === 'Escape') { e.preventDefault(); setQuery(''); setFilter(null); field.current?.blur(); }
     e.stopPropagation(); // keep editor shortcuts (A, R, digits) out of the field
   };
   const marked = (h: FindHit) => {
@@ -91,9 +101,15 @@ export function Layers({ onMenu, onReveal }: { onMenu: (x: number, y: number, no
     <Panel title="Layers" grow right={<button className="icon-btn" title="Add artboard" onClick={addArtboard}><Plus size={14} color="currentColor" /></button>}>
       <div className="layer-search">
         <SearchField id="layer-find" inputSize="micro" placeholder="Find layers  ⌘F" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={onFieldKey} aria-label="Find layers" />
+        <div className="pair-filters">
+          {(['shared', 'icon only', 'pictogram only'] as Pairing[]).map((f) => (
+            <Button key={f} size="micro" variant={filter === f ? 'secondary' : 'ghost'} onClick={() => setFilter(filter === f ? null : f)}>{f}</Button>
+          ))}
+        </div>
       </div>
-      {query.trim() ? (
+      {query.trim() || filter ? (
         <div className="find-results">
+          {filter && <div className="hint">{hits.length} {filter === 'shared' ? 'motifs in both sets' : filter === 'icon only' ? 'icons without a pictogram' : 'pictograms without an icon'}{query.trim() ? ' matching' : ''}</div>}
           {!hits.length && <div className="hint">Nothing called that.</div>}
           {hits.map((h, i) => (
             <div key={h.id} className={'row find-hit' + (i === active ? ' active' : '') + (sel.includes(h.id) ? ' sel' : '')} style={{ paddingLeft: 10 }}

@@ -7,6 +7,8 @@ import * as ops from '../model/ops';
 import { Panel } from './Panel';
 import { Variants } from './Variants';
 import { detachInstance, masterOf, placeVariants } from '../model/instances';
+import { pairingOf } from '../model/pairing';
+import { kindOf } from '../model/types';
 
 /** Name of an artboard or icon, saved on Enter or when the field loses focus: one undo step per rename. */
 function NameField({ id, name }: { id: string; name: string }) {
@@ -28,13 +30,13 @@ const Num = ({ label, value, onChange, min }: { label: string; value: number | '
   </div>
 );
 
-export function Inspector({ onCopySvg, onExportIcon, onMakeComponent }: { onCopySvg: (ic: Icon) => void; onExportIcon: (ic: Icon) => void; onMakeComponent: (name: string) => void }) {
+export function Inspector({ onCopySvg, onExportIcon, onMakeComponent, onReveal }: { onCopySvg: (ic: Icon) => void; onExportIcon: (ic: Icon) => void; onMakeComponent: (name: string) => void; onReveal: (id: string) => void }) {
   const { state, sel, edit, index, ui } = useEditor();
   const same = (key: 'x' | 'y' | 'w' | 'h') => (sel.every((n) => (n.obj as Rect)[key] === (sel[0].obj as Rect)[key]) ? (sel[0].obj as Rect)[key] : '');
   const setGeo = (key: 'x' | 'y' | 'w' | 'h', v: number) => {
     const val = key === 'w' || key === 'h' ? Math.max(1, v) : v;
     const ids = sel.map((n) => n.id);
-    edit((d) => ids.reduce((acc, id) => ops.setGeometry(acc, id, { [key]: val }), d));
+    edit((d) => ids.reduce((acc, id) => { const next = ops.setGeometry(acc, id, { [key]: val }); return next.artboards.find((a) => a.id === id)?.grid?.auto ? ops.arrangeArtboardItems(next, id) : next; }, d));
   };
   const looseOnly = sel.length > 0 && sel.every((n) => n.kind === 'rect' && !n.iconId) && new Set(sel.map((n) => n.artboardId)).size === 1;
   const [compName, setCompName] = useState('');
@@ -132,6 +134,18 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent }: { onCopy
         })()}
         {one?.kind === 'icon' && !(one.obj as Icon).instance && (
           <>
+            {(() => {
+              const ic = one.obj as Icon, ab = index.get(one.artboardId)?.obj as Artboard | undefined;
+              const pic = !!ab && kindOf(ab) === 'pictograms';
+              const { pairing, twin } = pairingOf(state.doc, ic, pic);
+              return (
+                <div className="pairing">
+                  <span className="dim">{pairing === 'shared' ? (pic ? 'Pictogram of the icon' : 'Icon with a pictogram') : pairing === 'icon only' ? 'Icon only' : 'Pictogram only'}</span>
+                  {twin && <Button size="micro" variant="ghost" onClick={() => onReveal(twin.id)}>{pic ? 'Go to icon' : 'Go to pictogram'}</Button>}
+                  {pic && pairing === 'pictogram only' && <div className="hint">A pictogram with no icon twin may be larger than 7×5 when the motif needs more pixels; shared motifs stay 7×5 so the pair matches.</div>}
+                </div>
+              );
+            })()}
             <ToggleSwitch label="Include in export  E" checked={(one.obj as Icon).export === true} onChange={(v) => edit((d) => ops.setProps(d, one.id, { export: v }))} />
             <div className="field"><span className="lbl">File</span><span className="mono dim">raw-icons/{(one.obj as Icon).name}.svg</span></div>
             <div className="btn-row">

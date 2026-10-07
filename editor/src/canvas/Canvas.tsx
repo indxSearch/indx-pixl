@@ -293,7 +293,8 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
           box.w = Math.max(d.minW, box.w); box.h = Math.max(d.minH, box.h);
           setGuides(s.guides);
         }
-        edit(() => ops.setGeometry(d.orig, d.id, box), true);
+        // an auto-layout artboard re-flows its items while it is resized
+        edit(() => { const next = ops.setGeometry(d.orig, d.id, box); return next.artboards.find((a) => a.id === d.id)?.grid?.auto ? ops.arrangeArtboardItems(next, d.id) : next; }, true);
         return;
       }
       case 'marquee': {

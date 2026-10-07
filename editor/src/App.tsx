@@ -431,7 +431,7 @@ function Editor() {
           </div>
           {!state.ui.hideUi && (
             <div className="column">
-              <Inspector onCopySvg={copySvg} onExportIcon={exportIcon} onMakeComponent={makeComponent} />
+              <Inspector onCopySvg={copySvg} onExportIcon={exportIcon} onMakeComponent={makeComponent} onReveal={reveal} />
               <SelectionColors />
               <FillPanel dark={dark} />
               <Preview />

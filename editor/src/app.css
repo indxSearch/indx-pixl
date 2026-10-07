@@ -172,6 +172,8 @@ button { font: inherit; color: inherit; }
 .accents { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; }
 
 /* color library */
+.pairing { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.pair-filters { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 6px; }
 .layer-search { padding: 6px 8px 8px; position: sticky; top: 0; background: var(--lv1); z-index: 1; }
 .find-hit .name b { font-weight: 650; color: var(--lv8); }
 .find-hit .name span { color: var(--lv5); }
