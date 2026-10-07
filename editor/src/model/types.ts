@@ -9,14 +9,15 @@ export interface Icon { id: string; name: string; x: number; y: number; w: numbe
 /** A colour variant of an icon: the same pixels with some fills swapped, like a red heart drawn from the violet
  *  one. It exports as "<icon> <variant>" and as a `variant` prop on the icon's component. */
 export interface Variant { id: string; name: string; swaps: Record<string, Fill> }
-/** What an artboard's components export as: 7×5 icons (`raw-icons/`, the package root) or illustrations of any size (`raw-illustrations/`, `@indxsearch/pixl/illustrations`). */
-export type ArtboardKind = 'icons' | 'illustrations';
+/** What an artboard's components export as: 7×5 icons (`raw-icons/`, the package root) or pictograms of any size (`raw-pictograms/`, `@indxsearch/pixl/pictograms`). */
+export type ArtboardKind = 'icons' | 'pictograms';
 export interface Artboard {
   id: string; name: string; x: number; y: number; w: number; h: number; icons: Icon[]; rects: Rect[]; texts?: TextNode[]; export?: boolean; grid?: IconGrid;
   /** Absent means 'icons'. */
   kind?: ArtboardKind;
 }
-export const kindOf = (a: Artboard): ArtboardKind => a.kind ?? 'icons';
+/** 'illustrations' was the kind's name until Oct 2026; a file saved before then still reads as pictograms. */
+export const kindOf = (a: Artboard): ArtboardKind => (a.kind === 'pictograms' || (a.kind as string) === 'illustrations' ? 'pictograms' : 'icons');
 
 /** Layout used by Arrange / Auto layout. Values are in icon pixels. */
 export interface IconGrid { cols: number; gap: number; pad: number; auto?: boolean }

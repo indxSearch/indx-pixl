@@ -5,7 +5,7 @@ import { useEditor } from '../model/store';
 import { ACCENTS, type ColorToken, type Fill as FillT, type Rect, type TextNode, fillAttr, isToken, uid } from '../model/types';
 import * as ops from '../model/ops';
 import { toHex } from '../model/svg';
-import { colorIdOf, colorRef, cssVarOf, differsByMode, findColor, idsUsing, isLink, linksTo, nameProblem, rawOf, resolveColor, usageOf } from '../model/colors';
+import { colorIdOf, colorRef, cssVarOf, differsByMode, findColor, idsUsing, isLink, linkSummary, linkedFrom, linksTo, nameProblem, rawOf, resolveColor, usageOf } from '../model/colors';
 import { Panel } from './Panel';
 import { TidyColors } from './TidyColors';
 
@@ -57,7 +57,7 @@ export function FillPanel({ dark }: { dark: boolean }) {
         <div className="lbl-row"><span className="lbl">Colors <span className="dim">double-click to edit · drag to sort</span></span><Button size="micro" variant="ghost" onClick={() => setTidying(true)}>Tidy…</Button></div>
         <TidyColors open={tidying} onOpenChange={setTidying} />
         <div className="accents" onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropAt(null); }}>
-          {colors.map((c, i) => swatch(colorRef(c.id), `${c.name} · ${cssVarOf(c)}${differsByMode(colors, c) ? ' · light/dark' : ''}${isLink(c.light) || isLink(c.dark) ? ' · linked' : ''}`, undefined, {
+          {colors.map((c, i) => swatch(colorRef(c.id), [c.name, linkSummary(colors, c) || (differsByMode(colors, c) ? 'light/dark' : ''), linkedFrom(colors, c.id).length ? `linked from ${linkedFrom(colors, c.id).length}` : ''].filter(Boolean).join(' · '), undefined, {
             onDoubleClick: () => setEditing(c.id),
             onContextMenu: (e) => { e.preventDefault(); setEditing(c.id); },
             draggable: true,
@@ -212,6 +212,25 @@ function ColorEditor({ id, dark: inDark, onClose }: { id: string; dark: boolean;
       {!hasDark && <div className="hint">Same in both modes. Change it while the editor is in {there} mode, or edit {there} above, to make it differ.</div>}
       {hasDark && <Button size="micro" variant="ghost" onClick={() => { const v = rawOf(c, here); if (!isLink(v)) { setLight(v); setDark(v); } edit((d) => ops.updateColor(d, c.id, { light: v, dark: undefined })); }}>Use the {here} value in both modes</Button>}
       <div className="hint">Link a mode to another color to take its value there, like a palette tone: “error background” as red 50 in light and red 900 in dark.</div>
+      {(() => {
+        const from = linkedFrom(colors, c.id);
+        if (!from.length) return null;
+        return (
+          <div className="linked-from">
+            <span className="lbl">Linked from</span>
+            <div className="linked-from-list">
+              {from.map((o) => (
+                <button key={o.id} className="link-row" onClick={() => ui({ fill: colorRef(o.id) })} title={`${o.name}: ${linkSummary(colors, o)}`}>
+                  <span className="sw" style={{ background: resolveColor(colors, o, inDark ? 'dark' : 'light') }} />
+                  <span className="name">{o.name}</span>
+                  <span className="dim">{[o.light === `c:${c.id}` ? 'light' : '', o.dark === `c:${c.id}` || (o.dark === undefined && o.light === `c:${c.id}`) ? 'dark' : ''].filter(Boolean).join(' + ')}</span>
+                </button>
+              ))}
+            </div>
+            <div className="hint">Changing this color changes {from.length === 1 ? 'this one' : `these ${from.length}`} too, in the modes shown.</div>
+          </div>
+        );
+      })()}
       <div className="hint">{used ? `Used by ${used} rect${used === 1 ? '' : 's'}.` : 'Not used yet.'} Toggle Dark in the toolbar to see and edit the other mode.</div>
 
       {deleting ? (

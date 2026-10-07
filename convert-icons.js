@@ -1,12 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 
-// Icons (raw-icons/) are the package root. Illustrations (raw-illustrations/) are generated under
-// src/icons/illustrations so that tsc keeps src/icons as its root and the icons stay at dist/*.js;
-// they come out as dist/illustrations/*, published as @indxsearch/pixl/illustrations.
+// Icons (raw-icons/) are the package root. Pictograms (raw-pictograms/) are generated under
+// src/icons/pictograms so that tsc keeps src/icons as its root and the icons stay at dist/*.js;
+// they come out as dist/pictograms/*, published as @indxsearch/pixl/pictograms.
 const sets = [
   { input: path.join(__dirname, 'raw-icons'), output: path.join(__dirname, 'src/icons'), label: 'icons' },
-  { input: path.join(__dirname, 'raw-illustrations'), output: path.join(__dirname, 'src/icons/illustrations'), label: 'illustrations' },
+  { input: path.join(__dirname, 'raw-pictograms'), output: path.join(__dirname, 'src/icons/pictograms'), label: 'pictograms' },
 ];
 
 for (const { input: inputFolder, output: outputFolder, label } of sets) {

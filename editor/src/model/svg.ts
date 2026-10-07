@@ -30,7 +30,7 @@ export function exportIconSvg(icon: Icon, colors: ColorToken[] = [], mode: 'unio
 export function allComponents(doc: Doc): Icon[] {
   return doc.artboards.flatMap((a) => a.icons.filter((ic) => isExported(a, ic)));
 }
-/** Components that Export all writes, each with its artboard's kind: icons and illustrations go to
+/** Components that Export all writes, each with its artboard's kind: icons and pictograms go to
  *  separate folders and packages, so the same name may appear once in each (a coloured "search"). */
 export function exportedByKind(doc: Doc): { icon: Icon; kind: ArtboardKind }[] {
   return doc.artboards.flatMap((a) => a.icons.filter((ic) => isExported(a, ic)).map((icon) => ({ icon, kind: kindOf(a) })));
@@ -48,7 +48,7 @@ export function exportedFiles(doc: Doc): { icon: Icon; kind: ArtboardKind; base:
 }
 /** Per kind, which components have variants and what they are called: written as variants.json for convert-icons.js. */
 export function variantManifest(doc: Doc): Record<ArtboardKind, Record<string, string[]>> {
-  const out: Record<ArtboardKind, Record<string, string[]>> = { icons: {}, illustrations: {} };
+  const out: Record<ArtboardKind, Record<string, string[]>> = { icons: {}, pictograms: {} };
   for (const { icon, kind } of exportedByKind(doc)) if (icon.variants?.length) out[kind][icon.name] = icon.variants.map((v) => v.name);
   return out;
 }
@@ -58,7 +58,7 @@ export function kindOfIcon(doc: Doc, icon: Icon): ArtboardKind {
   return a ? kindOf(a) : 'icons';
 }
 /** Folder an exported component lands in. */
-export const rawFolderOf = (kind: ArtboardKind) => (kind === 'illustrations' ? 'raw-illustrations' : 'raw-icons');
+export const rawFolderOf = (kind: ArtboardKind) => (kind === 'pictograms' ? 'raw-pictograms' : 'raw-icons');
 /** Components skipped by Export all, with the reason. */
 export function skippedComponents(doc: Doc): { icon: Icon; reason: string }[] {
   return doc.artboards.flatMap((a) => a.icons.filter((ic) => !isExported(a, ic) && !ic.instance).map((ic) => ({ icon: ic, reason: a.export === false ? `artboard "${a.name}" not exported` : 'not included in export' })));

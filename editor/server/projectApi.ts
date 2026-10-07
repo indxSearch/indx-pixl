@@ -37,13 +37,13 @@ export function projectApi(root: string, run: RunScript, changed: (version: stri
       }
       if (url === '/api/export' && request.method === 'POST') {
         const { files, convert, build, colorsCss, variants } = await request.json() as { files: { name: string; svg: string; kind?: string }[]; convert?: boolean; build?: boolean; colorsCss?: string; variants?: Record<string, Record<string, string[]>> };
-        if (!Array.isArray(files) || files.some(f => typeof f.name !== 'string' || !/^[\p{L}\p{N}][\p{L}\p{N} \-_]*$/u.test(f.name) || typeof f.svg !== 'string' || (f.kind !== undefined && f.kind !== 'icons' && f.kind !== 'illustrations'))) return json(400, { error: 'Invalid icon name, kind or SVG' });
+        if (!Array.isArray(files) || files.some(f => typeof f.name !== 'string' || !/^[\p{L}\p{N}][\p{L}\p{N} \-_]*$/u.test(f.name) || typeof f.svg !== 'string' || (f.kind !== undefined && f.kind !== 'icons' && f.kind !== 'pictograms'))) return json(400, { error: 'Invalid icon name, kind or SVG' });
         if (typeof colorsCss === 'string') fs.writeFileSync(path.join(root, 'colors.css'), colorsCss);
-        // Icons go to raw-icons/ (the package root), illustrations to raw-illustrations/ (@indxsearch/pixl/illustrations).
-        const folderOf = (kind?: string) => (kind === 'illustrations' ? path.join(root, 'raw-illustrations') : raw);
+        // Icons go to raw-icons/ (the package root), pictograms to raw-pictograms/ (@indxsearch/pixl/pictograms).
+        const folderOf = (kind?: string) => (kind === 'pictograms' ? path.join(root, 'raw-pictograms') : raw);
         for (const f of files) { fs.mkdirSync(folderOf(f.kind), { recursive: true }); fs.writeFileSync(path.join(folderOf(f.kind), f.name + '.svg'), f.svg); }
         // Which components have colour variants, for convert-icons.js to give them a `variant` prop.
-        if (variants && typeof variants === 'object') for (const kind of ['icons', 'illustrations'] as const) {
+        if (variants && typeof variants === 'object') for (const kind of ['icons', 'pictograms'] as const) {
           const v = variants[kind] ?? {};
           if (!Object.keys(v).length && !fs.existsSync(path.join(folderOf(kind), 'variants.json'))) continue;
           fs.mkdirSync(folderOf(kind), { recursive: true });

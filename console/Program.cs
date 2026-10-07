@@ -945,9 +945,9 @@ sealed class PixlLibrary
     public bool CanEdit => document is not null;
     public List<string> ArtboardNames => document?["artboards"]?.AsArray().OfType<JsonObject>().Where(IsMonochrome).Select(artboard => artboard["name"]?.GetValue<string>() ?? "Artboard").ToList() ?? ["raw-icons"];
 
-    /// <summary>The TUI drafts monochrome motives. Coloured illustrations belong to the canvas editor:
+    /// <summary>The TUI drafts monochrome motives. Coloured pictograms belong to the canvas editor:
     /// a save here writes every pixel as lv8 and would flatten their colours, so they are not shown.</summary>
-    private static bool IsMonochrome(JsonObject artboard) => artboard["kind"]?.GetValue<string>() != "illustrations";
+    private static bool IsMonochrome(JsonObject artboard) => artboard["kind"]?.GetValue<string>() is not ("pictograms" or "illustrations"); // the old name, before Oct 2026
     public IconEntry? FindIcon(string name) => Icons.FirstOrDefault(icon => string.Equals(icon.Name, name, StringComparison.OrdinalIgnoreCase));
 
     public static PixlLibrary Load(string pixlPath, string rawIconDir)

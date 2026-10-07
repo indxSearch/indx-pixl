@@ -85,3 +85,14 @@ export function idsUsing(doc: Doc, fill: Fill): string[] {
 
 /** Count rects and texts using a fill. Texts count too: deleting a color recolors them as well. */
 export const usageOf = (doc: Doc, fill: Fill): number => idsUsing(doc, fill).length;
+
+/** What a color follows, for a tooltip: "light → red 50 · dark → red 900", or '' when it holds its own values. */
+export function linkSummary(colors: ColorToken[], c: ColorToken): string {
+  const name = (v?: string) => colors.find((x) => x.id === v?.slice(2))?.name ?? 'missing color';
+  const parts: string[] = [];
+  if (isLink(c.light)) parts.push(`light → ${name(c.light)}`);
+  if (c.dark !== undefined ? isLink(c.dark) : isLink(c.light)) parts.push(`dark → ${name(c.dark ?? c.light)}`);
+  return parts.join(' · ');
+}
+/** Colors whose light or dark value links straight to `id`. */
+export const linkedFrom = (colors: ColorToken[], id: string) => colors.filter((c) => c.light === `c:${id}` || c.dark === `c:${id}`);

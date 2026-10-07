@@ -38,7 +38,7 @@ export function Variants({ icon }: { icon: Icon }) {
   return (
     <div className="variants stack">
       <div className="variants-head"><span className="lbl">Variants</span><Button size="micro" variant="ghost" onClick={add}>Add variant</Button></div>
-      {variants.length === 0 && <div className="hint">Colour versions of this {icon.w > 7 || icon.h > 5 ? 'illustration' : 'icon'} that share its pixels, like a red and a green heart. Each exports as “{icon.name} &lt;variant&gt;” and as a variant prop.</div>}
+      {variants.length === 0 && <div className="hint">Colour versions of this {icon.w > 7 || icon.h > 5 ? 'pictogram' : 'icon'} that share its pixels, like a red and a green heart. Each exports as “{icon.name} &lt;variant&gt;” and as a variant prop.</div>}
       {variants.map((v) => {
         const problem = nameProblem(v.name, v.id);
         return (

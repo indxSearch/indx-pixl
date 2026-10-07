@@ -89,9 +89,9 @@ function Editor() {
   const [exporting, setExporting] = useState(false);
   const icons = allComponents(state.doc);
   const byKind = exportedByKind(state.doc);
-  const illustrationCount = byKind.filter((c) => c.kind === 'illustrations').length;
+  const pictogramCount = byKind.filter((c) => c.kind === 'pictograms').length;
   const skipped = skippedComponents(state.doc);
-  // A name must be unique within its kind; an icon and its coloured illustration share one on purpose.
+  // A name must be unique within its kind; an icon and its coloured pictogram share one on purpose.
   const files = exportedFiles(state.doc);
   const keys = files.map((c) => `${c.kind}\u0000${c.icon.name}`);
   const dupes = [...new Set(keys.filter((k, i) => keys.indexOf(k) !== i).map((k) => k.replace('\u0000', ': ')))];
@@ -443,12 +443,12 @@ function Editor() {
       </div>
       <ContextMenu menu={menu} onClose={closeMenu} />
       <FastTip />
-      <Modal open={exportOpen} onOpenChange={setExportOpen} title="Export all" description={`Write ${icons.length - illustrationCount} icon${icons.length - illustrationCount === 1 ? '' : 's'} to raw-icons/${illustrationCount ? ` and ${illustrationCount} illustration${illustrationCount === 1 ? '' : 's'} to raw-illustrations/` : ''} as SVG.`}>
+      <Modal open={exportOpen} onOpenChange={setExportOpen} title="Export all" description={`Write ${icons.length - pictogramCount} icon${icons.length - pictogramCount === 1 ? '' : 's'} to raw-icons/${pictogramCount ? ` and ${pictogramCount} pictogram${pictogramCount === 1 ? '' : 's'} to raw-pictograms/` : ''} as SVG.`}>
         <div className="stack" style={{ paddingTop: 10 }}>
           {skipped.length > 0 && <div className="hint">Skipping {skipped.length} icon{skipped.length === 1 ? '' : 's'} not included in export: {skipped.slice(0, 12).map((s) => s.icon.name).join(', ')}{skipped.length > 12 ? ', …' : ''}</div>}
           {dupes.length > 0 && <div className="warn">Duplicate names: {dupes.join(', ')}</div>}
           {badNames.length > 0 && <div className="warn">Invalid names (letters, digits, space, - and _ only): {badNames.join(', ')}</div>}
-          <Checkbox label="Run convert-icons.js afterwards (regenerates src/icons and src/icons/illustrations)" checked={convert} onChange={(e) => setConvert(e.target.checked)} />
+          <Checkbox label="Run convert-icons.js afterwards (regenerates src/icons and src/icons/pictograms)" checked={convert} onChange={(e) => setConvert(e.target.checked)} />
           <Checkbox label="Build npm package afterwards (updates dist)" checked={buildPackage} onChange={(e) => setBuildPackage(e.target.checked)} />
           <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
             <Button size="micro" variant="ghost" onClick={() => setExportOpen(false)}>Cancel</Button>

@@ -196,6 +196,8 @@ button { font: inherit; color: inherit; }
 .link-row.on { background: var(--lv2); color: var(--lv8); }
 .link-row .sw { width: 16px; height: 16px; border-radius: 3px; border: 1px solid var(--lv3); }
 .link-row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.linked-from { display: flex; flex-direction: column; gap: 4px; }
+.linked-from-list { display: flex; flex-direction: column; max-height: 160px; overflow: auto; }
 .color-mode { gap: 4px; }
 .link-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sw-btn.linked::after { content: ''; position: absolute; right: 2px; bottom: 2px; width: 4px; height: 4px; border-radius: 50%; background: var(--lv8); border: 1px solid var(--lv0); }

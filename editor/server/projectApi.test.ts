@@ -33,9 +33,9 @@ test('export validates all names before writing and runs conversion before build
     assert.equal(result.status, 200);
     assert.deepEqual(calls, ['convert', 'build']);
     assert.equal(await fs.readFile(path.join(root, 'raw-icons/test icon.svg'), 'utf8'), '<svg/>');
-    // An illustration with the same name as an icon lands in its own folder, beside it, not over it.
-    assert.equal((await post({ files: [{ name: 'test icon', svg: '<svg id="i"/>', kind: 'illustrations' }] })).status, 200);
-    assert.equal(await fs.readFile(path.join(root, 'raw-illustrations/test icon.svg'), 'utf8'), '<svg id="i"/>');
+    // An pictogram with the same name as an icon lands in its own folder, beside it, not over it.
+    assert.equal((await post({ files: [{ name: 'test icon', svg: '<svg id="i"/>', kind: 'pictograms' }] })).status, 200);
+    assert.equal(await fs.readFile(path.join(root, 'raw-pictograms/test icon.svg'), 'utf8'), '<svg id="i"/>');
     assert.equal(await fs.readFile(path.join(root, 'raw-icons/test icon.svg'), 'utf8'), '<svg/>');
     assert.equal((await post({ files: [{ name: 'x', svg: '<svg/>', kind: '../elsewhere' }] })).status, 400);
     const icons = await api(new Request('http://localhost/api/raw-icons'));
