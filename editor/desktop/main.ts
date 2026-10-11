@@ -1,4 +1,5 @@
-import { app, BrowserWindow, dialog, Menu, net, protocol, shell, utilityProcess } from 'electron';
+import { app, BrowserWindow, dialog, Menu, net, protocol, shell } from 'electron';
+import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -28,17 +29,17 @@ function remember(folder: string) {
   fs.writeFileSync(preferences(), JSON.stringify({ root }));
 }
 
-// Electron supplies Node, so Finder launches do not depend on a shell PATH.
+// Electron supplies Node, so Finder launches do not depend on a shell PATH. The app binary runs the script as
+// plain Node (ELECTRON_RUN_AS_NODE): a utilityProcess child stayed alive after its script finished, so its
+// exit never came and Export all hung on the first step.
 function run(task: string): Promise<string> {
   const script = task === 'convert' ? path.join(root, 'convert-icons.js') : path.join(root, 'node_modules/typescript/bin/tsc');
   if (!fs.existsSync(script)) return Promise.reject(new Error('Project dependencies are missing. Run npm install in the project folder first.'));
   return new Promise((resolve, reject) => {
-    const child = utilityProcess.fork(script, [], { cwd: root, stdio: 'pipe' });
-    let output = '';
-    child.stdout?.on('data', chunk => { output += chunk; });
-    child.stderr?.on('data', chunk => { output += chunk; });
-    child.on('error', reject);
-    child.on('exit', code => code === 0 ? resolve(output) : reject(new Error(output || `${task} exited with code ${code}`)));
+    execFile(process.execPath, [script], { cwd: root, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+      const output = stdout + stderr;
+      if (error) reject(new Error(output || `${task} failed: ${error.message}`)); else resolve(output);
+    });
   });
 }
 function createWindow() {
