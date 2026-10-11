@@ -6,13 +6,13 @@ import * as ops from '../model/ops';
 import { FillPicker, labelOf, swatchStyle } from './SelectionColors';
 
 /** One swatch cell: the fill as it is in the base or a variant, and a picker that changes it. */
-function Cell({ fill, onPick, dim }: { fill: Fill; onPick: (f: Fill) => void; dim?: boolean }) {
+function Cell({ fill, onPick, dim, allowHide }: { fill: Fill; onPick: (f: Fill) => void; dim?: boolean; allowHide?: boolean }) {
   const { state } = useEditor();
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen} side="left" align="start" aria-label="Change color"
       trigger={<button className={'sw-btn' + (dim ? ' same' : '')} style={swatchStyle(fill, state.doc.colors ?? [])} title={labelOf(fill, state.doc)} />}>
-      <FillPicker current={fill} onPick={(f) => { setOpen(false); onPick(f); }} />
+      <FillPicker current={fill} allowHide={allowHide} onPick={(f) => { setOpen(false); onPick(f); }} />
     </Popover>
   );
 }
@@ -38,7 +38,7 @@ export function Variants({ icon }: { icon: Icon }) {
   return (
     <div className="variants stack">
       <div className="variants-head"><span className="lbl">Variants</span><Button size="micro" variant="ghost" onClick={add}>Add variant</Button></div>
-      {variants.length === 0 && <div className="hint">Colour versions of this {icon.w > 7 || icon.h > 5 ? 'pictogram' : 'icon'} that share its pixels, like a red and a green heart. Each exports as “{icon.name} &lt;variant&gt;” and as a variant prop.</div>}
+      {variants.length === 0 && <div className="hint">Colour versions of this {icon.w > 7 || icon.h > 5 ? 'pictogram' : 'icon'} that share its pixels, like a red and a green heart. A variant can also hide a colour, to draw less than the base. Each exports as “{icon.name} &lt;variant&gt;” and as a variant prop.</div>}
       {variants.map((v) => {
         const problem = nameProblem(v.name, v.id);
         return (
@@ -59,7 +59,7 @@ export function Variants({ icon }: { icon: Icon }) {
             <div key={f} className="variant-line">
               <span className="variant-fill" title={labelOf(f, state.doc)}>{labelOf(f, state.doc)}</span>
               <Cell fill={f} onPick={(to) => edit((d) => ops.recolorIcon(d, icon.id, f, to))} />
-              {variants.map((v) => <Cell key={v.id} fill={v.swaps[f] ?? f} dim={!(f in v.swaps)} onPick={(to) => edit((d) => ops.setSwap(d, icon.id, v.id, f, to))} />)}
+              {variants.map((v) => <Cell key={v.id} fill={v.swaps[f] ?? f} dim={!(f in v.swaps)} allowHide onPick={(to) => edit((d) => ops.setSwap(d, icon.id, v.id, f, to))} />)}
             </div>
           ))}
         </div>

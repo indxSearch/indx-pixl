@@ -7,8 +7,15 @@ export interface Icon { id: string; name: string; x: number; y: number; w: numbe
   /** Set on an instance: it draws another icon's pixels, optionally in one of its variants, and has no rects of its own. */
   instance?: { of: string; variant?: string } }
 /** A colour variant of an icon: the same pixels with some fills swapped, like a red heart drawn from the violet
- *  one. It exports as "<icon> <variant>" and as a `variant` prop on the icon's component. */
+ *  one. A fill swapped to `HIDE` is left out, so a variant can draw less than its base (a plain box beside one
+ *  with a filled inside): the base holds every pixel any variant draws. It exports as "<icon> <variant>" and as
+ *  a `variant` prop on the icon's component. */
 export interface Variant { id: string; name: string; swaps: Record<string, Fill> }
+/** The swap target that hides a fill in a variant. Only a variant may use it; an icon's own rects never do. */
+export const HIDE = 'none';
+/** Rects as a variant draws them: fills swapped, hidden ones dropped. */
+export const swapRects = <R extends { fill: Fill }>(rects: R[], swaps: Record<string, Fill> = {}): R[] =>
+  rects.flatMap((r) => { const f = swaps[r.fill] ?? r.fill; return f === HIDE ? [] : [f === r.fill ? r : { ...r, fill: f }]; });
 /** What an artboard's components export as: 7×5 icons (`raw-icons/`, the package root) or pictograms of any size (`raw-pictograms/`, `@indxsearch/pixl/pictograms`). */
 export type ArtboardKind = 'icons' | 'pictograms';
 export interface Artboard {

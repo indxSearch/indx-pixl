@@ -1,4 +1,4 @@
-import { ACCENTS, type ArtboardKind, type ColorToken, type Doc, type Fill, type Icon, type Rect, type Variant, isAccent, isExported, isLevel, kindOf, uid } from './types';
+import { ACCENTS, type ArtboardKind, type ColorToken, type Doc, type Fill, type Icon, type Rect, type Variant, isAccent, isExported, isLevel, kindOf, swapRects, uid } from './types';
 import { cssVarOf, resolveColor, slugOf } from './colors';
 import { fillsOf, maximalRects, mergedRects, outlinePath, toGrid } from './pixels';
 
@@ -37,7 +37,7 @@ export function exportedByKind(doc: Doc): { icon: Icon; kind: ArtboardKind }[] {
 }
 /** An icon as one of its variants looks: the same rects with the variant's fills swapped in. */
 export function variantIcon(icon: Icon, v: Variant): Icon {
-  return { ...icon, name: `${icon.name} ${v.name}`, variants: undefined, rects: icon.rects.map((r) => ({ ...r, fill: v.swaps[r.fill] ?? r.fill })) };
+  return { ...icon, name: `${icon.name} ${v.name}`, variants: undefined, rects: swapRects(icon.rects, v.swaps) };
 }
 /** Every file Export all writes: each component, then each of its variants as "<name> <variant>". */
 export function exportedFiles(doc: Doc): { icon: Icon; kind: ArtboardKind; base: string; variant?: string }[] {

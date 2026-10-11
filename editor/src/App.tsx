@@ -87,25 +87,27 @@ function Editor() {
   const [convert, setConvert] = useState(true);
   const [buildPackage, setBuildPackage] = useState(true);
   const [exporting, setExporting] = useState(false);
+  // Pictograms are left out until asked for: they publish as a subpackage of their own.
+  const [withPictograms, setWithPictograms] = useState(false);
   const icons = allComponents(state.doc);
   const byKind = exportedByKind(state.doc);
   const pictogramCount = byKind.filter((c) => c.kind === 'pictograms').length;
   const skipped = skippedComponents(state.doc);
   // A name must be unique within its kind; an icon and its coloured pictogram share one on purpose.
-  const files = exportedFiles(state.doc);
+  const files = exportedFiles(state.doc).filter((f) => withPictograms || f.kind !== 'pictograms');
   const keys = files.map((c) => `${c.kind}\u0000${c.icon.name}`);
   const dupes = [...new Set(keys.filter((k, i) => keys.indexOf(k) !== i).map((k) => k.replace('\u0000', ': ')))];
   const badNames = files.map((f) => f.icon.name).filter((n) => !/^[\p{L}\p{N}][\p{L}\p{N} \-_]*$/u.test(n));
   const exportAll = useCallback(async () => {
     setExporting(true);
     try {
-      const r = await api.exportIcons(files.map(({ icon, kind }) => ({ name: icon.name, svg: exportIconSvg(icon, state.doc.colors), kind })), convert, buildPackage, exportColorCss(state.doc.colors), variantManifest(state.doc));
+      const r = await api.exportIcons(files.map(({ icon, kind }) => ({ name: icon.name, svg: exportIconSvg(icon, state.doc.colors), kind })), convert, buildPackage, exportColorCss(state.doc.colors), { ...variantManifest(state.doc), ...(withPictograms ? {} : { pictograms: {} }) });
       status(`Exported ${r.written.length} components${convert ? ' + converted' : ''}${buildPackage ? ' + built package' : ''}`);
       if (r.convertOutput || r.buildOutput) console.log([r.convertOutput, r.buildOutput].filter(Boolean).join('\n'));
       setExportOpen(false);
     } catch (e) { status('Export failed: ' + (e as Error).message); }
     finally { setExporting(false); }
-  }, [files, convert, buildPackage, status, state.doc]);
+  }, [files, convert, buildPackage, withPictograms, status, state.doc]);
   const makeComponent = useCallback((name?: string) => {
     const rects = sel.filter((n) => n.kind === 'rect' && !n.iconId);
     if (!rects.length || new Set(rects.map((n) => n.artboardId)).size !== 1) return status('Select loose rects on one artboard');
@@ -443,16 +445,17 @@ function Editor() {
       </div>
       <ContextMenu menu={menu} onClose={closeMenu} />
       <FastTip />
-      <Modal open={exportOpen} onOpenChange={setExportOpen} title="Export all" description={`Write ${icons.length - pictogramCount} icon${icons.length - pictogramCount === 1 ? '' : 's'} to raw-icons/${pictogramCount ? ` and ${pictogramCount} pictogram${pictogramCount === 1 ? '' : 's'} to raw-pictograms/` : ''} as SVG.`}>
+      <Modal open={exportOpen} onOpenChange={setExportOpen} title="Export all" description={`Write ${icons.length - pictogramCount} icon${icons.length - pictogramCount === 1 ? '' : 's'} to raw-icons/${withPictograms && pictogramCount ? ` and ${pictogramCount} pictogram${pictogramCount === 1 ? '' : 's'} to raw-pictograms/` : ''} as SVG.`}>
         <div className="stack" style={{ paddingTop: 10 }}>
           {skipped.length > 0 && <div className="hint">Skipping {skipped.length} icon{skipped.length === 1 ? '' : 's'} not included in export: {skipped.slice(0, 12).map((s) => s.icon.name).join(', ')}{skipped.length > 12 ? ', …' : ''}</div>}
           {dupes.length > 0 && <div className="warn">Duplicate names: {dupes.join(', ')}</div>}
           {badNames.length > 0 && <div className="warn">Invalid names (letters, digits, space, - and _ only): {badNames.join(', ')}</div>}
+          {pictogramCount > 0 && <Checkbox label={`Include ${pictogramCount} pictogram${pictogramCount === 1 ? '' : 's'} (raw-pictograms/, @indxsearch/pixl/pictograms)`} checked={withPictograms} onChange={(e) => setWithPictograms(e.target.checked)} />}
           <Checkbox label="Run convert-icons.js afterwards (regenerates src/icons and src/icons/pictograms)" checked={convert} onChange={(e) => setConvert(e.target.checked)} />
           <Checkbox label="Build npm package afterwards (updates dist)" checked={buildPackage} onChange={(e) => setBuildPackage(e.target.checked)} />
           <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
             <Button size="micro" variant="ghost" onClick={() => setExportOpen(false)}>Cancel</Button>
-            <Button size="micro" variant="primary" disabled={!icons.length || dupes.length > 0 || badNames.length > 0} loading={exporting} onClick={exportAll}>Export</Button>
+            <Button size="micro" variant="primary" disabled={!files.length || dupes.length > 0 || badNames.length > 0} loading={exporting} onClick={exportAll}>Export</Button>
           </div>
         </div>
       </Modal>

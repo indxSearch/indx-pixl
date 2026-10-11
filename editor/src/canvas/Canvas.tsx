@@ -5,7 +5,8 @@ import * as ops from '../model/ops';
 import { NameInput } from '../panels/NameInput';
 import { HANDLES, type Handle, handlePos, norm, resizeBox, screenBox, toWorld } from './geometry';
 import { type Guide, measure, movingEdges, snap } from './guides';
-import { drawnRects } from '../model/instances';
+import { drawnRects, masterOf } from '../model/instances';
+import { VARIANT_STRIP_HEIGHT, VariantStrip, variantStripWidth } from './VariantStrip';
 
 type Drag =
   | { type: 'pan'; sx: number; sy: number; vx: number; vy: number }
@@ -432,7 +433,7 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
         <path transform={`translate(${is.x} ${is.y - 14}) scale(1.4)`} d={ic.instance ? INSTANCE_PATH : COMPONENT_PATH} />
         {isRenaming(ic.id)
           ? <foreignObject x={is.x + 10} y={is.y - 20} width={Math.max(120, is.w)} height={18}><NameInput id={ic.id} name={ic.name} className="canvas-name" /></foreignObject>
-          : <text x={is.x + 14} y={is.y - 6}>{ic.name}</text>}
+          : <text x={is.x + 14} y={is.y - 6}>{ic.name}{!!ic.variants?.length && <tspan className="icon-variant-count"> · {ic.variants.length + 1} colours</tspan>}</text>}
       </g>);
       if (state.ui.outlines) overlay.push(<rect key={'f' + ic.id} className={'icon-frame' + (live ? ' exportable' : '')} x={is.x - (live ? 2.5 : 0.5)} y={is.y - (live ? 2.5 : 0.5)} width={is.w + (live ? 5 : 1)} height={is.h + (live ? 5 : 1)} />);
       if (grid && k >= GRID_ZOOM) {
@@ -451,6 +452,14 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
   if (sel.length === 1 && !drag) {
     const n = sel[0]; const s = screenBox(view, { x: n.ax, y: n.ay, w: n.w, h: n.h });
     for (const h of HANDLES) { const [hx, hy] = handlePos(h); overlay.push(<rect key={'h' + h} className="handle" data-h={h} x={s.x + s.w * hx - 3.5} y={s.y + s.h * hy - 3.5} width={7} height={7} />); }
+  }
+  // the selected icon's variants, in a strip under it
+  if (sel.length === 1 && sel[0].kind === 'icon' && !drag && !state.ui.hideUi) {
+    const n = sel[0], ic = n.obj as Icon, m = ic.instance ? masterOf(doc, ic) : ic;
+    if (m?.variants?.length) {
+      const s = screenBox(view, { x: n.ax, y: n.ay, w: n.w, h: n.h });
+      overlay.push(<foreignObject key="variant-strip" x={s.x - 4} y={s.y + s.h + 8} width={variantStripWidth(ic, m)} height={VARIANT_STRIP_HEIGHT}><VariantStrip icon={ic} /></foreignObject>);
+    }
   }
   const editingText = state.ui.renaming?.at === 'canvas' ? index.get(state.ui.renaming.id) : undefined;
   if (editingText?.kind === 'text') {

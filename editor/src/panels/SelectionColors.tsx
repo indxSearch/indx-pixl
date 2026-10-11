@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Button, InputField, Popover } from '@indxsearch/systm';
 import { useEditor } from '../model/store';
-import { ACCENTS, type ColorToken, type Doc, type Fill as FillT, type Node, fillAttr, isLevel, uid } from '../model/types';
+import { ACCENTS, type ColorToken, type Doc, type Fill as FillT, HIDE, type Node, fillAttr, isLevel, uid } from '../model/types';
 import * as ops from '../model/ops';
 import { colorIdOf, colorRef, differsByMode, findColor, resolveColor } from '../model/colors';
 import { toHex } from '../model/svg';
@@ -27,18 +27,21 @@ function idsInScope(sel: Node[], focusIcon: Node | undefined, doc: Doc): string[
 
 /** A swatch's background: library colors that differ per mode show both halves, like the Fill panel. */
 export function swatchStyle(f: FillT, colors: ColorToken[]) {
+  if (f === HIDE) return { background: 'linear-gradient(to top right, transparent calc(50% - 1px), var(--lv5) calc(50% - 1px), var(--lv5) calc(50% + 1px), transparent calc(50% + 1px))' };
   const c = colors.find((x) => x.id === colorIdOf(f));
   return c && differsByMode(colors, c) ? { background: `linear-gradient(135deg, ${resolveColor(colors, c, 'light')} 50%, ${resolveColor(colors, c, 'dark')} 50%)` } : { background: fillAttr(f) };
 }
 
 export function labelOf(f: FillT, doc: Doc): string {
+  if (f === HIDE) return 'Hidden';
   if (isLevel(f)) return `Level ${f.slice(2)}`;
   if (f.startsWith('c:')) return findColor(doc, colorIdOf(f))?.name ?? 'Missing color';
   return f.toUpperCase();
 }
 
-/** Every swatch the document offers, plus a hex field: what a selection color can be changed to. */
-export function FillPicker({ current, onPick }: { current: FillT; onPick: (f: FillT) => void }) {
+/** Every swatch the document offers, plus a hex field: what a selection color can be changed to. `allowHide`
+ *  adds Hidden, for a variant that leaves those pixels out. */
+export function FillPicker({ current, onPick, allowHide }: { current: FillT; onPick: (f: FillT) => void; allowHide?: boolean }) {
   const { state } = useEditor();
   const colors = state.doc.colors ?? [];
   const [hex, setHex] = useState(current.startsWith('#') ? current : '');
@@ -47,6 +50,7 @@ export function FillPicker({ current, onPick }: { current: FillT; onPick: (f: Fi
   );
   return (
     <div className="fill-picker stack">
+      {allowHide && <><span className="lbl">Variant</span><div className="accents">{sw(HIDE, 'Hidden: this variant leaves these pixels out')}</div></>}
       <span className="lbl">Levels</span>
       <div className="swatches">{LEVELS.map((f) => sw(f, `Level ${f.slice(2)}`))}</div>
       <span className="lbl">Accents</span>

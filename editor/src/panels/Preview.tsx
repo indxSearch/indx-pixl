@@ -1,10 +1,10 @@
 import { useEditor } from '../model/store';
-import { type Icon, type Rect, fillAttr } from '../model/types';
+import { type Icon, type Rect, fillAttr, swapRects } from '../model/types';
 import { masterOf } from '../model/instances';
 import { Panel } from './Panel';
 
 const draw = (rects: Rect[], swaps: Record<string, string> = {}) =>
-  rects.map((r, i) => <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} fill={fillAttr(swaps[r.fill] ?? r.fill)} />);
+  swapRects(rects, swaps).map((r, i) => <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} fill={fillAttr(r.fill)} />);
 
 export function Preview() {
   const { state, sel, index, ui } = useEditor();

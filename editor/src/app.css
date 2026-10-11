@@ -182,6 +182,13 @@ button { font: inherit; color: inherit; }
 .variant-preview { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px; border: 1px solid transparent; border-radius: var(--radius); background: none; cursor: pointer; color: var(--lv5); font: var(--text-2xs); }
 .variant-preview:hover { background: var(--lv2); }
 .variant-preview.on { border-color: var(--sel); color: var(--lv8); }
+/* the selected icon's variants, under it on the canvas */
+.variant-strip { display: inline-flex; gap: 2px; padding: 4px; background: var(--lv1); border: 1px solid var(--lv3); border-radius: var(--radius); font-family: var(--font-family); }
+.variant-thumb { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 48px; padding: 5px 2px 4px; border: 1px solid transparent; border-radius: var(--radius); background: none; cursor: pointer; color: var(--lv5); font: var(--text-2xs); }
+.variant-thumb span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.variant-thumb:hover { background: var(--lv2); color: var(--lv8); }
+.variant-thumb.on { border-color: var(--sel); color: var(--lv8); }
+.icon-label .icon-variant-count { fill: var(--lv4); }
 .lbl-row { display: flex; align-items: center; justify-content: space-between; }
 .tidy { padding-top: 10px; min-width: 420px; }
 .tidy-groups { display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow: auto; }

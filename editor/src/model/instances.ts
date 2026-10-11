@@ -1,7 +1,7 @@
 // Instances, like Figma's: an icon that draws a component's pixels, in one of its colour variants, and
 // follows every change to it. It has no rects of its own, cannot be edited, and is not exported.
 import type { Doc, Icon, Rect, TextNode } from './types';
-import { uid } from './types';
+import { swapRects, uid } from './types';
 import { arrangeArtboardItems } from './ops';
 
 export const iconById = (doc: Doc, id: string): Icon | undefined => doc.artboards.flatMap((a) => a.icons).find((i) => i.id === id);
@@ -13,7 +13,7 @@ export function drawnRects(doc: Doc, ic: Icon): Rect[] {
   if (!ic.instance) return ic.rects;
   if (!m) return [];
   const swaps = m.variants?.find((v) => v.id === ic.instance!.variant)?.swaps ?? {};
-  return m.rects.map((r) => ({ ...r, fill: swaps[r.fill] ?? r.fill }));
+  return swapRects(m.rects, swaps);
 }
 
 /** Turn an instance into ordinary pixels it owns, keeping how it looks. */
