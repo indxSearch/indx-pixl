@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button, Modal, Slider, ToggleSwitch } from '@indxsearch/systm';
 import { Component, Instance, Crop, Cursor, Document_or_file, Download, Drop_full, Indx, Maximize, Minus, Options_menu, Plus, Refresh, Text_cursor } from '@indxsearch/pixl';
+import type { Mode } from '../model/store';
 import type { SaveState } from '../hooks/useAutosave';
 
 const SAVE_LABEL: Record<SaveState, string> = { loading: 'Loading…', saved: 'Saved', unsaved: 'Unsaved', saving: 'Saving…', conflict: 'Changed on disk', error: 'Save failed' };
@@ -15,10 +16,15 @@ const TOOLS: { id: Tool; label: string; key: string; icon: React.ReactElement<{ 
   { id: 'eyedropper', label: 'Pick', key: 'P', icon: <Drop_full /> },
 ];
 
-export function Toolbar({ dark, onDark, onExportAll, onImport, onZoom, onZoomFit, saveState }: {
+/** In spinner mode Import and Export all give way to New spinner and Generate: the folder is saved as you edit,
+ *  and the generator is what turns it into the Spinner component's data. */
+export interface SpinnerActions { onNew: () => void; onGenerate: () => void; generating: boolean }
+
+export function Toolbar({ dark, onDark, onExportAll, onImport, onZoom, onZoomFit, saveState, docLabel, onMode, spinnerActions }: {
   dark: boolean; onDark: (v: boolean) => void; onExportAll: () => void; onImport: () => void; onZoom: (f: number) => void; onZoomFit: () => void; saveState: SaveState;
+  docLabel: string; onMode: (m: Mode) => void; spinnerActions: SpinnerActions;
 }) {
-  const { state, ui } = useEditor();
+  const { state, ui, mode } = useEditor();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [zoomOpen, setZoomOpen] = useState(false);
   const count = state.doc.artboards.reduce((n, a) => n + a.icons.length, 0);
@@ -29,8 +35,13 @@ export function Toolbar({ dark, onDark, onExportAll, onImport, onZoom, onZoomFit
     <div className="toolbar">
       <span className="brand"><Indx size={21} color="var(--lv4)" /></span>
       <span className="sep" />
-      <span className="meta file-state">pixl.json · <span className={'save-state ' + saveState} title="Saves automatically. ⌘S saves now.">{SAVE_LABEL[saveState]}</span></span>
-      <span className="meta icon-count">{count} icons</span>
+      <div className="mode-switch" role="group" aria-label="Document">
+        <Button size="micro" variant={mode === 'icons' ? 'secondary' : 'ghost'} title="Icons and pictograms (pixl.json)" onClick={() => onMode('icons')}>Icons</Button>
+        <Button size="micro" variant={mode === 'spinners' ? 'secondary' : 'ghost'} title="indx-systm's spinners" onClick={() => onMode('spinners')}>Spinners</Button>
+      </div>
+      <span className="sep" />
+      <span className="meta file-state">{docLabel} · <span className={'save-state ' + saveState} title="Saves automatically. ⌘S saves now.">{SAVE_LABEL[saveState]}</span></span>
+      <span className="meta icon-count">{mode === 'spinners' ? `${state.doc.artboards.length} spinners` : `${count} icons`}</span>
       <span className="status" title={state.ui.status}>{state.ui.status}</span>
       <span className="spacer" />
       <div className="zoom-menu">
@@ -56,8 +67,13 @@ export function Toolbar({ dark, onDark, onExportAll, onImport, onZoom, onZoomFit
       <Button size="micro" variant="ghost" iconLeft={<Options_menu />} aria-label="Settings" title="Settings" onClick={() => setSettingsOpen(true)} />
       <ToggleSwitch checked={dark} onChange={onDark} label="Dark" />
       <span className="sep" />
-      <Button size="micro" variant="ghost" iconLeft={<Refresh />} title="Import raw-icons/ into a new artboard" onClick={onImport}><span className="toolbar-label">Import</span></Button>
-      <Button size="micro" variant="primary" iconLeft={<Download />} title="Export all" onClick={onExportAll}><span className="toolbar-label export-label">Export all</span></Button>
+      {mode === 'spinners' ? <>
+        <Button size="micro" variant="ghost" iconLeft={<Plus />} title="New spinner, below the others" onClick={spinnerActions.onNew}><span className="toolbar-label">New spinner</span></Button>
+        <Button size="micro" variant="primary" iconLeft={<Refresh />} loading={spinnerActions.generating} title="Run indx-systm's generate-spinners.mjs, so the Spinner component plays what is saved" onClick={spinnerActions.onGenerate}><span className="toolbar-label export-label">Generate</span></Button>
+      </> : <>
+        <Button size="micro" variant="ghost" iconLeft={<Refresh />} title="Import raw-icons/ into a new artboard" onClick={onImport}><span className="toolbar-label">Import</span></Button>
+        <Button size="micro" variant="primary" iconLeft={<Download />} title="Export all" onClick={onExportAll}><span className="toolbar-label export-label">Export all</span></Button>
+      </>}
     </div>
     <div className="floating-tools" aria-label="Canvas tools">
       {TOOLS.map((t) => (

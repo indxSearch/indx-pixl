@@ -3,6 +3,8 @@ import { type Doc, type Fill, type Node, emptyDoc, indexDoc } from './types';
 
 export type Tool = 'select' | 'artboard' | 'icon' | 'rect' | 'text' | 'eyedropper';
 export type Theme = 'system' | 'light' | 'dark';
+/** Which document is open: pixl.json's icons and pictograms, or indx-systm's spinners folder. */
+export type Mode = 'icons' | 'spinners';
 export interface View { x: number; y: number; k: number }
 
 export interface UI {
@@ -23,6 +25,8 @@ export interface UI {
   hideUi: boolean; // ⌘. hides toolbar, panels and hints
   autoMerge: boolean; // merge an icon's rects when leaving it
   dragging: boolean; // a canvas drag is in progress (autosave waits)
+  playing: boolean; // spinner mode: the Play frame is running the selected spinner
+  onion: boolean; // spinner mode: the frame before the one being edited shows faintly under it
 }
 export interface State {
   doc: Doc;
@@ -86,7 +90,7 @@ const initial: State = {
   ui: {
     tool: 'select', sel: [], focus: null, hover: null, highlight: [], preview: null,
     view: load('pixl.view', { x: 80, y: 80, k: 8 }),
-    fill: 'lv8', theme: load('pixl.theme', 'system'), grid: load('pixl.grid', false), outlines: load('pixl.outlines', true), expanded: {}, status: '', renaming: null, hideUi: false, autoMerge: load('pixl.autoMerge', true), dragging: false,
+    fill: 'lv8', theme: load('pixl.theme', 'system'), grid: load('pixl.grid', false), outlines: load('pixl.outlines', true), expanded: {}, status: '', renaming: null, hideUi: false, autoMerge: load('pixl.autoMerge', true), dragging: false, playing: true, onion: load('pixl.onion', true),
   },
 };
 
@@ -98,10 +102,11 @@ interface Ctx {
   ui: (patch: Partial<UI>) => void;
   sel: Node[];
   dirty: boolean;
+  mode: Mode;
 }
 const EditorContext = createContext<Ctx | null>(null);
 
-export function EditorProvider({ children }: { children: ReactNode }) {
+export function EditorProvider({ children, mode }: { children: ReactNode; mode: Mode }) {
   const [state, dispatch] = useReducer(reducer, initial);
   const index = useMemo(() => indexDoc(state.doc), [state.doc]);
   const edit = useCallback((fn: (doc: Doc) => Doc, transient?: boolean) => dispatch({ type: 'EDIT', fn, transient }), []);
@@ -110,7 +115,8 @@ export function EditorProvider({ children }: { children: ReactNode }) {
     state, index, dispatch, edit, ui,
     sel: state.ui.sel.map((id) => index.get(id)).filter((n): n is Node => !!n),
     dirty: state.savedDoc !== state.doc,
-  }), [state, index, edit, ui]);
+    mode,
+  }), [state, index, edit, ui, mode]);
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
 }
 

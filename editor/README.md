@@ -97,6 +97,16 @@ The Fill panel offers four kinds of fill:
 - Text labels are stored on their artboard and rendered with the `indx-pixl` font family. New labels use a fixed-width 3px-tall frame with a centered 2px font. Use the **Text** tool to place a label, or choose **Add label** on an icon to place its name 2px to the right. Edit a single label's text in the inspector; select multiple labels to bulk edit font size and fill.
 - Artboards support horizontal wrap auto layout for mixed icons and text labels. Select an artboard, enable **Horizontal wrap**, then set gap and padding in icon pixels. Drag items to reorder; they snap back into wrapped rows on drop.
 
+## Spinners
+
+**Spinners** in the toolbar switches the editor to indx-systm's `spinners/` folder, the source of the `Spinner` component. It edits that folder in place: nothing about a spinner goes into `pixl.json` or this package. The first time, give the folder's path (the one beside `scripts/generate-spinners.mjs`); it is remembered on this machine in `editor.local.json`, which is not in git.
+
+- Each spinner is an artboard, and its frames are icons in one row, played left to right. **⌘D** duplicates a frame into the next slot, the arrow keys move a selected frame, and **I** adds an empty one. Renaming the artboard renames the folder.
+- A frame's **Hold** (in the inspector) keeps it on screen for several ticks. On disk that is the same SVG repeated, which is how the generator times frames; identical frames in a row load back as one held frame.
+- The **Play** frame in the corner plays the selected spinner tick for tick as the component will, ping-pong included. Paused, it shows the frame selected on the canvas. **,** and **.** step through frames, **K** plays and pauses. The tempo buttons and the field set the ms per tick (`delay`), and Loop sets `pingpong`. Layers turns on the onion skin, which shows the previous frame faintly while you edit a frame.
+- Saving is automatic, with the same conflict protection as `pixl.json`. A save writes only the spinners you changed, and keeps the original text of every file whose pixels did not change, so the diff in indx-systm is the edit and nothing more. A spinner name must be lowercase letters, digits and dashes, and all frames the same size, or nothing is written until it is fixed.
+- **Generate** runs `generate-spinners.mjs`, so the `Spinner` component plays what is saved. The `Spinner` component draws every pixel in one colour, so fills are ignored.
+
 ## Bringing icons in
 
 - **Paste from Figma:** select a frame or artboard in Figma and choose *Copy/Paste as › Copy as SVG*, then press **⌘V** in the editor.

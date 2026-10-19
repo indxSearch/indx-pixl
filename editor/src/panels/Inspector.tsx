@@ -9,6 +9,7 @@ import { Variants } from './Variants';
 import { detachInstance, masterOf, placeVariants } from '../model/instances';
 import { pairingOf } from '../model/pairing';
 import { kindOf } from '../model/types';
+import { SPINNER_NAME, framesOf, holdOf, settingsOf } from '../model/spinners';
 
 /** Name of an artboard or icon, saved on Enter or when the field loses focus: one undo step per rename. */
 function NameField({ id, name }: { id: string; name: string }) {
@@ -31,7 +32,8 @@ const Num = ({ label, value, onChange, min }: { label: string; value: number | '
 );
 
 export function Inspector({ onCopySvg, onExportIcon, onMakeComponent, onReveal }: { onCopySvg: (ic: Icon) => void; onExportIcon: (ic: Icon) => void; onMakeComponent: (name: string) => void; onReveal: (id: string) => void }) {
-  const { state, sel, edit, index, ui } = useEditor();
+  const { state, sel, edit, index, ui, mode } = useEditor();
+  const spinners = mode === 'spinners';
   const same = (key: 'x' | 'y' | 'w' | 'h') => (sel.every((n) => (n.obj as Rect)[key] === (sel[0].obj as Rect)[key]) ? (sel[0].obj as Rect)[key] : '');
   const setGeo = (key: 'x' | 'y' | 'w' | 'h', v: number) => {
     const val = key === 'w' || key === 'h' ? Math.max(1, v) : v;
@@ -63,7 +65,7 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent, onReveal }
       <div className="stack">
         <div className="crumb">{crumb(sel[0])}{!one ? ` › ${sel.length} items` : ''}</div>
         {(one?.kind === 'artboard' || one?.kind === 'icon') && <NameField id={one.id} name={(one.obj as Artboard | Icon).name} />}
-        {!one && (() => {
+        {!one && !spinners && (() => {
           const icons = sel.filter((n) => n.kind === 'icon' && !(n.obj as Icon).instance);
           if (icons.length < 2) return null;
           const inc = icons.filter((n) => (n.obj as Icon).export === true).length;
@@ -85,7 +87,26 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent, onReveal }
           const f = sel.every((n) => (n.obj as Rect | TextNode).fill === (sel[0].obj as Rect | TextNode).fill) ? (sel[0].obj as Rect | TextNode).fill : null;
           return <div className="field"><span className="lbl">Fill</span><span className="sw lg" style={{ background: f ? fillAttr(f) : 'var(--lv2)' }} /><span className="mono">{f ? (f.startsWith('c:') ? (state.doc.colors?.find((c) => c.id === f.slice(2))?.name ?? 'missing color') : fillAttr(f)) : 'mixed'}</span></div>;
         })()}
-        {one?.kind === 'artboard' && (
+        {one?.kind === 'artboard' && spinners && (() => {
+          const a = one.obj as Artboard, frames = framesOf(a), { delay } = settingsOf(a);
+          const ticks = frames.reduce((n, f) => n + holdOf(f), 0);
+          return <>
+            {!SPINNER_NAME.test(a.name) && <div className="warn">Not saved until it has a spinner name: lowercase letters, digits and single dashes.</div>}
+            <div className="field"><span className="lbl">Files</span><span className="mono dim">spinners/{a.name}/keyframes/</span></div>
+            <div className="hint">{frames.length} frame{frames.length === 1 ? '' : 's'}, {ticks} tick{ticks === 1 ? '' : 's'} of {delay} ms. {frames.length ? 'Frames play left to right; the arrow keys move a selected frame.' : 'A spinner with no frames is not saved.'} The Spinner component draws every pixel in one colour.</div>
+          </>;
+        })()}
+        {one?.kind === 'icon' && spinners && (() => {
+          const ic = one.obj as Icon, a = index.get(one.artboardId)?.obj as Artboard, { delay } = settingsOf(a);
+          const frames = framesOf(a), at = frames.findIndex((f) => f.id === ic.id) + 1, hold = holdOf(ic);
+          return <>
+            <div className="field"><span className="lbl">Frame</span><span className="mono">{at} of {frames.length}</span></div>
+            <Num label="Hold" value={hold} min={1} onChange={(v) => edit((d) => ops.setProps(d, ic.id, { hold: Math.max(1, v) === 1 ? undefined : Math.max(1, v) }))} />
+            <div className="hint">Shown for {hold} tick{hold === 1 ? '' : 's'}, {hold * delay} ms. Saved as {hold === 1 ? 'one file' : `${hold} identical files in a row`}.</div>
+            {frames.some((f) => f.w !== ic.w || f.h !== ic.h) && <div className="warn">This spinner's frames differ in size. They must all be the same before it saves.</div>}
+          </>;
+        })()}
+        {one?.kind === 'artboard' && !spinners && (
           <>
             <ToggleSwitch label="Include in Export all" checked={(one.obj as Artboard).export !== false} onChange={(v) => edit((d) => ops.setProps(d, one.id, { export: v }))} />
             {(one.obj as Artboard).export === false && <div className="hint">Icons on this artboard are skipped by Export all, even if included individually.</div>}
@@ -132,7 +153,7 @@ export function Inspector({ onCopySvg, onExportIcon, onMakeComponent, onReveal }
             </>
           );
         })()}
-        {one?.kind === 'icon' && !(one.obj as Icon).instance && (
+        {one?.kind === 'icon' && !(one.obj as Icon).instance && !spinners && (
           <>
             {(() => {
               const ic = one.obj as Icon, ab = index.get(one.artboardId)?.obj as Artboard | undefined;

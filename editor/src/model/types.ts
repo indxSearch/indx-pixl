@@ -5,7 +5,9 @@ export interface Rect { id: string; x: number; y: number; w: number; h: number; 
 export interface TextNode { id: string; text: string; x: number; y: number; w: number; h: number; size: number; fill: Fill }
 export interface Icon { id: string; name: string; x: number; y: number; w: number; h: number; rects: Rect[]; export?: boolean; aliases?: string[]; variants?: Variant[];
   /** Set on an instance: it draws another icon's pixels, optionally in one of its variants, and has no rects of its own. */
-  instance?: { of: string; variant?: string } }
+  instance?: { of: string; variant?: string };
+  /** Spinner mode: how many ticks this frame stays on screen (default 1). Saved as that many copies of its SVG. */
+  hold?: number }
 /** A colour variant of an icon: the same pixels with some fills swapped, like a red heart drawn from the violet
  *  one. A fill swapped to `HIDE` is left out, so a variant can draw less than its base (a plain box beside one
  *  with a filled inside): the base holds every pixel any variant draws. It exports as "<icon> <variant>" and as
@@ -22,12 +24,18 @@ export interface Artboard {
   id: string; name: string; x: number; y: number; w: number; h: number; icons: Icon[]; rects: Rect[]; texts?: TextNode[]; export?: boolean; grid?: IconGrid;
   /** Absent means 'icons'. */
   kind?: ArtboardKind;
+  /** Spinner mode: the spinner's config.json. Its frames are the artboard's icons in reading order. */
+  spinner?: SpinnerSettings;
 }
+/** A spinner's playback, as indx-systm's generate-spinners.mjs reads it: ms per tick, and whether the loop runs back. */
+export interface SpinnerSettings { delay: number; pingpong: boolean }
 /** 'illustrations' was the kind's name until Oct 2026; a file saved before then still reads as pictograms. */
 export const kindOf = (a: Artboard): ArtboardKind => (a.kind === 'pictograms' || (a.kind as string) === 'illustrations' ? 'pictograms' : 'icons');
 
 /** Layout used by Arrange / Auto layout. Values are in icon pixels. */
-export interface IconGrid { cols: number; gap: number; pad: number; auto?: boolean }
+export interface IconGrid { cols: number; gap: number; pad: number; auto?: boolean;
+  /** Auto layout keeps every item on one row, the artboard growing to fit: a spinner's frames read as a filmstrip. */
+  row?: boolean }
 export const DEFAULT_GRID: IconGrid = { cols: 10, gap: 7, pad: 7, auto: false };
 
 /** Is this icon part of Export all? Icons are drafts unless `export` is true, and icons on non-exported artboards are skipped. */

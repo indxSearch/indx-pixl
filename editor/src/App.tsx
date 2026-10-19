@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Checkbox, Modal } from '@indxsearch/systm';
-import { EditorProvider, persist, useEditor } from './model/store';
+import { Button, Checkbox, InputField, Modal } from '@indxsearch/systm';
+import { EditorProvider, type Mode, persist, useEditor } from './model/store';
 import { Canvas, type MenuRequest } from './canvas/Canvas';
 import { ContextMenu, type MenuItem, type MenuState } from './panels/ContextMenu';
 import { Toolbar } from './panels/Toolbar';
@@ -11,6 +11,9 @@ import { SelectionColors } from './panels/SelectionColors';
 import { FastTip } from './panels/FastTip';
 import { Preview } from './panels/Preview';
 import { Aliases } from './panels/Aliases';
+import { Panel } from './panels/Panel';
+import { PlayFrame } from './panels/PlayFrame';
+import { newSpinner, spinnerSource } from './model/spinners';
 import { useShortcuts } from './hooks/useShortcuts';
 import { useAutosave } from './hooks/useAutosave';
 import { allComponents, exportIconSvg, exportedByKind, exportedFiles, importSvg, kindOfIcon, rawFolderOf, skippedComponents, variantManifest } from './model/svg';
@@ -36,13 +39,22 @@ type ClipboardNode =
   | { kind: 'rect'; artboardId: string; iconId: string | null; rect: Rect };
 interface PixlClipboard { type: typeof PIXL_CLIPBOARD; nodes: ClipboardNode[] }
 
+const savedMode = (): Mode => { try { return localStorage.getItem('pixl.mode') === '"spinners"' ? 'spinners' : 'icons'; } catch { return 'icons'; } };
+
+/** Each document gets an editor of its own: switching remounts it, so undo history and selection never cross over. */
 export default function App() {
-  return <EditorProvider><Editor /></EditorProvider>;
+  const [mode, setMode] = useState<Mode>(savedMode);
+  const onMode = useCallback((m: Mode) => { persist('pixl.mode', m); setMode(m); }, []);
+  return <EditorProvider key={mode} mode={mode}><Editor onMode={onMode} /></EditorProvider>;
 }
 
-function Editor() {
-  const { state, dispatch, edit, ui, sel, dirty, index } = useEditor();
+function Editor({ onMode }: { onMode: (m: Mode) => void }) {
+  const { state, dispatch, edit, ui, sel, dirty, index, mode } = useEditor();
   const status = useCallback((s: string) => { ui({ status: s }); setTimeout(() => ui({ status: '' }), Math.max(2000, s.length * 60)); }, [ui]);
+  const spinners = mode === 'spinners';
+  // where the spinners folder is, as the last load found it; null until spinner mode has loaded
+  const [folder, setFolder] = useState<{ folder: string | null; error?: string } | null>(null);
+  const source = useMemo(() => (mode === 'spinners' ? spinnerSource(setFolder) : api.pixlSource), [mode]);
 
   // ---- theme ----
   const sysDark = useMemo(() => window.matchMedia('(prefers-color-scheme: dark)'), []);
@@ -57,14 +69,50 @@ function Editor() {
 
   // ---- load ----
   const [loaded, setLoaded] = useState(false);
-  const autosave = useAutosave(status);
+  const autosave = useAutosave(status, source);
   useEffect(() => {
     autosave.load().then(() => setLoaded(true)).catch((e) => status('Load failed: ' + e.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // zoom to fit once after load, so the document is never off-screen on first open
+  const [fitRequest, setFitRequest] = useState(0);
   useEffect(() => { if (loaded) zoomFit(); // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded]);
+  }, [loaded, fitRequest]);
+
+  // ---- documents ----
+  const switchMode = useCallback(async (m: Mode) => {
+    if (m === mode) return;
+    if (!(await autosave.settle())) return status(`${source.label} is not saved yet. Resolve that first, then switch.`);
+    onMode(m);
+  }, [mode, autosave, source, status, onMode]);
+  const [folderPath, setFolderPath] = useState('');
+  const openFolder = useCallback(async () => {
+    try {
+      const { dir } = await api.setSpinnersFolder(folderPath);
+      await autosave.load();
+      setFitRequest((n) => n + 1);
+      status(`Opened ${dir}`);
+    } catch (e) { status((e as Error).message); }
+  }, [folderPath, autosave, status]);
+  const addSpinner = useCallback((at?: { x: number; y: number }) => {
+    const bottom = Math.max(0, ...state.doc.artboards.map((a) => a.y + a.h + 8));
+    const ab = newSpinner(state.doc, at ?? { x: 0, y: bottom });
+    edit((d) => ops.addArtboard(d, ab));
+    ui({ sel: [ab.id], focus: null, playing: false });
+    zoomToBox({ x: ab.x, y: ab.y, w: ab.w, h: ab.h }, 400);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.doc, edit, ui]);
+  const [generating, setGenerating] = useState(false);
+  const generate = useCallback(async () => {
+    setGenerating(true);
+    try {
+      if (!(await autosave.settle())) return status('Not generated: the spinners are not saved yet');
+      const { output } = await api.generateSpinners();
+      console.log(output);
+      status(output.trim().split('\n').pop() || 'Generated the Spinner component data');
+    } catch (e) { status('Generate failed: ' + (e as Error).message); }
+    finally { setGenerating(false); }
+  }, [autosave, status]);
 
   // ---- commands ----
   const save = autosave.saveNow;
@@ -346,12 +394,14 @@ function Editor() {
     const one = cur.length === 1 ? cur[0] : null;
     const ids = cur.map((n) => n.id);
     const items: MenuItem[] = [];
-    const canvasItems = (): MenuItem[] => [{ label: 'New artboard here', shortcut: 'A', onClick: () => {
+    const newSpinnerHere: MenuItem = { label: 'New spinner here', onClick: () => addSpinner(world) };
+    const canvasItems = (): MenuItem[] => spinners ? [newSpinnerHere, { label: 'Paste SVG', shortcut: '⌘V', onClick: pasteFromClipboard }, { label: 'Zoom to fit', shortcut: '⌘0', onClick: zoomFit }] : [{ label: 'New artboard here', shortcut: 'A', onClick: () => {
       const ab: Artboard = { id: uid(), name: ops.nextName(state.doc, 'Artboard'), x: Math.round(world?.x ?? 0), y: Math.round(world?.y ?? 0), w: 80, h: 40, icons: [], rects: [] };
       edit((d) => ops.addArtboard(d, ab)); ui({ sel: [ab.id] });
     } }, { label: 'Paste SVG', shortcut: '⌘V', onClick: pasteFromClipboard }, { label: 'Zoom to fit', shortcut: '⌘0', onClick: zoomFit }];
     if (!node) {
-      items.push({ label: 'New artboard here', shortcut: 'A', onClick: () => {
+      if (spinners) items.push(newSpinnerHere);
+      else items.push({ label: 'New artboard here', shortcut: 'A', onClick: () => {
         const ab: Artboard = { id: uid(), name: ops.nextName(state.doc, 'Artboard'), x: Math.round(world?.x ?? 0), y: Math.round(world?.y ?? 0), w: 80, h: 40, icons: [], rects: [] };
         edit((d) => ops.addArtboard(d, ab)); ui({ sel: [ab.id] });
       } });
@@ -368,7 +418,7 @@ function Editor() {
     if (one?.kind === 'icon') {
       const ic = one.obj as Icon;
       const ab = index.get(one.artboardId)?.obj as Artboard | undefined;
-      items.push({ label: 'Add label', shortcut: 'T', onClick: () => {
+      if (!spinners) items.push({ label: 'Add label', shortcut: 'T', onClick: () => {
         const t: TextNode = { id: uid(), text: ic.name, x: ic.x + ic.w + 2, y: ic.y, w: ic.w, h: 3, size: 2, fill: 'lv8' };
         edit((d) => {
           const next = ops.addText(d, one.artboardId, t);
@@ -378,24 +428,24 @@ function Editor() {
       } });
       items.push({ label: 'Edit icon', shortcut: 'Enter', onClick: () => ui({ focus: one.id, sel: [] }) });
       items.push({ label: 'Rename', onClick: () => ui({ sel: [one.id], renaming: { id: one.id, at: 'layers' }, expanded: { ...state.ui.expanded, [one.artboardId]: true } }) });
-      items.push({ label: ic.export ? 'Exclude from export' : 'Include in export', onClick: () => edit((d) => ops.setProps(d, one.id, { export: !ic.export })) });
+      if (!spinners) items.push({ label: ic.export ? 'Exclude from export' : 'Include in export', onClick: () => edit((d) => ops.setProps(d, one.id, { export: !ic.export })) });
       items.push({ label: 'Merge rects (union)', shortcut: '⌥⌘U', onClick: () => merge([one.id]) });
       items.push('sep');
       items.push({ label: 'Copy SVG', shortcut: '⌘E', onClick: () => copySvg(ic) });
-      items.push({ label: 'Export this icon', onClick: () => exportIcon(ic) });
+      if (!spinners) items.push({ label: 'Export this icon', onClick: () => exportIcon(ic) });
       items.push({ label: 'Detach component', onClick: () => { edit((d) => ops.detachComponent(d, one.id)); ui({ sel: [] }); } });
     }
     if (one?.kind === 'artboard') {
       const a = one.obj as Artboard;
       items.push({ label: 'Rename', onClick: () => ui({ sel: [one.id], renaming: { id: one.id, at: 'layers' }, expanded: { ...state.ui.expanded, [one.artboardId]: true } }) });
-      items.push({ label: a.export === false ? 'Include in Export all' : 'Exclude from Export all', onClick: () => edit((d) => ops.setProps(d, one.id, { export: a.export === false })) });
+      if (!spinners) items.push({ label: a.export === false ? 'Include in Export all' : 'Exclude from Export all', onClick: () => edit((d) => ops.setProps(d, one.id, { export: a.export === false })) });
       items.push({ label: 'Arrange items', onClick: () => edit((d) => ops.arrangeArtboardItems(d, one.id)) });
     }
     if (cur.length) {
       items.push('sep');
       items.push({ label: 'Zoom to selection', shortcut: '⇧2', onClick: zoomSel });
       const exportable = cur.filter((n) => n.kind === 'icon' && !(n.obj as Icon).instance);
-      if (exportable.length) {
+      if (exportable.length && !spinners) {
         const allIn = exportable.every((n) => (n.obj as Icon).export === true);
         items.push({ label: allIn ? 'Leave out of export' : 'Include in export', shortcut: 'E', onClick: () => edit((d) => ops.toggleExport(d, exportable.map((n) => n.id))) });
       }
@@ -409,7 +459,7 @@ function Editor() {
     }
     if (world) { items.push('sep'); items.push(...canvasItems()); }
     setMenu({ x, y, items });
-  }, [index, state.ui.sel, state.ui.focus, state.doc, sel, edit, ui, zoomFit, zoomSel, makeComponent, copySvg, exportIcon, duplicate, remove, merge, pasteFromClipboard]);
+  }, [index, state.ui.sel, state.ui.focus, state.doc, sel, edit, ui, zoomFit, zoomSel, makeComponent, copySvg, exportIcon, duplicate, remove, merge, pasteFromClipboard, spinners, addSpinner]);
   const onCanvasMenu = useCallback((r: MenuRequest) => openMenu(r.x, r.y, r.nodeId, r.world), [openMenu]);
   const onLayerMenu = useCallback((x: number, y: number, id: string) => openMenu(x, y, id), [openMenu]);
 
@@ -417,10 +467,11 @@ function Editor() {
     <div className={'app' + (state.ui.hideUi ? ' ui-hidden' : '')}>
       <style>{editorColorCss(state.doc.colors)}</style>
       <div className="surface">
-        {!state.ui.hideUi && <Toolbar dark={dark} onDark={onDark} onExportAll={() => setExportOpen(true)} onImport={importRaw} onZoom={zoom} onZoomFit={zoomFit} saveState={autosave.saveState} />}
+        {!state.ui.hideUi && <Toolbar dark={dark} onDark={onDark} onExportAll={() => setExportOpen(true)} onImport={importRaw} onZoom={zoom} onZoomFit={zoomFit} saveState={autosave.saveState}
+          docLabel={source.label} onMode={switchMode} spinnerActions={{ onNew: () => addSpinner(), onGenerate: generate, generating }} />}
         {autosave.saveState === 'conflict' && (
           <div className="banner">
-            <span>pixl.json changed on disk{dirty ? ' while you have unsaved edits' : ''}.</span>
+            <span>{source.label} changed on disk{dirty ? ' while you have unsaved edits' : ''}.</span>
             <span className="spacer" />
             <Button size="micro" variant="secondary" onClick={autosave.resolveReload}>Reload from disk</Button>
             <Button size="micro" variant="primary" onClick={autosave.resolveKeepMine}>Keep my version</Button>
@@ -430,14 +481,30 @@ function Editor() {
           {!state.ui.hideUi && <div className="column"><Layers onMenu={onLayerMenu} onReveal={reveal} /></div>}
           <div className="stage">
             <Canvas onMenu={onCanvasMenu} />
+            {spinners && <PlayFrame />}
+            {spinners && folder && (folder.folder === null || folder.error) && (
+              <div className="folder-prompt">
+                <Panel title="Open the spinners folder">
+                  <div className="stack">
+                    <div className="hint">Spinner mode edits indx-systm's spinners folder in place: the one beside scripts/generate-spinners.mjs, for example indx-react/packages/indx-systm/spinners. The path is remembered on this machine in editor.local.json.</div>
+                    {folder.error && <div className="warn">{folder.error}</div>}
+                    <InputField value={folderPath} placeholder="/path/to/indx-systm/spinners" aria-label="Spinners folder" onChange={(e) => setFolderPath(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void openFolder(); }} />
+                    <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
+                      <Button size="micro" variant="primary" disabled={!folderPath.trim()} onClick={() => void openFolder()}>Open</Button>
+                      <Button size="micro" variant="secondary" onClick={() => void switchMode('icons')}>Back to icons</Button>
+                    </div>
+                  </div>
+                </Panel>
+              </div>
+            )}
           </div>
           {!state.ui.hideUi && (
             <div className="column">
               <Inspector onCopySvg={copySvg} onExportIcon={exportIcon} onMakeComponent={makeComponent} onReveal={reveal} />
               <SelectionColors />
               <FillPanel dark={dark} />
-              <Preview />
-              <Aliases />
+              {!spinners && <Preview />}
+              {!spinners && <Aliases />}
               <div className="filler" />
             </div>
           )}

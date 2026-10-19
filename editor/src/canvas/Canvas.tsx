@@ -7,6 +7,7 @@ import { HANDLES, type Handle, handlePos, norm, resizeBox, screenBox, toWorld } 
 import { type Guide, measure, movingEdges, snap } from './guides';
 import { drawnRects, masterOf } from '../model/instances';
 import { VARIANT_STRIP_HEIGHT, VariantStrip, variantStripWidth } from './VariantStrip';
+import { framesOf, holdOf } from '../model/spinners';
 
 type Drag =
   | { type: 'pan'; sx: number; sy: number; vx: number; vy: number }
@@ -22,7 +23,7 @@ const GRID_ZOOM = 8;    // show icon pixel grid from this zoom
 export interface MenuRequest { x: number; y: number; nodeId: string | null; world: { x: number; y: number } }
 
 export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
-  const { state, index, edit, ui, dispatch, sel } = useEditor();
+  const { state, index, edit, ui, dispatch, sel, mode } = useEditor();
   const { doc } = state;
   const { view, tool, focus, hover, grid } = state.ui;
   const svgRef = useRef<SVGSVGElement>(null);
@@ -418,8 +419,19 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
 
   const isRenaming = (id: string) => state.ui.renaming?.at === 'canvas' && state.ui.renaming.id === id;
   const overlay: React.ReactNode[] = [];
+  const spinners = mode === 'spinners';
+  // spinner mode: the frame before the one being edited (the last, before the first: it loops), drawn faintly under it
+  const onion = (() => {
+    const n = spinners && state.ui.onion && focus ? index.get(focus) : undefined;
+    const a = n && (index.get(n.artboardId)?.obj as Artboard | undefined);
+    if (!n || !a) return null;
+    const frames = framesOf(a), i = frames.findIndex((f) => f.id === focus);
+    return frames.length > 1 && i >= 0 ? { artboardId: a.id, at: n.obj as Icon, prev: frames[(i - 1 + frames.length) % frames.length] } : null;
+  })();
   for (const a of doc.artboards) {
     if (!vis(a)) continue;
+    // a spinner's frames are named by where they play, and say how long they hold
+    const playOrder = spinners ? new Map(framesOf(a).map((f, i) => [f.id, i + 1])) : null;
     const s = screenBox(view, a);
     if (isRenaming(a.id)) overlay.push(<foreignObject key={'t' + a.id} x={s.x - 4} y={s.y - 22} width={Math.max(160, s.w)} height={20}><NameInput id={a.id} name={a.name} className="canvas-name ab" /></foreignObject>);
     else overlay.push(<text key={'t' + a.id} className={'ab-title' + (a.export === false ? ' draft' : '')} x={s.x} y={s.y - 6} data-id={a.id} data-kind="artboard" data-role="title">{a.name}{a.kind === 'pictograms' ? ' · pictograms' : ''}{a.export === false ? ' · not exported' : ''}</text>);
@@ -427,13 +439,13 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
       const ib = { x: a.x + ic.x, y: a.y + ic.y, w: ic.w, h: ic.h };
       if (!vis(ib)) continue;
       const is = screenBox(view, ib);
-      const isFocus = ic.id === focus, live = isExported(a, ic);
+      const isFocus = ic.id === focus, live = spinners || isExported(a, ic);
       // with Outlines off the canvas shows only the drawing: no frame and no name (except while renaming)
       if (state.ui.outlines || isRenaming(ic.id)) overlay.push(<g key={'l' + ic.id} className={'icon-label' + (isFocus ? ' focus' : '') + (ic.instance ? ' instance' : live ? '' : ' draft')} data-id={ic.id} data-kind="icon" data-role="title">
         <path transform={`translate(${is.x} ${is.y - 14}) scale(1.4)`} d={ic.instance ? INSTANCE_PATH : COMPONENT_PATH} />
         {isRenaming(ic.id)
           ? <foreignObject x={is.x + 10} y={is.y - 20} width={Math.max(120, is.w)} height={18}><NameInput id={ic.id} name={ic.name} className="canvas-name" /></foreignObject>
-          : <text x={is.x + 14} y={is.y - 6}>{ic.name}{!!ic.variants?.length && <tspan className="icon-variant-count"> · {ic.variants.length + 1} colours</tspan>}</text>}
+          : <text x={is.x + 14} y={is.y - 6}>{playOrder ? playOrder.get(ic.id) : ic.name}{playOrder && holdOf(ic) > 1 && <tspan className="icon-variant-count"> ×{holdOf(ic)}</tspan>}{!!ic.variants?.length && <tspan className="icon-variant-count"> · {ic.variants.length + 1} colours</tspan>}</text>}
       </g>);
       if (state.ui.outlines) overlay.push(<rect key={'f' + ic.id} className={'icon-frame' + (live ? ' exportable' : '')} x={is.x - (live ? 2.5 : 0.5)} y={is.y - (live ? 2.5 : 0.5)} width={is.w + (live ? 5 : 1)} height={is.h + (live ? 5 : 1)} />);
       if (grid && k >= GRID_ZOOM) {
@@ -504,6 +516,7 @@ export function Canvas({ onMenu }: { onMenu: (r: MenuRequest) => void }) {
           <rect className="ab-bg" data-id={a.id} data-kind="artboard" {...snapBox(view, a.x, a.y, a.w, a.h)} />
           {a.rects.map((r) => <RectEl key={r.id} r={r} ox={a.x} oy={a.y} v={view} />)}
           <g transform={`translate(${view.x} ${view.y}) scale(${k})`}>{(a.texts ?? []).map((t) => <TextEl key={t.id} t={t} ox={a.x} oy={a.y} />)}</g>
+          {onion?.artboardId === a.id && <g className="onion">{onion.prev.rects.map((r) => <rect key={r.id} {...snapBox(view, a.x + onion.at.x + r.x, a.y + onion.at.y + r.y, r.w, r.h)} fill={fillAttr(r.fill)} shapeRendering="crispEdges" />)}</g>}
           {a.icons.map((ic) => <IconEl key={ic.id} ic={ic} rects={drawnRects(doc, ic)} ox={a.x} oy={a.y} v={view} swaps={state.ui.preview?.icon === ic.id ? ic.variants?.find((v) => v.id === state.ui.preview!.variant)?.swaps : undefined} />)}
         </g>
       ))}

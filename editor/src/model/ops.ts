@@ -296,7 +296,7 @@ const normalizedGrid = (a: Artboard, grid?: Partial<IconGrid>): IconGrid => {
 };
 
 const applyWrappedLayout = (a: Artboard, g: IconGrid, ordered: LayoutItem[]) => {
-  const innerW = Math.max(1, a.w - g.pad * 2);
+  const innerW = g.row ? Infinity : Math.max(1, a.w - g.pad * 2);
   let x = g.pad, y = g.pad, rowH = 0, maxRight = g.pad;
   for (const item of ordered) {
     if (x > g.pad && x + item.w > g.pad + innerW) { x = g.pad; y += rowH + g.gap; rowH = 0; }
@@ -305,7 +305,7 @@ const applyWrappedLayout = (a: Artboard, g: IconGrid, ordered: LayoutItem[]) => 
     rowH = Math.max(rowH, item.h);
     maxRight = Math.max(maxRight, x - g.gap);
   }
-  a.w = Math.max(a.w, maxRight + g.pad);
+  a.w = g.row ? maxRight + g.pad : Math.max(a.w, maxRight + g.pad);
   a.h = Math.max(g.pad * 2 + rowH, y + rowH + g.pad);
   for (const r of a.rects) { a.w = Math.max(a.w, r.x + r.w + g.pad); a.h = Math.max(a.h, r.y + r.h + g.pad); }
 };
@@ -323,6 +323,12 @@ export function arrangeArtboardItems(doc: Doc, artboardId: string, grid?: Partia
   if (!items.length) return d;
   applyWrappedLayout(a, g, readingOrder(items));
   return d;
+}
+
+/** An artboard's icons in reading order, the order auto layout lays them out in: a spinner's frames play in it. */
+export function iconsInReadingOrder(a: Artboard): Icon[] {
+  const byId = new Map(a.icons.map((ic) => [ic.id, ic]));
+  return readingOrder(layoutItems(a)).flatMap((item) => byId.get(item.id) ?? []);
 }
 
 /** Move selected auto-layout icons/labels one slot earlier or later in their artboard's wrapped order. */

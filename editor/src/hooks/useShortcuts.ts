@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { persist, useEditor } from '../model/store';
 import * as ops from '../model/ops';
+import { useStepFrame } from '../panels/PlayFrame';
 
 export interface Commands {
   save: () => void;
@@ -17,7 +18,8 @@ export interface Commands {
 }
 
 export function useShortcuts(cmd: Commands) {
-  const { state, dispatch, edit, ui, sel, index } = useEditor();
+  const { state, dispatch, edit, ui, sel, index, mode } = useEditor();
+  const step = useStepFrame();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
@@ -58,7 +60,10 @@ export function useShortcuts(cmd: Commands) {
         case 'p': ui({ tool: 'eyedropper' }); break;
         case 'g': ui({ grid: !state.ui.grid }); persist('pixl.grid', !state.ui.grid); break;
         case 'o': ui({ outlines: !state.ui.outlines }); persist('pixl.outlines', !state.ui.outlines); break;
-        case 'e': if (ids.length) edit((d) => ops.toggleExport(d, ids)); break;
+        case 'e': if (mode === 'spinners') return; if (ids.length) edit((d) => ops.toggleExport(d, ids)); break;
+        // spinner mode: step through frames, play and pause
+        case ',': case '.': if (mode !== 'spinners' || !step(e.key === ',' ? -1 : 1)) return; break;
+        case 'k': if (mode !== 'spinners') return; ui({ playing: !state.ui.playing }); break;
         case 'Escape': if (ids.length) ui({ sel: [] }); else ui({ focus: null, tool: 'select' }); break;
         case 'Delete': case 'Backspace': cmd.remove(); break;
         case 'ArrowLeft': arrow(-1, 0, -1); break;
@@ -74,5 +79,5 @@ export function useShortcuts(cmd: Commands) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [state, sel, index, dispatch, edit, ui, cmd]);
+  }, [state, sel, index, dispatch, edit, ui, cmd, mode, step]);
 }

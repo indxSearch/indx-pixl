@@ -60,3 +60,6 @@ obj/
 /Indx Pixl.app/
 /editor/desktop-dist/
 /editor/desktop-build/
+
+# Editor settings for this machine (where indx-systm's spinners folder is)
+editor.local.json

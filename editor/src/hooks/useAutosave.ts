@@ -6,10 +6,11 @@ export type SaveState = 'loading' | 'saved' | 'unsaved' | 'saving' | 'conflict' 
 const DELAY = 800;
 
 /**
- * Autosaves pixl.json shortly after edits settle, with compare-and-set on the file version so two tabs
- * or an external change (git pull, checkout) never silently overwrite each other.
+ * Autosaves the document (pixl.json, or the spinners folder in spinner mode) shortly after edits settle, with
+ * compare-and-set on the file version so two tabs or an external change (git pull, checkout) never silently
+ * overwrite each other.
  */
-export function useAutosave(status: (s: string) => void) {
+export function useAutosave(status: (s: string) => void, source: api.DocSource) {
   const { state, dispatch, dirty } = useEditor();
   const [saveState, setSaveState] = useState<SaveState>('loading');
   const version = useRef<string | null>(null);
@@ -19,32 +20,35 @@ export function useAutosave(status: (s: string) => void) {
   latest.current = { doc: state.doc, dirty, conflict: saveState === 'conflict' };
 
   const load = useCallback(async (quiet = false) => {
-    const { doc, version: v } = await api.loadDoc();
+    const { doc, version: v } = await source.load();
     version.current = v;
     if (doc) dispatch({ type: 'LOAD', doc });
     loaded.current = true;
     setSaveState('saved');
-    if (quiet) status('Reloaded pixl.json (changed on disk)');
+    if (quiet) status(`Reloaded ${source.label} (changed on disk)`);
     return !!doc;
-  }, [dispatch, status]);
+  }, [dispatch, status, source]);
 
-  const save = useCallback(async (opts: { force?: boolean } = {}) => {
-    if (!loaded.current || inFlight.current) return;
-    if (latest.current.conflict && !opts.force) return;
+  /** True when what was on screen is now on disk. */
+  const save = useCallback(async (opts: { force?: boolean } = {}): Promise<boolean> => {
+    if (!loaded.current || inFlight.current) return false;
+    if (latest.current.conflict && !opts.force) return false;
     const doc = latest.current.doc;
     inFlight.current = true;
     setSaveState('saving');
     try {
-      version.current = await api.saveDoc(doc, version.current, opts);
+      version.current = await source.save(doc, version.current, opts);
       dispatch({ type: 'MARK_SAVED', doc });
       setSaveState(latest.current.doc === doc ? 'saved' : 'unsaved');
+      return latest.current.doc === doc;
     } catch (e) {
-      if (e instanceof api.ConflictError) { setSaveState('conflict'); status('pixl.json changed on disk. Reload or keep your version.'); }
+      if (e instanceof api.ConflictError) { setSaveState('conflict'); status(`${source.label} changed on disk. Reload or keep your version.`); }
       else { setSaveState('error'); status('Save failed: ' + (e as Error).message); }
+      return false;
     } finally {
       inFlight.current = false;
     }
-  }, [dispatch, status]);
+  }, [dispatch, status, source]);
 
   // debounce saves after edits, never mid-drag
   useEffect(() => {
@@ -62,25 +66,25 @@ export function useAutosave(status: (s: string) => void) {
       if (v === version.current) return; // our own write
       if (inFlight.current) return; // our save may be the cause; a real conflict still surfaces as a 409
       if (!latest.current.dirty) load(true).catch((e) => status('Reload failed: ' + e.message));
-      else { setSaveState('conflict'); status('pixl.json changed on disk. Reload or keep your version.'); }
+      else { setSaveState('conflict'); status(`${source.label} changed on disk. Reload or keep your version.`); }
     };
     if (import.meta.hot) {
-      import.meta.hot.on('pixl:doc-changed', onChange);
-      return () => import.meta.hot?.off('pixl:doc-changed', onChange);
+      import.meta.hot.on(source.event, onChange);
+      return () => import.meta.hot?.off(source.event, onChange);
     }
     // Desktop has no Vite websocket. Keep the same external-change behavior.
     const timer = window.setInterval(() => {
-      if (loaded.current) api.loadDoc().then(onChange).catch(() => {});
+      if (loaded.current) source.version().then((v) => onChange({ version: v })).catch(() => {});
     }, 2000);
     return () => window.clearInterval(timer);
-  }, [load, status]);
+  }, [load, status, source]);
 
   // last-chance save when the tab is hidden or closed
   useEffect(() => {
     const flush = () => {
       const { doc, dirty: d, conflict } = latest.current;
       if (!loaded.current || !d || conflict || inFlight.current) return;
-      api.saveDoc(doc, version.current, { keepalive: true }).then((v) => { version.current = v; dispatch({ type: 'MARK_SAVED', doc }); }).catch(() => {});
+      source.save(doc, version.current, { keepalive: true }).then((v) => { version.current = v; dispatch({ type: 'MARK_SAVED', doc }); }).catch(() => {});
     };
     const onVis = () => { if (document.visibilityState === 'hidden') flush(); };
     document.addEventListener('visibilitychange', onVis);
@@ -97,7 +101,7 @@ export function useAutosave(status: (s: string) => void) {
       e.returnValue = '';
       if (closing) return;
       if (latest.current.conflict) {
-        window.alert('Resolve the pixl.json conflict before closing.');
+        window.alert(`Resolve the ${source.label} conflict before closing.`);
         return;
       }
       closing = true;
@@ -106,7 +110,7 @@ export function useAutosave(status: (s: string) => void) {
         const doc = latest.current.doc;
         inFlight.current = true;
         try {
-          version.current = await api.saveDoc(doc, version.current);
+          version.current = await source.save(doc, version.current);
           dispatch({ type: 'MARK_SAVED', doc });
           if (latest.current.doc === doc) {
             latest.current.dirty = false;
@@ -121,10 +125,16 @@ export function useAutosave(status: (s: string) => void) {
     };
     window.addEventListener('beforeunload', warn);
     return () => { document.removeEventListener('visibilitychange', onVis); window.removeEventListener('pagehide', flush); window.removeEventListener('beforeunload', warn); };
-  }, [dispatch]);
+  }, [dispatch, source]);
 
-  const resolveReload = useCallback(() => load(false).then(() => status('Reloaded pixl.json from disk')), [load, status]);
-  const resolveKeepMine = useCallback(() => save({ force: true }).then(() => status('Saved your version over pixl.json')), [save, status]);
+  const resolveReload = useCallback(() => load(false).then(() => status(`Reloaded ${source.label} from disk`)), [load, status, source]);
+  const resolveKeepMine = useCallback(() => save({ force: true }).then(() => status(`Saved your version over ${source.label}`)), [save, status, source]);
+  /** Save whatever is pending and say whether everything is on disk: switching documents waits on this. */
+  const settle = useCallback(async () => {
+    while (inFlight.current) await new Promise((r) => setTimeout(r, 50));
+    if (latest.current.conflict) return false;
+    return latest.current.dirty ? save() : true;
+  }, [save]);
 
-  return { saveState, load, saveNow: () => save(), resolveReload, resolveKeepMine };
+  return { saveState, load, saveNow: () => { void save(); }, settle, resolveReload, resolveKeepMine };
 }
