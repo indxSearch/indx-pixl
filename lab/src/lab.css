@@ -1,0 +1,75 @@
+/* The lab is a tool, not a product page: the systm's ladder and components, nothing more. It is
+   dark on purpose (the banners are judged on the ground they ship on), so the dark ladder is set
+   here whatever the viewer's system theme. No shadows, as everywhere in the systm. */
+:root {
+  --lv0: #080809; --lv1: #121215; --lv2: #1A1A21; --lv3: #393941; --lv4: #565661;
+  --lv5: #8F8F97; --lv6: #EFEFEF; --lv7: #FBFBFB; --lv8: #FFFFFF;
+  --signal: #FF4238;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--lv0); color: var(--lv6); font: 350 13px/1.5 'FunktionalGrotesk', Geist, system-ui, sans-serif; }
+:root { --font-family: 'FunktionalGrotesk', Geist, system-ui, sans-serif; }
+.lab header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 28px; height: 52px; padding: 0 20px; background: var(--lv1); border-bottom: 1px solid var(--lv2); }
+.lab h1 { font-weight: 450; font-size: 15px; margin: 0; color: var(--lv8); white-space: nowrap; }
+.lab h2 { font-weight: 450; font-size: 13px; margin: 0 0 8px; color: var(--lv8); }
+.body { display: grid; grid-template-columns: 300px minmax(0, 1fr); }
+aside { position: sticky; top: 52px; height: calc(100vh - 52px); overflow-y: auto; background: var(--lv1); border-right: 1px solid var(--lv2); padding: 20px; display: flex; flex-direction: column; gap: 22px; }
+.group { display: flex; flex-direction: column; gap: 10px; }
+.field { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px; align-items: center; color: var(--lv5); }
+.field.range { grid-template-columns: 1fr; gap: 4px; padding: 0 8px; }
+.field.range span { margin: 0 -8px; }
+.field.range span { display: flex; justify-content: space-between; }
+.field em { font-style: normal; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; color: var(--lv6); }
+.dim { opacity: 0.4; }
+.swatches { display: flex; flex-wrap: wrap; gap: 2px; }
+.swatch { display: block; width: 18px; height: 18px; border: 1px solid var(--lv3); }
+.buttons { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+main { padding: 28px; display: flex; flex-direction: column; gap: 36px; min-width: 0; }
+.note { color: var(--lv5); margin: 0; max-width: 760px; }
+.frame { position: relative; width: 100%; max-width: 1584px; margin-top: 8px; }
+.frame canvas { width: 100%; height: auto; display: block; border: 1px solid var(--lv2); }
+.safe { position: absolute; border: 1px dashed var(--signal); pointer-events: none; }
+.sheet { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; max-width: 1584px; }
+.sheet canvas { width: 100%; height: auto; background: var(--lv1); border: 1px solid var(--lv2); }
+.all { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; max-width: 1584px; }
+.all figure { margin: 0; background: var(--lv1); border: 1px solid var(--lv2); padding: 6px; cursor: pointer; }
+.all figure:hover { border-color: var(--lv5); }
+.all canvas { width: 100%; height: auto; display: block; }
+.all figcaption { color: var(--lv5); font-size: 11px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.exports { display: flex; flex-direction: column; gap: 12px; }
+.exports img, .exports video { max-width: 100%; height: auto; border: 1px solid var(--lv3); background: var(--lv1); }
+.exports figure { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.exports figcaption { color: var(--lv5); }
+.prompt-edit { max-width: 760px; margin-top: 12px; }
+.prompt-edit textarea { font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; line-height: 1.6; }
+.generations { display: flex; flex-direction: column; gap: 20px; max-width: 1200px; }
+.generations figure { margin: 0; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--lv2); padding-top: 16px; }
+.generations .outputs { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.generations .outputs img { width: 100%; height: auto; display: block; border: 1px solid var(--lv2); }
+.generations figcaption { display: flex; flex-direction: column; gap: 6px; color: var(--lv5); }
+.generations .inputs { display: flex; gap: 6px; }
+.generations .inputs img { width: 56px; height: auto; border: 1px solid var(--lv2); }
+.reference { display: block; max-width: 320px; max-height: 320px; margin-top: 12px; border: 1px solid var(--lv2); }
+.pick-row { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 12px; align-items: center; margin-top: 10px; }
+.picks { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.pick { flex: none; height: auto !important; padding: 3px !important; }
+.pick-img { display: block; width: 72px; height: 72px; object-fit: cover; }
+.pick[aria-pressed="true"] { outline: 1px solid var(--lv8); }
+.pack-each { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; max-width: 1600px; }
+@media (max-width: 860px) { .pack-each { grid-template-columns: 1fr; } }
+.mockups { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin-top: 12px; max-width: 1100px; }
+.mockups figure { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.mockups img { width: 100%; height: auto; display: block; border: 1px solid var(--lv2); }
+.saved-prompts { max-width: 760px; margin-top: 20px; display: flex; flex-direction: column; gap: 4px; }
+.reverse-result { max-width: 760px; }
+.reverse-history { margin-top: 24px; display: flex; flex-direction: column; gap: 8px; max-width: 760px; }
+.reverse-row { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.reverse-row img { width: 56px; height: 56px; object-fit: cover; border: 1px solid var(--lv2); }
+.prompt { white-space: pre-wrap; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12px; line-height: 1.6; color: var(--lv6); background: var(--lv1); border: 1px solid var(--lv2); padding: 14px 16px; margin: 12px 0 0; max-width: 760px; }
+@media (max-width: 860px) {
+  .lab header { height: auto; flex-wrap: wrap; gap: 8px 20px; padding: 10px 16px; position: static; }
+  .body { grid-template-columns: 1fr; }
+  aside { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--lv2); padding: 16px; }
+  main { padding: 20px 16px; }
+}

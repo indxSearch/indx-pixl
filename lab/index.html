@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Pixl Lab</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="lab.css">
+<style>
+  /* FunktionalGrotesk, the brand font, from the git-ignored fonts/ (never committed: paid). Geist where it is missing. */
+  @font-face { font-family: 'FunktionalGrotesk'; src: url('fonts/FunktionalGrotesk-Light.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: swap; }
+  @font-face { font-family: 'FunktionalGrotesk'; src: url('fonts/FunktionalGrotesk-LightItalic.woff2') format('woff2'); font-weight: 300; font-style: italic; font-display: swap; }
+  @font-face { font-family: 'FunktionalGrotesk'; src: url('fonts/FunktionalGrotesk-Book.woff2') format('woff2'); font-weight: 350; font-style: normal; font-display: swap; }
+  @font-face { font-family: 'FunktionalGrotesk'; src: url('fonts/FunktionalGrotesk-BookItalic.woff2') format('woff2'); font-weight: 350; font-style: italic; font-display: swap; }
+  @font-face { font-family: 'FunktionalGrotesk'; src: url('fonts/FunktionalGrotesk-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+  @font-face { font-family: 'FunktionalGrotesk'; src: url('fonts/FunktionalGrotesk-RegularItalic.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: swap; }
+  @font-face { font-family: 'FunktionalGrotesk'; src: url('fonts/FunktionalGrotesk-Medium.woff2') format('woff2'); font-weight: 500; font-style: normal; font-display: swap; }
+  @font-face { font-family: 'FunktionalGrotesk'; src: url('fonts/FunktionalGrotesk-MediumItalic.woff2') format('woff2'); font-weight: 500; font-style: italic; font-display: swap; }
+  @font-face { font-family: 'FunktionalGrotesk'; src: url('fonts/FunktionalGrotesk-Semibold.woff2') format('woff2'); font-weight: 600; font-style: normal; font-display: swap; }
+  @font-face { font-family: 'FunktionalGrotesk'; src: url('fonts/FunktionalGrotesk-SemiboldItalic.woff2') format('woff2'); font-weight: 600; font-style: italic; font-display: swap; }
+  @font-face { font-family: 'FunktionalGrotesk'; src: url('fonts/FunktionalGrotesk-Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+  @font-face { font-family: 'FunktionalGrotesk'; src: url('fonts/FunktionalGrotesk-BoldItalic.woff2') format('woff2'); font-weight: 700; font-style: italic; font-display: swap; }
+  body { margin: 0; background: #080809; }
+</style>
+<div id="root"></div>
+<!-- The page is built from src/ by build.mjs: lab.js holds React and the systm, three.js comes from the CDN. -->
+<script src="icons.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module" src="lab.js"></script>

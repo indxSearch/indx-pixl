@@ -1,0 +1,96 @@
+[
+  {
+    "id": "hero",
+    "label": "Search. Ask. Observe.",
+    "source": "lab",
+    "headline": "Search. Ask. Observe.",
+    "query": "serch",
+    "text": "Search. Ask. Observe. Pattern-recognition search that finds what keyword search misses, answers questions from your own content, and tells you what to tune."
+  },
+  {
+    "id": "everything",
+    "label": "Everything you expect",
+    "source": "lab",
+    "headline": "Everything you expect in a search system. Improved.",
+    "query": "facets boost",
+    "text": "Search as you type. Typo tolerance. Relevance ranking. Facets. Filters. Synonyms. Boost rules. Scheduled campaigns. Personal boosting. Nested JSON. Every language. Real-time updates. Reindexing with no downtime. Vector search. Hybrid search. Search statistics. Team API keys. A terminal monitor. Self-hosted. GDPR friendly. Native C#. Everything you expect in a search system. Improved."
+  },
+  {
+    "id": "observe",
+    "label": "Detects what users do",
+    "source": "lab",
+    "headline": "Detects what users do.",
+    "query": "detects",
+    "text": "Detects what users do. Sees what people search for and what they choose. Notices the searches that find nothing. Spots the word your customers use and your catalogue does not. Proposes a synonym. Proposes a boost. Asks before it changes anything. You say yes or no. Search that gets better from being used."
+  },
+  {
+    "id": "typos",
+    "label": "Typos welcome",
+    "source": "lab",
+    "headline": "Spell it any way you like.",
+    "query": "serch",
+    "text": "Serch finds search. Waterproof finds water proof. Half a word finds the whole one. Indx reads character patterns, three letters at a time, so a typo still holds most of the word. No dictionary to keep. No stemming per language. Every language works the same way. Type it wrong. Find it anyway."
+  },
+  {
+    "id": "fast",
+    "label": "Fast as visitors type",
+    "source": "lab",
+    "headline": "Fast as visitors type.",
+    "query": "instant",
+    "text": "Fast as visitors type. Results on every keystroke. Instant response time. Linear performance scaling. The index lives in memory. Built for large catalogues. Nobody waits for a search box."
+  },
+  {
+    "id": "ask",
+    "label": "Answers from your own content",
+    "source": "lab",
+    "headline": "Ask your own content.",
+    "query": "answers",
+    "text": "Ask a question. Get the answer from your own content. Search finds the records. Ask reads them. Your data stays on your own server. Great for AI agents, with an MCP server built in. The same index answers people and agents."
+  },
+  {
+    "id": "merch",
+    "label": "Boosts and campaigns",
+    "source": "lab",
+    "headline": "Put the right thing first.",
+    "query": "boost",
+    "text": "Boost a brand. Boost a category. Boost the new arrivals for two weeks, then let them go. Schedule the campaign before it starts. Boost what each customer likes. Synonyms for the words people actually use. Relevance first, your rules on top. Change it in the console and it is live."
+  },
+  {
+    "id": "developers",
+    "label": "One package, in your own code",
+    "source": "lab",
+    "headline": "One package, in your own .NET code.",
+    "query": "index",
+    "text": "Init. Load. Index. Search. One package, in your own .NET code. Or a server over HTTP, self-hosted. Nested JSON in, ranked results out. Insert, update and delete in real time. Reindex in a shadow and swap with no downtime. Team-scoped API keys. A terminal monitor to watch it run."
+  },
+  {
+    "id": "catalogue",
+    "label": "Made for catalogues",
+    "source": "lab",
+    "headline": "Made for catalogues.",
+    "query": "size colour",
+    "text": "Made for catalogues. Product names, codes, sizes and colours. A code typed with a missing digit. A brand typed the way it sounds. Facets for size, colour and price. Filters that combine. Every record searchable the moment it changes. Find the product, not just the word."
+  },
+  {
+    "id": "2026-11-03T14-00-01-769Z",
+    "label": "Observr proposes changes. You say yes or no.",
+    "source": "written",
+    "created": "2026-11-03T14:00:01.769Z",
+    "model": "google/gemini-3.1-pro-preview",
+    "brief": "Observe: it detects what users do and proposes changes",
+    "headline": "Observr proposes changes. You say yes or no.",
+    "query": "obsevr",
+    "text": "Users search for things on your site. Sometimes they get zero results. Indx tracks your search statistics to see what people search for, what they choose, and what finds nothing. Then Observr goes to work. It watches that traffic. It proposes a new synonym or a boost rule based on those habits. Nothing changes behind your back. It just asks you yes or no. You make the call. Indx is a native C# engine. Run it as a NuGet package or an HTTP server. Keep everything self-hosted and GDPR friendly. You get facets. Filters. Real-time inserts and deletes. Vector search. Your relevance ranking improves with a simple click. Observr does the watching. You just say yes."
+  },
+  {
+    "id": "2026-11-03T14-03-34-607Z",
+    "label": "People type poorly. Indx finds it anyway.",
+    "source": "written",
+    "created": "2026-11-03T14:03:34.607Z",
+    "model": "google/gemini-3.1-pro-preview",
+    "brief": "",
+    "headline": "People type poorly. Indx finds it anyway.",
+    "query": "water prrof",
+    "text": "People make mistakes. They type fast and spell things wrong. Indx uses character patterns to match partial words and split words. A search for water proof finds waterproof. It uses BM25F relevance ranking. Facets. Filters. Synonyms. Sometimes a new typo keeps happening. Indx tracks what people search for and what returns nothing. Then Observr steps in. It watches empty searches and proposes a new synonym. It just asks you yes or no. Say yes and the rule updates instantly. You get real-time inserts and reindexing with no downtime. Everything runs self-hosted. Grab the native C# NuGet package or spin up the HTTP server. Keep your data on your own machines."
+  }
+]

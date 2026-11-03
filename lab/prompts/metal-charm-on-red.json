@@ -1,0 +1,28 @@
+{
+  "name": "Metal charm on red",
+  "slug": "metal-charm-on-red",
+  "saved": "2026-11-03T10:32:21.999Z",
+  "note": "Worn silver charm on a black-to-red gradient, square. Send the plain Voxl render: the metal holds the cube layout well. It casts neighbouring cubes as one piece. (The 09:55 run that proved it was sent this prompt as a list of character codes, by a lab server bug since fixed.)",
+  "settings": {
+    "mat": "voxl",
+    "inside": true,
+    "res": 1,
+    "depth": 1,
+    "gap": 0.04,
+    "relief": 0,
+    "rounded": true,
+    "turn": -14,
+    "tilt": 12,
+    "ortho": true,
+    "fill": 0.6,
+    "aspect": 1,
+    "ground": "black",
+    "colour": "#FFC21A",
+    "colourName": "Signal yellow",
+    "genInputs": "render",
+    "genLayout": true,
+    "genSize": "2K"
+  },
+  "from": "2026-11-03T09-55-23-800Z-indx",
+  "prompt": "{\n  \"task\": \"Transform the attached image into a stylized 3D metal charm, preserving its original silhouette and key graphic details.\",\n  \"preserve\": { \"original_silhouette\": true, \"key_graphic_details\": true },\n  \"material\": {\n    \"type\": \"thick silver metal\",\n    \"color\": \"strictly monochrome neutral silver-gray\",\n    \"color_behavior\": \"fully monochrome, no colored tint, no red coloration, no warm color contamination\",\n    \"edges\": \"beveled\",\n    \"surface_details\": [\"subtle wear\", \"scratches\", \"brushed texture\", \"dark oxidized areas\", \"faint smoky haze softly diffused across parts of the metal surface\"],\n    \"internal_details\": \"thin dark engraving\"\n  },\n  \"rendering\": {\n    \"object_position\": \"floating\",\n    \"camera_angle\": \"slight 3/4 angle\",\n    \"depth\": \"visible thickness and dimensional depth\",\n    \"reflections\": \"realistic monochrome metallic reflections without picking up red color from the background\",\n    \"lighting\": \"strong studio lighting\"\n  },\n  \"background\": {\n    \"type\": \"smooth vertical linear gradient\",\n    \"direction\": \"top-to-bottom (pure black at top -> vivid red at bottom)\",\n    \"color_stops\": [\"#000000 0%\", \"#1A0000 3%\", \"#320001 10%\", \"#CC0001 50%\", \"#FF2E1D 100%\"],\n    \"constraints\": [\"perfectly smooth blend\", \"strictly vertical\", \"bright, clean, vivid\", \"no haze/smoke/texture/noise/glow/banding on the background\"]\n  },\n  \"composition\": { \"format\": \"square\", \"placement\": \"centered\", \"object_isolation\": true, \"style\": \"premium editorial product render\" },\n  \"negative_prompt\": [\"no metal attachment ring or hanging loop protruding from the object\", \"no smoke around the object\"]\n}\n"
+}

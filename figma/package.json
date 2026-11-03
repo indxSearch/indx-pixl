@@ -1,0 +1,16 @@
+{
+  "name": "pixl-figma",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Figma plugin: the Pixl icons as a component library with Light/Dark variables, and an Insert icon panel.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.100.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.8.3"
+  }
+}

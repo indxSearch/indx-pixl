@@ -1,0 +1,15 @@
+{
+  "name": "Indx Pixl",
+  "id": "indx-pixl",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": { "allowedDomains": ["none"] },
+  "menu": [
+    { "name": "Insert icon", "command": "insert" },
+    { "separator": true },
+    { "name": "Sync library to this file", "command": "sync" }
+  ]
+}

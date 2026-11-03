@@ -63,3 +63,10 @@ obj/
 
 # Editor settings for this machine (where indx-systm's spinners folder is)
 editor.local.json
+
+# Pixl Lab: generated images (lab/server.mjs), they can be large and are not the source
+lab/generations/
+# Pixl Lab: FunktionalGrotesk, copied from indx-fonts by lab/build.mjs. Paid, never committed.
+lab/fonts/
+# Pixl Lab: reference screenshots, some of them other studios' work. Kept local, never published.
+lab/reference images/

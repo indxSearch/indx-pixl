@@ -1,0 +1,34 @@
+{
+  "name": "Glass with circuitry",
+  "slug": "glass-with-circuitry",
+  "saved": "2026-11-03T10:28:52.636Z",
+  "note": "Send it with the Glass render (internals on) at 85% fill, square, four images per send: about 3 in 4 come back right. Not the yellow render or the silhouette: with those the model rearranges the cubes. For an icon whose cubes close around empty space (search's ring), turn the camera to about -30\u00b0. The lab adds the keep-every-cube line, the cube layout and the empty-space line.",
+  "settings": {
+    "mat": "glass",
+    "inside": true,
+    "res": 1,
+    "depth": 1,
+    "gap": 0.04,
+    "relief": 0,
+    "rounded": true,
+    "turn": -14,
+    "tilt": 12,
+    "ortho": true,
+    "fill": 0.85,
+    "aspect": 1,
+    "ground": "black",
+    "colour": "#FFC21A",
+    "colourName": "Signal yellow",
+    "genInputs": "render",
+    "genLayout": true,
+    "genSize": "2K"
+  },
+  "from": "2026-11-03T10-26-34-699Z-indx",
+  "prompt": "{\n  \"task\": \"Transform the attached image into a clear transparent acrylic or glass structure encapsulating dense electronic circuitry.\",\n  \"preserve\": \"Keep the original shape, proportions, silhouette, and the exact number and layout of the cubes.\",\n  \"material\": {\n    \"type\": \"Transparent casing over electronics\",\n    \"color\": \"Clear exterior with dark grey, black, silver, and deep green internals\",\n    \"color_behavior\": \"Outer shell refracts light; internals absorb light and reflect metallic glints\",\n    \"description\": \"Clear outer shell revealing dense microelectronics, circuit boards, and wiring.\",\n    \"physical_feel\": \"Smooth hard exterior, mechanical interior\",\n    \"density\": \"Solid transparent shell, dense core\"\n  },\n  \"structure\": {\n    \"form\": \"Separate cubes, one per pixel, with nothing added: no base, plate, frame, backing, ring or loop.\",\n    \"volume\": \"Distinct 3D cubic volumes\",\n    \"edges\": \"Sharp, clean cube edges\",\n    \"silhouette\": \"The exact pixel layout of the input, cube for cube\"\n  },\n  \"surface\": {\n    \"finish\": \"Glossy, polished exterior\",\n    \"texture\": [\n      \"Smooth outer faces\",\n      \"Textured mechanical internals\"\n    ],\n    \"behavior\": \"Highly reflective exterior, matte and metallic interior\"\n  },\n  \"color_palette\": {\n    \"Background_Black\": \"#000000\",\n    \"Highlight_White\": \"#FFFFFF\",\n    \"Internal_Grey\": \"#8A8D8F\",\n    \"Circuit_Green\": \"#2A3B2C\",\n    \"Accent_Red\": \"#E61A1A\",\n    \"Accent_Lime\": \"#85C226\"\n  },\n  \"optical_behavior\": {\n    \"reflectivity\": \"High on outer casing\",\n    \"diffusion\": \"Low\",\n    \"specularity\": \"Intense, sharp white edge highlights\",\n    \"transparency\": \"High transparency on outer shell\",\n    \"contrast\": \"Extreme contrast between clear shell and dark internals\"\n  },\n  \"internal_structure\": {\n    \"visibility\": \"Fully visible through transparent shell\",\n    \"composition\": \"Microchips, PCBs, ribbon cables, metallic pins\"\n  },\n  \"micro_detail\": {\n    \"grain\": \"None\",\n    \"imperfections\": [\n      \"Micro-scratches\",\n      \"Fine dust\"\n    ],\n    \"patterns\": \"Grid-like arrangement of pins and circuits\"\n  },\n  \"lighting\": {\n    \"style\": \"Studio rim lighting\",\n    \"behavior\": \"Strong edge highlights wrapping the clear material\",\n    \"contrast\": \"High contrast\"\n  },\n  \"rendering\": {\n    \"camera_angle\": \"Straight-on front view\",\n    \"quality\": \"Photorealistic, macro photography\",\n    \"focus\": \"Sharp overall focus\"\n  },\n  \"background\": \"Solid black\",\n  \"composition\": \"Centered\",\n  \"negative_prompt\": [\n    \"base\",\n    \"plate\",\n    \"reshaped cubes\",\n    \"merged cubes\",\n    \"text\",\n    \"logos\",\n    \"added objects\",\n    \"backing\",\n    \"frame\",\n    \"ring\",\n    \"loop\",\n    \"toy\",\n    \"figure\",\n    \"character\"\n  ]\n}",
+  "proven": [
+    "2026-11-03T10-26-34-699Z-indx",
+    "2026-11-03T10-49-17-509Z-search",
+    "2026-11-03T10-44-41-290Z-question",
+    "2026-11-03T10-44-51-940Z-observr"
+  ]
+}
