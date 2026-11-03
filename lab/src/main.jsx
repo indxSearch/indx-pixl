@@ -29,10 +29,11 @@ const DEFAULTS = {
     frame: 'block', size: 'board', theme: 'black', colour: '#FF4238', colourName: 'Signal',
     query: 'serch', upper: true, cellLines: false, icons: 0.03, redact: 0.06, weight: 500, seed: 0,
     hitFrom: 'theme', nearColour: '', mixed: false, head: 'headline',
+    layout: 'grid', panels: 7, emptyPanels: 0.2, strips: 0.4, fills: 0.14, tableScale: 1.4, frameWords: false,
     chrome: 'none', background: 'none', motif: '', motifStyle: 'dots', motifSize: 0.6, motifAt: 'center', motifColour: 'ink', hitStyle: 'word',
     iconSet: 'main', air: 0.12, length: 30, leading: 0, breaks: 'none',
     // The hero until copy.json has loaded; the Copy group then offers the whole list.
-    copy: 'hero', headline: 'Search. Ask. Observe.', query: 'serch',
+    copy: 'hero', headline: 'Search. Ask. Observe.',
     text: 'Search. Ask. Observe. Pattern-recognition search that finds what keyword search misses, answers questions from your own content, and tells you what to tune.',
   },
   posters: {
@@ -851,6 +852,21 @@ function TypePanel({ p, set, candidates, setCandidates }) {
       <Choice label="Size" value={p.size} options={Object.entries(E.TYPE_SIZES).map(([value, v]) => ({ value, label: v[2] }))} onChange={v => set({ size: v })} />
       <Choice label="Theme" value={p.theme} options={Object.entries(E.TYPE_THEMES).map(([value, x]) => ({ value, label: x.label }))} onChange={v => set({ theme: v })} />
     </Group>
+    <Group title="Layout">
+      <SegmentedControl size="micro" stretch items={Object.entries(E.TYPE_LAYOUTS).map(([value, label]) => ({ value, label }))} value={p.layout ?? 'grid'} onChange={v => set({ layout: v })} aria-label="Layout" />
+      {(p.layout ?? 'grid') === 'grid' && <Switch label="A frame round every word" checked={!!p.frameWords} onChange={v => set({ frameWords: v })} />}
+      {p.layout === 'panels' && <>
+        <Range label="Panels" value={p.panels ?? 7} min={1} max={24} step={1} format={v => `${v}`} onChange={v => set({ panels: v })} />
+        <Range label="Left as colour only" value={p.emptyPanels ?? 0.2} min={0} max={0.7} step={0.05} format={pct} onChange={v => set({ emptyPanels: v })} />
+        <Range label="Lines on strips" value={p.strips ?? 0.4} min={0} max={1} step={0.05} format={pct} onChange={v => set({ strips: v })} />
+        <Switch label="A frame round every word" checked={!!p.frameWords} onChange={v => set({ frameWords: v })} />
+      </>}
+      {p.layout === 'table' && <>
+        <Range label="Cells filled" value={p.fills ?? 0.14} min={0} max={0.6} step={0.01} format={pct} onChange={v => set({ fills: v })} />
+        <Range label="Type size" value={p.tableScale ?? 1.4} min={1} max={4} step={0.1} format={v => `${v.toFixed(1)}×`} onChange={v => set({ tableScale: v })} />
+      </>}
+      <p className="note">Panels and Table after the reference: the page cut into colours, each holding a few sentences; or one word to a ruled cell. Shuffle cuts again.</p>
+    </Group>
     <Group title="Framing">
       <Choice label="Framing" value={p.chrome ?? 'none'} options={Object.entries(E.TYPE_CHROMES).map(([value, label]) => ({ value, label }))} onChange={v => set({ chrome: v })} />
       <Choice label="Empty cells" value={p.background ?? 'none'} options={Object.entries(E.TYPE_BACKGROUNDS).map(([value, label]) => ({ value, label }))} onChange={v => set({ background: v })} />
@@ -899,12 +915,15 @@ function TypePanel({ p, set, candidates, setCandidates }) {
 // static file, so the published lab has it too; adding and deleting need the lab's server.
 let copyCache = null;
 const copyListeners = new Set();
-const setCopyList = list => { copyCache = list; copyListeners.forEach(f => f(list)); };
+// The engine keeps the list too: a frame that fills the page continues into it.
+const setCopyList = list => { copyCache = list; E.setCopyLibrary(list); copyListeners.forEach(f => f(list)); };
+// Loaded as the lab starts, so the Pack and Posters' Index frames have it without the Type tab open.
+fetch('copy.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : []).then(setCopyList).catch(() => {});
 function useCopyList() {
   const [list, setList] = useState(copyCache ?? []);
   useEffect(() => {
     copyListeners.add(setList);
-    if (!copyCache) fetch('copy.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : []).then(setCopyList).catch(() => {});
+    if (copyCache) setList(copyCache);
     return () => copyListeners.delete(setList);
   }, []);
   return list;
@@ -969,7 +988,7 @@ function TypeMain({ p, set, exports }) {
   const [info, setInfo] = useState(null);
   const [playing, setPlaying] = useState(true), [recording, setRecording] = useState(false);
   const pRef = useRef(p); pRef.current = p;
-  useDraw(() => { const r = E.drawIndexed(p, 2); blit(ref.current, r.canvas); setInfo(r); }, [p]);
+  useDraw(() => { const r = E.drawIndexed(p, 2); blit(ref.current, r.canvas); setInfo(r); }, [p, copyList]);
   // The sequence plays in its own canvas at 1x, from the same settings.
   const clock = useRef({ start: performance.now(), pausedAt: 0, playing: true });
   useEffect(() => {

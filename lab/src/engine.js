@@ -1155,17 +1155,39 @@ export const TYPE_THEMES = {
   paper: { label: 'Paper', ground: '#FFFFFF', ink: '#080809', hit: '#0000FF', near: '#CFCFCF', dim: '#757575', mix: ['#0000FF', '#080809', '#CFCFCF', '#FF4238', '#72F5C6'] },
   terminal: { label: 'Terminal green', ground: '#0D1C1A', ink: '#5DD1A4', hit: '#EFEFEF', near: '#3D6C58', dim: '#3D6C58', mix: ['#EFEFEF', '#3D6C58', '#5DD1A4'] },
   amber: { label: 'Amber', ground: '#221713', ink: '#C84916', hit: '#EFEFEF', near: '#644439', dim: '#644439', mix: ['#EFEFEF', '#644439', '#C84916'] },
-  yellow: { label: 'Acid yellow (experiment)', ground: '#FFF200', ink: '#080809', hit: '#0000FF', near: '#080809', dim: '#8F8F97', mix: ['#0000FF', '#080809', '#FFFFFF', '#FF2A1A'] },
-  red: { label: 'Signal red (experiment)', ground: '#FF2A1A', ink: '#080809', hit: '#0000FF', near: '#080809', dim: '#8F2A20', mix: ['#0000FF', '#080809', '#FFFFFF'] },
-  blue: { label: 'Pure blue (experiment)', ground: '#0000FF', ink: '#FFFFFF', hit: '#FF2A1A', near: '#080809', dim: '#6B6BFF', mix: ['#080809', '#FFFFFF', '#FF2A1A', '#72F5C6'] },
-  teal: { label: 'Teal (experiment)', ground: '#72F5C6', ink: '#080809', hit: '#0000FF', near: '#080809', dim: '#3D8F72', mix: ['#0000FF', '#080809', '#FFFFFF', '#FF4238'] },
-  lime: { label: 'Lime (experiment)', ground: '#C6FF3D', ink: '#080809', hit: '#080809', near: '#0000FF', dim: '#6E8F22', mix: ['#080809', '#0000FF', '#FFFFFF', '#FF4238'] },
+  // Experiments (3 Nov 2026), after the reference: loud flat grounds and sets of five to seven
+  // colours, which Mixed boxes, the panels and the table's cells all draw from.
+  primary: { label: 'Primary on white (experiment)', ground: '#FFFFFF', ink: '#080809', hit: '#0000FF', near: '#C8C8C8', dim: '#8F8F97', mix: ['#0000FF', '#FF2A1A', '#00E5FF', '#080809', '#C8C8C8', '#FFF200', '#4A4A4A'] },
+  night: { label: 'Primary on black (experiment)', ground: '#080809', ink: '#FFFFFF', hit: '#FF2A1A', near: '#4A4A4A', dim: '#5A5A62', mix: ['#0000FF', '#FF2A1A', '#00E5FF', '#FFFFFF', '#C8C8C8', '#FFF200', '#4A4A4A'] },
+  yellow: { label: 'Acid yellow (experiment)', ground: '#FFF200', ink: '#080809', hit: '#0000FF', near: '#080809', dim: '#8F8F97', mix: ['#0000FF', '#080809', '#FFFFFF', '#FF2A1A', '#00E5FF', '#C8C8C8'] },
+  red: { label: 'Signal red (experiment)', ground: '#FF2A1A', ink: '#080809', hit: '#0000FF', near: '#080809', dim: '#8F2A20', mix: ['#0000FF', '#080809', '#FFFFFF', '#FFF200', '#C8C8C8', '#00E5FF'] },
+  blue: { label: 'Pure blue (experiment)', ground: '#0000FF', ink: '#FFFFFF', hit: '#FF2A1A', near: '#080809', dim: '#6B6BFF', mix: ['#080809', '#FFFFFF', '#FF2A1A', '#00E5FF', '#FFF200', '#C8C8C8'] },
+  cyan: { label: 'Cyan (experiment)', ground: '#00E5FF', ink: '#080809', hit: '#0000FF', near: '#FFFFFF', dim: '#2B8F9C', mix: ['#0000FF', '#080809', '#FFFFFF', '#FF2A1A', '#FFF200'] },
+  teal: { label: 'Teal (experiment)', ground: '#72F5C6', ink: '#080809', hit: '#0000FF', near: '#080809', dim: '#3D8F72', mix: ['#0000FF', '#080809', '#FFFFFF', '#FF4238', '#FFF200', '#6B2BFF'] },
+  lime: { label: 'Lime (experiment)', ground: '#C6FF3D', ink: '#080809', hit: '#080809', near: '#0000FF', dim: '#6E8F22', mix: ['#080809', '#0000FF', '#FFFFFF', '#FF4238', '#FF3EA5', '#00E5FF'] },
+  pink: { label: 'Hot pink (experiment)', ground: '#FF3EA5', ink: '#080809', hit: '#0000FF', near: '#FFF200', dim: '#A3246A', mix: ['#0000FF', '#FFF200', '#080809', '#FFFFFF', '#00E5FF', '#6B2BFF'] },
+  orange: { label: 'Orange (experiment)', ground: '#FF6A00', ink: '#080809', hit: '#0000FF', near: '#FFFFFF', dim: '#A34400', mix: ['#0000FF', '#080809', '#FFFFFF', '#72F5C6', '#FFF200', '#FF3EA5'] },
+  violet: { label: 'Violet (experiment)', ground: '#6B2BFF', ink: '#FFFFFF', hit: '#FFF200', near: '#080809', dim: '#A98BFF', mix: ['#FFF200', '#FF3EA5', '#FFFFFF', '#080809', '#00E5FF', '#FF6A00'] },
+  grey: { label: 'Concrete (experiment)', ground: '#C8C8C8', ink: '#080809', hit: '#FF2A1A', near: '#FFFFFF', dim: '#7A7A7A', mix: ['#080809', '#FFFFFF', '#FF2A1A', '#0000FF', '#4A4A4A', '#FFF200'] },
+  phosphor: { label: 'Phosphor (experiment)', ground: '#0D1C1A', ink: '#5DD1A4', hit: '#FFF200', near: '#3D6C58', dim: '#3D6C58', mix: ['#5DD1A4', '#FFF200', '#FF4238', '#6B9EFF', '#EFEFEF', '#3D6C58', '#C84916'] },
 };
 // The copy lives in lab/copy.json, a list of pieces ({id, label, source, headline, query, text}):
 // the lab's own sets, pieces written by the model and your own, saved from the Type tab.
 // A sentence ends at . ! or ? before a space or the end, so ".NET" stays one word.
 const SENTENCE = /\S[\s\S]*?[.!?]+(?=\s|$)|\S[\s\S]*$/g;
 const sentencesOf = c => (c.text.match(SENTENCE) ?? [c.text]).map(x => x.trim());
+// The copy list as the lab loaded it, so a frame that fills the page can go on with the other
+// pieces' sentences when its own text runs out, rather than starting it over.
+let COPY_LIBRARY = [];
+export function setCopyLibrary(list) { COPY_LIBRARY = Array.isArray(list) ? list : []; }
+/** The text, then every other sentence of the copy list not already in it, shuffled by `seed`. */
+function continued(text, seed) {
+  const own = new Set((text.match(SENTENCE) ?? []).map(t => t.trim().toLowerCase()));
+  const more = [...new Set(COPY_LIBRARY.flatMap(sentencesOf))].filter(t => !own.has(t.toLowerCase()))
+    .map((t, i) => [hash(i * 5 + 1, seed * 19 + 4), t]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+  return [text, ...more].join(' ');
+}
+
 /** Every piece's sentences, one chosen by `seed` leading: its headline and query head the piece and
  *  its own sentences come first, so even a Block shows what the query finds. The rest follow,
  *  shuffled by `seed`: much more text, and a new mix on each Shuffle. */
@@ -1237,6 +1259,7 @@ export const TYPE_MOTIF_STYLES = { dots: 'Dots', solid: 'Solid', stripes: 'Strip
 
 /** Indexed text at `k`x. Returns the canvas and how many words the query hit. */
 export function drawIndexed(T, k) {
+  if (T.layout === 'panels' || T.layout === 'table') return drawLayout(T, k);
   // `box`: draw at this size instead of a named one (a poster's block, a pack tile); `bare`: no head
   // or foot, a small margin (the frame round it is someone else's); `reveal`: the share of the lines
   // drawn, for the sequence building up.
@@ -1257,10 +1280,20 @@ export function drawIndexed(T, k) {
   let area;
   const F = {}; // the framing's own measures, for drawing it after the text
   if (chrome === 'window') {
+    // The tab holds Search, Ask and Observe's icons. Their drawn pixels, not their 7 × 5 boxes, set
+    // the edge: the tab's margin round them is even, and the text, the headline and the mark at the
+    // foot all keep the same distance from the frame as the first icon's left edge.
     const fx = Math.round(m * 0.7), fy = Math.round(m * 0.7), fw = W - 2 * fx, fh = H - 2 * fy, tabH = Math.round(headH * 2.4);
-    const pad = Math.round(headH * 1.1);
-    Object.assign(F, { fx, fy, fw, fh, tabH });
-    area = { left: fx + pad, right: fx + fw - pad, top: fy + tabH + pad, bottom: fy + fh - pad - headH * 1.6 };
+    const btns = PACK_WORDS.map(w => cells(w.icon));
+    const icp = Math.max(1, Math.round(tabH * 0.42 / 5)), gap = icp * 2;
+    const xs = ic => ic.list.map(c => c.x), ys = btns.flatMap(ic => ic.list.map(c => c.y));
+    const minX = Math.min(...xs(btns[0])), maxX = Math.max(...xs(btns[btns.length - 1]));
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const iconsW = (btns.length - 1) * (7 * icp + gap) + (maxX + 1) * icp - minX * icp; // drawn width, first pixel to last
+    const edge = Math.round((tabH - (maxY - minY + 1) * icp) / 2); // the margin round the icons, above and below as at the sides
+    const tabW = iconsW + 2 * edge;
+    Object.assign(F, { fx, fy, fw, fh, tabH, btns, icp, gap, minX, minY, edge, tabW });
+    area = { left: fx + edge, right: fx + fw - edge, top: fy + tabH + edge, bottom: fy + fh - edge - headH * 1.6 };
   } else if (chrome === 'sequencer') {
     const stripH = Math.round(headH * 4.6), barH = Math.round(headH * 1.9);
     Object.assign(F, { stripH, barH });
@@ -1310,7 +1343,9 @@ export function drawIndexed(T, k) {
   for (const t of sentences) { first = (first + ' ' + t.trim()).trim(); if (first.split(' ').filter(Boolean).length >= 3) break; }
   // A Block holds at most `length` words, whole sentences, so a long text still leaves it air above
   // and below and the wide justified gaps of a few lines (the hero's 25 words were the look).
-  let words0 = (T.frame === 'sentence' ? first : source).split(' ').filter(Boolean);
+  // A frame that fills the page goes on into the rest of the copy list before it repeats anything.
+  const filled = frame.fill ? (T.upper ? continued(T.text, T.seed ?? 0).toUpperCase() : continued(T.text, T.seed ?? 0)).replace(/\s+/g, ' ').trim() : source;
+  let words0 = (T.frame === 'sentence' ? first : filled).split(' ').filter(Boolean);
   if (T.frame === 'block' && T.length && words0.length > T.length) {
     let n = T.length;
     while (n < words0.length && !/[.!?]$/.test(words0[n - 1])) n++;
@@ -1382,6 +1417,8 @@ export function drawIndexed(T, k) {
         const box = redact ? th.ink : hit ? (mixed ?? accent) : near ? (mixed ?? T.nearColour ?? th.near) : null;
         const lettersOnly = T.hitStyle === 'letters' && (hit || near);
         if (box && !lettersOnly) { g.fillStyle = box; g.fillRect(Math.round(x), Math.round(y + ch * 0.06), Math.round(w.length * cw), Math.round(ch * 0.88)); }
+        // Framed words: a hairline box round every word, as the reference frames "The picture PRESENTS".
+        if (T.frameWords) { g.strokeStyle = th.ink; g.lineWidth = Math.max(1, k); g.strokeRect(Math.round(x - cw * 0.15) + 0.5, Math.round(y + ch * 0.02) + 0.5, Math.round((w.length + 0.3) * cw), Math.round(ch * 0.96)); }
         if (!redact) [...w].forEach((c, j) => {
           const cx = x + (j + 0.5) * cw, cy = y + ch / 2;
           // Sparse: only what the query found stays.
@@ -1443,7 +1480,6 @@ export function drawIndexed(T, k) {
   if (T.bare) return { canvas: cv, hits, rows, cols };
   const mono = Math.max(10 * k, headH * 0.55);
   const headline = T.upper ? (T.headline ?? '').toUpperCase() : (T.headline ?? '');
-  const hitsText = `${hits} ${hits === 1 ? 'hit' : 'hits'}`;
   // A text set in FunktionalGrotesk at the largest size up to `px` that fits `width`.
   const fitFont = (s, px, width, weight) => { g.font = `${weight} ${px}px ${TYPE}`; const w = g.measureText(s).width; return w > width ? px * width / w : px; };
   const foot = (yMid, x0, x1) => {
@@ -1452,18 +1488,18 @@ export function drawIndexed(T, k) {
   };
 
   if (chrome === 'window') {
-    // The window: a frame, a filled tab with close, minimise and expand, the headline at top right.
-    const { fx, fy, fw, fh, tabH } = F;
+    // The window: a frame, a filled tab with Search, Ask and Observe, the headline at top right.
+    const { fx, fy, fw, fh, tabH, btns, icp, gap, minX, minY, edge, tabW } = F;
     g.fillStyle = th.ink; strokeRect(fx, fy, fw, fh);
-    const icp = Math.max(1, Math.round(tabH * 0.42 / 5)), gap = icp * 3, tabPad = Math.round(tabH * 0.3);
-    const btns = ['x or error', 'minus', 'minimize'], tabW = tabPad * 2 + btns.length * 7 * icp + (btns.length - 1) * gap;
-    g.fillStyle = th.ink; g.fillRect(fx, fy, tabW, tabH);
-    btns.forEach((b, n) => { const ic = cells(b); g.fillStyle = th.ground; for (const c of ic.list) g.fillRect(fx + tabPad + n * (7 * icp + gap) + c.x * icp, Math.round(fy + (tabH - 5 * icp) / 2) + c.y * icp, icp, icp); });
+    g.fillRect(fx, fy, tabW, tabH);
+    g.fillStyle = th.ground;
+    btns.forEach((ic, n) => { for (const c of ic.list) g.fillRect(fx + edge + (n * (7 * icp + gap)) + (c.x - minX) * icp, fy + edge + (c.y - minY) * icp, icp, icp); });
     if (headline && T.head !== 'none') {
-      const px = fitFont(headline, tabH * 0.62, fw - tabW - tabH, 500);
-      g.font = `500 ${px}px ${TYPE}`; g.fillStyle = th.ink; g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillText(headline, fx + fw - tabPad * 1.4, fy + tabH / 2 + px * 0.04);
+      const px = fitFont(headline, tabH * 0.62, fw - tabW - 3 * edge, 500);
+      g.font = `500 ${px}px ${TYPE}`; g.fillStyle = th.ink; g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillText(headline, fx + fw - edge, fy + tabH / 2 + px * 0.04);
     }
-    foot(fy + fh - Math.round(headH * 1.1) - headH / 2, fx + Math.round(headH * 1.1), fx + fw - Math.round(headH * 1.1));
+    // The foot: the mark's left edge and the signature's right edge on the same lines as the text's.
+    foot(fy + fh - edge - headH / 2, fx + edge, fx + fw - edge);
   } else if (chrome === 'sequencer') {
     // The control strip: the query in an input, the first hit in a find box, the counts at the right
     // after a rule, then a ruled bar with the headline, as the sequencer's insert-mode hint.
@@ -1479,7 +1515,7 @@ export function drawIndexed(T, k) {
     field(x0, 'input', T.typing ?? T.query ?? '', th.near);
     field(x0 + colW + headH * 0.7, 'find', firstHit, accent);
     g.fillStyle = th.ink; g.fillRect(Math.round(statsX - headH * 0.5), m, line, Math.round(stripH - headH * 0.6));
-    [['hits', hits], ['cols', cols], ['rows', rows], ['seed', T.seed ?? 0]].forEach(([kk, v], n) => {
+    [['frame', TYPE_FRAMES[T.frame]?.label ?? ''], ['cols', cols], ['rows', rows], ['seed', T.seed ?? 0]].forEach(([kk, v], n) => {
       const y = m + lab * 0.7 + n * lab * 1.45;
       monoText(g, `${kk} :`, statsX, y, lab, 'left', th.ink);
       monoText(g, String(v), x1, y, lab, 'right', th.ink);
@@ -1527,7 +1563,7 @@ export function drawIndexed(T, k) {
     g.fillRect(fx, fy + fh - stripH2, leftW, stripH2);
     g.save(); g.font = `350 ${stripH2 * 0.5}px ${TYPE}`; g.fillStyle = th.ground; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(SIGNATURE, fx + stripH2 * 0.5, fy + fh - stripH2 / 2); g.restore();
     monoText(g, `[ ${(T.query || 'search').toUpperCase()} ]`, fx + stripH2 * 0.5, fyy + (footH - stripH2) / 2, mono * 1.15, 'left', th.ink);
-    const facts = [['query', T.query || '-'], ['hits', hits], ['frame', TYPE_FRAMES[T.frame]?.label ?? ''], ['status', 'ready']];
+    const facts = [['query', T.query || '-'], ['frame', TYPE_FRAMES[T.frame]?.label ?? ''], ['status', 'ready']];
     const fl = Math.min(mono, footH * 0.8 / (facts.length * 1.5));
     facts.forEach(([kk, v], n) => monoText(g, `${kk}: ${v}`, fx + leftW + stripH2 * 0.5, fyy + footH * 0.1 + (n + 0.5) * fl * 1.5, fl, 'left', th.ink));
   } else {
@@ -1535,10 +1571,208 @@ export function drawIndexed(T, k) {
     const head = T.typing != null ? 'query' : (T.head ?? 'query');
     if (head === 'query' && (T.query || T.typing != null)) monoText(g, `> ${T.typing ?? T.query}${T.typing != null ? '_' : ''}`, m, m + headH / 2, mono, 'left', th.ink);
     if (head === 'headline' && headline) monoText(g, headline, m, m + headH / 2, mono, 'left', th.ink);
-    if (T.query && head !== 'none') monoText(g, hitsText, W - m, m + headH / 2, mono, 'right', th.dim);
     foot(H - m - headH / 2, m, W - m);
   }
   return { canvas: cv, hits, rows, cols };
+}
+
+// ── Layouts after the reference: panels and a table ──────────────────────────────────
+// Symphony in Acid frames its text from the inside: the page cut into rectangles of colour, each
+// holding a sentence or a few in its own size and alignment, some lines on a strip of their own;
+// or a ruled table, one word to a cell. The words keep every move of the grid (hits, near misses,
+// redactions, icons), through `setWord`.
+export const TYPE_LAYOUTS = { grid: 'One grid', panels: 'Panels', table: 'Table' };
+
+/** One word at (x, y) on cells cw × ch: its box, its letters, an icon swapped in now and then.
+ *  `bg` is what it sits on, for the letters' colour. Returns whether it was a hit. */
+function setWord(g, w, x, y, cw, ch, C) {
+  const { T, th, accent, queryGrams, pool, k, bg } = C;
+  const n = C.n++;
+  const read = readWord(w, queryGrams);
+  const hit = read.share >= (T.hitAt ?? 0.5), near = !hit && w.replace(/[^\p{L}\p{N}]/gu, '').length >= 3 && read.share >= (T.nearAt ?? 0.25);
+  const redact = !hit && !near && hash(n * 7 + 1, T.seed * 31 + 5) < (T.redact ?? 0);
+  const mixed = T.mixed && (hit || near) ? th.mix[Math.floor(hash(n * 13 + 7, T.seed * 5 + (hit ? 1 : 2)) * th.mix.length)] : null;
+  let box = redact ? onBox(bg) : hit ? (mixed ?? accent) : near ? (mixed ?? T.nearColour ?? th.near) : null;
+  if (box && box.toLowerCase() === bg.toLowerCase()) box = onBox(bg); // a box the colour of its ground would vanish
+  const lettersOnly = T.hitStyle === 'letters' && (hit || near);
+  if (box && !lettersOnly) { g.fillStyle = box; g.fillRect(Math.round(x), Math.round(y + ch * 0.06), Math.round(w.length * cw), Math.round(ch * 0.88)); }
+  if (T.frameWords) { g.strokeStyle = onBox(bg); g.lineWidth = Math.max(1, k); g.strokeRect(Math.round(x - cw * 0.15) + 0.5, Math.round(y + ch * 0.02) + 0.5, Math.round((w.length + 0.3) * cw), Math.round(ch * 0.96)); }
+  if (redact) return hit;
+  const size = ch * 0.72, base = bg === th.ground ? th.ink : onBox(bg);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  [...w].forEach((c, j) => {
+    const cx = x + (j + 0.5) * cw, cy = y + ch / 2, matched = read.letters.has(j);
+    let colour = box && !lettersOnly ? onBox(box) : base;
+    if (lettersOnly && matched) { g.fillStyle = box; g.fillRect(Math.round(x + j * cw), Math.round(y + ch * 0.06), Math.ceil(cw), Math.round(ch * 0.88)); colour = onBox(box); }
+    if (!hit && /\p{L}/u.test(c) && hash((n * 31 + j) * 3, T.seed * 17 + 11) < (T.icons ?? 0)) {
+      const icp = Math.min(cw * 0.86 / 7, ch * 0.5 / 5), ic = cells(pool[Math.floor(hash(n + j, T.seed) * pool.length)]);
+      const { canvas, pad } = renderFlat(ic, icp, colour);
+      g.drawImage(canvas, Math.round(cx - 3.5 * icp - pad * icp), Math.round(cy - 2.5 * icp - pad * icp));
+    } else {
+      g.font = `${matched && hit ? 700 : (T.weight ?? 400)} ${size}px ${TYPE}`;
+      g.fillStyle = colour; g.fillText(c, cx, cy + size * 0.04);
+    }
+  });
+  return hit;
+}
+
+function drawLayout(T, k) {
+  const [W0, H0] = T.box ?? TYPE_SIZES[T.size] ?? FIELD_SIZES.board, W = W0 * k, H = H0 * k;
+  const frame = TYPE_FRAMES[T.frame] ?? TYPE_FRAMES.block, th = TYPE_THEMES[T.theme] ?? TYPE_THEMES.black;
+  const accent = T.hitFrom === 'chosen' ? (T.colour ?? th.hit) : th.hit;
+  const cv = canvasOf(W, H), g = cv.getContext('2d');
+  g.fillStyle = th.ground; g.fillRect(0, 0, W, H);
+  const m = Math.round(Math.min(W, H) * (T.bare ? 0.03 : 0.06)), headH = T.bare ? 0 : Math.max(14 * k, Math.min(W, H) * 0.04);
+  const A = { x: m, y: m + headH * 1.6, w: W - 2 * m, h: H - 2 * m - headH * 3.2 };
+  const source = (T.upper ? T.text.toUpperCase() : T.text).replace(/\s+/g, ' ').trim();
+  const queryGrams = (T.query ?? '').split(/\s+/).filter(Boolean).map(q => new Set(trigrams(q).map(x => x.g)));
+  const pool = ICON_NAMES.filter(n => n !== 'indx' && ICONS[n].w === 7 && ICONS[n].h === 5 && (T.iconSet === 'all' || ICONS[n].board === 'main'));
+  const C = { T, th, accent, queryGrams, pool, k, bg: th.ground, n: 0 };
+  // The colours a panel or a cell can take: the ground, the ink and the theme's set.
+  const palette = [...new Set([th.ground, th.ink, ...th.mix].map(c => c.toUpperCase()))];
+  const rnd = (a, b) => hash(a * 977 + 13, T.seed * 59 + b);
+  const base = A.w / frame.cols; // the grid's own cell, the smallest a panel sets in
+  let hits = 0;
+
+  if (T.layout === 'panels') {
+    // Cut the area: always the largest panel, across its longer side, at a whole number of base
+    // cells between a quarter and three quarters, until there are `panels` of them.
+    const want = Math.max(1, Math.round(T.panels ?? 7));
+    let leaves = [{ x: 0, y: 0, w: A.w, h: A.h }];
+    // A panel is never cut narrower than ten base cells, or lower than three lines: a panel too small
+    // to cut one way is cut the other, and one too small for both is left whole.
+    const minW = base * 10, minH = base * 1.32 * 3;
+    for (let n = 1, tries = 0; n < want && tries < want * 4; tries++) {
+      leaves.sort((a, b) => b.w * b.h - a.w * a.h);
+      const i = leaves.findIndex(r => r.w >= 2 * minW || r.h >= 2 * minH);
+      if (i < 0) break;
+      const r = leaves.splice(i, 1)[0];
+      const canV = r.w >= 2 * minW, canH = r.h >= 2 * minH;
+      let across = r.w / r.h > 1.2 ? 'v' : r.h / r.w > 1.2 ? 'h' : (rnd(n, 1) < 0.5 ? 'v' : 'h');
+      if (across === 'v' && !canV) across = 'h';
+      if (across === 'h' && !canH) across = 'v';
+      const t = 0.25 + rnd(n, 2) * 0.5;
+      if (across === 'v') { const cut = Math.min(r.w - minW, Math.max(minW, Math.round(r.w * t / base) * base)); leaves.push({ ...r, w: cut }, { ...r, x: r.x + cut, w: r.w - cut }); }
+      else { const cut = Math.min(r.h - minH, Math.max(minH, Math.round(r.h * t / base) * base)); leaves.push({ ...r, h: cut }, { ...r, y: r.y + cut, h: r.h - cut }); }
+      n++;
+    }
+    leaves.sort((a, b) => a.y - b.y || a.x - b.x);
+    // The text in sentences, handed out in order: a panel takes one to three; a few take none.
+    const all = (T.upper ? continued(T.text, T.seed ?? 0).toUpperCase() : continued(T.text, T.seed ?? 0)).replace(/\s+/g, ' ').trim();
+    const sentences = (frame.fill ? all : source).match(SENTENCE) ?? [source];
+    let si = 0, prev = th.ground;
+    leaves.forEach((r, n) => {
+      // A colour unlike its neighbour's; the first panel often the ground, so the page keeps its theme.
+      let fill = palette[Math.floor(rnd(n, 3) * palette.length)];
+      if (fill === prev) fill = palette[(palette.indexOf(fill) + 1) % palette.length];
+      prev = fill;
+      const x0 = A.x + r.x, y0 = A.y + r.y;
+      g.fillStyle = fill; g.fillRect(Math.floor(x0), Math.floor(y0), Math.ceil(r.w) + 1, Math.ceil(r.h) + 1);
+      if (rnd(n, 4) < (T.emptyPanels ?? 0.2) && n > 0) return;
+      // As many sentences as the panel's share asks for, fewer if they do not fit; the size the
+      // largest of a few steps, from four base cells down to one, at which every line and every
+      // whole word fits. Only a single sentence at the smallest size is ever cut.
+      const pad = base * 0.6, iw = r.w - 2 * pad, ih = r.h - 2 * pad;
+      const align = ['left', 'right', 'justify'][Math.floor(rnd(n, 6) * 3)];
+      const strips = rnd(n, 7) < (T.strips ?? 0.4);
+      const want2 = 1 + Math.floor(rnd(n, 5) * 3 * Math.min(1.5, (r.w * r.h) / (A.w * A.h) * want));
+      let set = null;
+      for (let take = want2; take >= 1 && !set; take--) {
+        const words = Array.from({ length: take }, (_, t) => sentences[(si + t) % sentences.length]).join(' ').split(' ').filter(Boolean);
+        const longest = Math.max(...words.map(w => w.length));
+        for (const scale of [4, 3, 2.5, 2, 1.6, 1.3, 1]) {
+          const cw = base * scale, ch = cw * 1.32, cols = Math.floor(iw / cw), rows = Math.floor(ih / ch);
+          if (cols < 4 || rows < 1) continue;
+          const lines = wrapWords(words, cols);
+          if (lines.length <= rows && longest <= cols) { set = { cw, ch, cols, lines, take }; break; }
+          if (take === 1 && scale === 1) set = { cw, ch, cols, lines: lines.slice(0, rows), take };
+        }
+      }
+      if (set) si += set.take;
+      if (!set) return;
+      const { cw, ch, cols, lines } = set;
+      // A third of the panels set their text at the foot, as the reference often does.
+      const drop = rnd(n, 9) < 0.35 ? Math.max(0, Math.floor((ih - lines.length * ch) / ch)) * ch : 0;
+      // Strips: each line on a band of its own, white or grey or the ink, its length the line's.
+      const stripColour = [onBox(fill) === '#080809' ? '#FFFFFF' : '#080809', '#C8C8C8', '#FFFFFF'][Math.floor(rnd(n, 8) * 3)];
+      lines.forEach((ln, li) => {
+        const used = ln.reduce((a, w) => a + w.length, 0) + ln.length - 1, spare = cols - used;
+        const just = align === 'justify' && li < lines.length - 1 && ln.length > 1;
+        let col = align === 'right' ? spare : 0;
+        const y = y0 + pad + drop + li * ch;
+        const bg = strips ? stripColour : fill;
+        if (strips) { g.fillStyle = stripColour; g.fillRect(Math.round(x0 + pad + col * cw - cw * 0.2), Math.round(y), Math.round((just ? cols : used) * cw + cw * 0.4), Math.ceil(ch)); }
+        C.bg = bg;
+        ln.forEach((w, wi) => {
+          if (setWord(g, w, x0 + pad + col * cw, y, cw, ch, C)) hits++;
+          col += w.length + 1 + (just ? Math.floor(spare / (ln.length - 1)) + (wi < spare % (ln.length - 1) ? 1 : 0) : 0);
+        });
+      });
+    });
+  } else {
+    // The table: columns of four to twelve base cells, rows a line tall and now and then two, a word
+    // to a cell, right-aligned (a few left), the rules in the ink; hits fill their cell in the accent,
+    // and `fills` of the others take a colour of the set.
+    const cw = base * (T.tableScale ?? 1.4), ch = cw * 1.32;
+    const colsW = [];
+    for (let x = 0, n = 0; x < A.w - cw * 3; n++) { const c = Math.min(Math.floor((A.w - x) / cw), 4 + Math.floor(rnd(n, 11) * 9)); colsW.push(c); x += c * cw; }
+    const tw = colsW.reduce((a, c) => a + c, 0) * cw, tx = A.x + (A.w - tw) / 2;
+    const rows = [];
+    for (let y = 0, n = 0; y + ch <= A.h; n++) { const h = rnd(n, 12) < 0.14 && y + 2 * ch <= A.h ? 2 * ch : ch; rows.push({ y, h }); y += h; }
+    const words = (frame.fill ? (T.upper ? continued(T.text, T.seed ?? 0).toUpperCase() : continued(T.text, T.seed ?? 0)) : source).replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+    const line = Math.max(1, Math.round(k));
+    let wi = 0;
+    rows.forEach((row, ri) => {
+      let x = tx;
+      colsW.forEach((c, ci) => {
+        const w0 = words[wi++ % words.length], wcw = c * cw, y = A.y + row.y;
+        if (!frame.fill && wi > words.length) return;
+        const read = readWord(w0, queryGrams);
+        const hit = read.share >= (T.hitAt ?? 0.5);
+        const fillCell = hit ? accent : rnd(ri * 31 + ci, 13) < (T.fills ?? 0.14) ? palette[Math.floor(rnd(ri * 7 + ci, 14) * palette.length)] : th.ground;
+        if (fillCell !== th.ground) { g.fillStyle = fillCell; g.fillRect(Math.round(x), Math.round(y), Math.ceil(wcw), Math.ceil(row.h)); }
+        const w = w0.slice(0, c);
+        const right = rnd(ri * 13 + ci, 15) > 0.15;
+        const wx = right ? x + wcw - (w.length + 0.2) * cw : x + cw * 0.2;
+        g.save(); g.beginPath(); g.rect(x, y, wcw, row.h); g.clip();
+        // A hit's word sits on its own filled cell, so it is not boxed again.
+        C.bg = fillCell;
+        if (hit) { hits++; C.n++; g.font = `700 ${ch * 0.72}px ${TYPE}`; g.fillStyle = onBox(fillCell); g.textAlign = 'left'; g.textBaseline = 'middle'; [...w].forEach((ch2, j) => { g.textAlign = 'center'; g.fillText(ch2, wx + (j + 0.5) * cw, y + row.h - ch / 2 + ch * 0.03); }); }
+        else setWord(g, w, wx, y + row.h - ch, cw, ch, C);
+        g.restore();
+        // The rules.
+        g.fillStyle = th.ink; g.fillRect(Math.round(x), Math.round(y), line, Math.ceil(row.h));
+        x += wcw;
+      });
+      g.fillStyle = th.ink; g.fillRect(Math.round(tx), Math.round(A.y + row.y), Math.round(tw), line);
+      g.fillRect(Math.round(x), Math.round(A.y + row.y), line, Math.ceil(row.h));
+    });
+    const last = rows[rows.length - 1];
+    if (last) { g.fillStyle = th.ink; g.fillRect(Math.round(tx), Math.round(A.y + last.y + last.h), Math.round(tw), line); }
+  }
+
+  if (T.bare) return { canvas: cv, hits, rows: 0, cols: frame.cols };
+  // Head and foot as on the grid: the headline or the query, the mark and the signature.
+  const mono = Math.max(10 * k, headH * 0.55);
+  const head = T.typing != null ? 'query' : (T.head ?? 'query');
+  if (head === 'query' && (T.query || T.typing != null)) monoText(g, `> ${T.typing ?? T.query}${T.typing != null ? '_' : ''}`, m, m + headH / 2, mono, 'left', th.ink);
+  if (head === 'headline' && T.headline) monoText(g, T.upper ? T.headline.toUpperCase() : T.headline, m, m + headH / 2, mono, 'left', th.ink);
+  drawMark(g, m + headH * 7 / 5, H - m - headH, headH / 5, th.ink);
+  g.save(); g.font = `350 ${headH * 0.66}px ${TYPE}`; g.fillStyle = th.ink; g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillText(SIGNATURE, W - m, H - m - headH / 2); g.restore();
+  return { canvas: cv, hits, rows: 0, cols: frame.cols };
+}
+
+/** Words into lines of at most `cols` characters, a word longer than the line cut to it. */
+function wrapWords(words, cols) {
+  const lines = [];
+  let line = [], used = 0;
+  for (const w0 of words) {
+    const w = w0.slice(0, cols), need = (line.length ? 1 : 0) + w.length;
+    if (line.length && used + need > cols) { lines.push(line); line = []; used = 0; }
+    line.push(w); used += (line.length > 1 ? 1 : 0) + w.length;
+  }
+  if (line.length) lines.push(line);
+  return lines;
 }
 
 // ── Pack: Search. Ask. Observe. over the chosen generations ─────────────────────────
