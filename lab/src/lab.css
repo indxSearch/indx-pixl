@@ -73,3 +73,5 @@ main { padding: 28px; display: flex; flex-direction: column; gap: 36px; min-widt
   aside { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--lv2); padding: 16px; }
   main { padding: 20px 16px; }
 }
+/* People: the stills to set a scene on, larger than the pack's picks. */
+.still-img { display: block; width: 168px; height: 110px; object-fit: cover; }

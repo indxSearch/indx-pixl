@@ -11,6 +11,10 @@ window.PIXL_ENGINE = E;
 
 // ── Parameter sets, one per tab, kept in this browser ───────────────────────────────
 const DEFAULTS = {
+  people: {
+    scene: 'sofa', who: '', size: 'board', place: 'right', cards: 'dark', results: 3, colour: '#FF4238',
+    look: 'photo', fade: 'light', fadeAmount: 0.8, glow: 0.5, grain: 'terminal', grid: 140, contrast: 1.3, dim: 0, query: '', observr: '', photo: '', genCount: 2,
+  },
   banners: {
     style: 'metaball', theme: 'light', layout: 'row', icons: ['search', 'question', 'observr'],
     tone: 'lv3', gridMode: 'over', reach: 0.45, corner: 0, micro: 12, bevel: 3, ditherMeta: false,
@@ -57,7 +61,7 @@ const DEFAULTS = {
     colour: '#FFC21A', colourName: 'Signal yellow',
   },
 };
-const TABS = [{ value: 'banners', label: 'Banners' }, { value: 'voxl', label: 'Voxl' }, { value: 'field', label: 'Icon field' }, { value: 'pack', label: 'Pack' }, { value: 'posters', label: 'Posters' }, { value: 'type', label: 'Type' }];
+const TABS = [{ value: 'banners', label: 'Banners' }, { value: 'voxl', label: 'Voxl' }, { value: 'field', label: 'Icon field' }, { value: 'pack', label: 'Pack' }, { value: 'posters', label: 'Posters' }, { value: 'type', label: 'Type' }, { value: 'people', label: 'People' }];
 
 const saved = (key, fallback) => { try { return JSON.parse(localStorage.getItem('pixl-lab-' + key)) ?? fallback; } catch { return fallback; } };
 const save = (key, value) => { try { localStorage.setItem('pixl-lab-' + key, JSON.stringify(value)); } catch { /* private window: this visit only */ } };
@@ -549,7 +553,7 @@ function VoxlMain({ p, set, exports, gen, generations, refreshGenerations }) {
   const [edited, setEdited] = useState(null);
   const prompt = edited ?? auto;
   const [sending, setSending] = useState(false);
-  const images = generations.filter(g => g.kind !== 'reverse' && !g.settings?.mockup);
+  const images = generations.filter(g => g.kind !== 'reverse' && !g.settings?.mockup && !g.settings?.people);
   const [error, setError] = useState(null);
   useDraw(() => blit(ref.current, E.drawVoxl(p, PREVIEW)), [p]);
   const copy = async () => {
@@ -1130,6 +1134,132 @@ function PostersMain({ p, set, exports, gen, generations, refreshGenerations, ty
   </>;
 }
 
+// ── People ──────────────────────────────────────────────────────────────────────────
+// A person at the moment of searching, and over the still the two halves of the story: they find
+// the thing despite the typo, and Observr notices something and asks yes or no.
+// A photo chosen from the computer lives for this visit only: too big for the browser's storage.
+let uploadedPhoto = null;
+function useImage(src) {
+  const [img, setImg] = useState(null);
+  useEffect(() => {
+    if (!src) { setImg(null); return; }
+    const im = new Image();
+    im.onload = () => setImg(im); im.onerror = () => setImg(null);
+    im.src = src;
+  }, [src]);
+  return img;
+}
+// The ratio Nano Banana is asked for: the nearest it supports to the chosen size.
+const RATIOS = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'];
+const nearestRatio = ([w, h]) => {
+  const off = r => { const [a, b] = r.split(':').map(Number); return Math.abs(Math.log(a / b) - Math.log(w / h)); };
+  return RATIOS.reduce((best, r) => off(r) < off(best) ? r : best, '1:1');
+};
+
+function PeoplePanel({ p, set }) {
+  const scene = E.PEOPLE_SCENES[p.scene] ?? E.PEOPLE_SCENES.sofa;
+  return <>
+    <Group title="Scene">
+      <Choice label="Where" value={p.scene} options={Object.entries(E.PEOPLE_SCENES).map(([value, x]) => ({ value, label: x.label }))} onChange={v => set({ scene: v, query: '', observr: '' })} />
+      <InputField label="The person (optional)" placeholder="e.g. a woman in her sixties, grey hair" value={p.who} onChange={e => set({ who: e.target.value })} />
+      <Choice label="Size" value={p.size} options={Object.entries(E.TYPE_SIZES).map(([value, v]) => ({ value, label: v[2] }))} onChange={v => set({ size: v })} />
+    </Group>
+    <Group title="The story">
+      <InputField label="They type" placeholder={scene.query} value={p.query} onChange={e => set({ query: e.target.value })} />
+      <Textarea label="Observr noticed" rows={4} placeholder={scene.observr} value={p.observr} onChange={e => set({ observr: e.target.value })} />
+      <Range label="Results shown" value={p.results} min={1} max={3} step={1} format={v => `${v}`} onChange={v => set({ results: v })} />
+      <p className="note">Empty fields use the scene's own example. The results and their numbers are an example's, never a claim.</p>
+    </Group>
+    <Group title="Cards">
+      <Choice label="Placed" value={p.place} options={opts([['right', 'Both on the right'], ['left', 'Both on the left'], ['split', 'Search top left, Observr bottom right']])} onChange={v => set({ place: v })} />
+      <Choice label="Cards" value={p.cards} options={opts([['dark', 'Dark'], ['light', 'Light']])} onChange={v => set({ cards: v })} />
+    </Group>
+    <Group title="The photo">
+      <SegmentedControl size="micro" stretch items={Object.entries(E.PEOPLE_LOOKS).map(([value, label]) => ({ value, label }))} value={p.look} onChange={v => set({ look: v })} aria-label="Look" />
+      {p.look === 'photo' && <>
+        <Choice label="Fade under the mark" value={p.fade ?? 'light'} options={opts([['light', 'To white'], ['dark', 'To warm black, as Tana'], ['none', 'None']])} onChange={v => set({ fade: v })} />
+        {(p.fade ?? 'light') !== 'none' && <Range label="Fade" value={p.fadeAmount ?? 0.8} min={0} max={1} step={0.05} format={pct} onChange={v => set({ fadeAmount: v })} />}
+        <Range label="Glow, warm and cool" value={p.glow ?? 0.5} min={0} max={1} step={0.05} format={pct} onChange={v => set({ glow: v })} />
+        <Range label="Darken" value={p.dim} min={0} max={0.6} step={0.02} format={pct} onChange={v => set({ dim: v })} />
+      </>}
+      {p.look !== 'photo' && <Choice label="Colours" value={p.grain} options={Object.entries(E.PEOPLE_GRAINS).map(([value, x]) => ({ value, label: x.label }))} onChange={v => set({ grain: v })} />}
+      {(p.look === 'dots' || p.look === 'ascii') && <>
+        <Range label="Grid, across" value={p.grid} min={40} max={260} step={2} format={v => `${v}`} onChange={v => set({ grid: v })} />
+        <Range label="Contrast" value={p.contrast} min={0.6} max={2.4} step={0.05} format={v => v.toFixed(2)} onChange={v => set({ contrast: v })} />
+      </>}
+    </Group>
+  </>;
+}
+
+function PeopleMain({ p, set, exports, gen, generations, refreshGenerations }) {
+  const ref = useRef(null), input = useRef(null);
+  const [sending, setSending] = useState(false), [error, setError] = useState(null);
+  const [edited, setEdited] = useState(null);
+  const [, bump] = useState(0);
+  const stills = generations.filter(g => g.settings?.people).flatMap(g => g.outputs.map(o => ({ src: o, scene: g.settings.scene })));
+  const src = p.photo === 'upload' ? uploadedPhoto : p.photo || stills[0]?.src || '';
+  const img = useImage(src);
+  useDraw(() => blit(ref.current, E.drawPeople(p, 1, img)), [p, img]);
+  const prompt = edited ?? E.peoplePrompt(p);
+  const generate = async () => {
+    setSending(true); setError(null);
+    try {
+      const r = await fetch('/api/generate', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ prompt, images: [], aspectRatio: nearestRatio(E.TYPE_SIZES[p.size]), imageSize: '2K', count: p.genCount,
+          settings: { people: true, scene: p.scene, who: p.who, icon: `people-${p.scene}`, mat: 'people' } }),
+      });
+      const meta = await r.json();
+      if (!r.ok || meta.errors?.length) setError(meta.errors?.join('; ') || meta.error || `HTTP ${r.status}`);
+      if (meta.outputs?.length) set({ photo: meta.outputs[0] });
+      refreshGenerations();
+    } catch (e) { setError(e.message); }
+    setSending(false);
+  };
+  const choose = f => {
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => { uploadedPhoto = reader.result; set({ photo: 'upload' }); bump(n => n + 1); };
+    reader.readAsDataURL(f);
+  };
+  const sceneLabel = k => E.PEOPLE_SCENES[k]?.label ?? k;
+  return <>
+    <section>
+      <h2>A person at the moment of searching</h2>
+      <p className="note">They find what they meant despite the typo, and Observr notices what the searches have in common. Generated people are for sketching; publish with real photos.</p>
+      <div className="frame" style={{ maxWidth: E.TYPE_SIZES[p.size][0] }}><canvas ref={ref} /></div>
+      <div className="buttons">
+        {gen?.hasKey && <Button size="micro" variant="primary" loading={sending} onClick={generate}>Generate {p.genCount > 1 ? `${p.genCount} stills` : 'a still'}</Button>}
+        <input ref={input} type="file" accept="image/*" hidden onChange={e => { choose(e.target.files?.[0]); e.target.value = ''; }} />
+        <Button size="micro" variant="secondary" onClick={() => input.current.click()}>Choose your own photo</Button>
+        <Button size="micro" variant={gen?.hasKey ? 'secondary' : 'primary'} onClick={() => exports.add(E.drawPeople(p, 2, img), `people-${p.scene}-${p.look}-${p.size}.png`)}>Export PNG at 2x</Button>
+        {sending && <span className="note">Generating: this takes a while…</span>}
+      </div>
+      {gen === null && <p className="note">Stills are generated in the lab on your machine (<code>npm start</code> in lab/, with a key). Your own photo works anywhere.</p>}
+      {error && <Alert variant="destructive"><AlertTitle>Generation failed</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+    </section>
+    {stills.length > 0 && <section>
+      <h2>Stills</h2>
+      <p className="note">Choose one to set the scene on. They are kept with the generations.</p>
+      <div className="picks">
+        {stills.map(st => (
+          <Button key={st.src} size="micro" variant={st.src === src ? 'secondary' : 'ghost'} className="pick" aria-pressed={st.src === src}
+            aria-label={`Use this still: ${sceneLabel(st.scene)}`} onClick={() => set({ photo: st.src })}
+            iconLeft={<img className="still-img" src={st.src} alt="" />} />
+        ))}
+      </div>
+    </section>}
+    {gen?.hasKey && <section>
+      <h2>Prompt</h2>
+      <div className="prompt-edit">
+        <Textarea label={edited == null ? 'Prompt, from the settings' : 'Prompt, edited by hand'} rows={7} value={prompt} onChange={e => setEdited(e.target.value)} />
+        <Range label="Stills per run" value={p.genCount} min={1} max={4} step={1} format={v => `${v}`} onChange={v => set({ genCount: v })} />
+        {edited != null && <div className="buttons"><Button size="micro" variant="ghost" onClick={() => setEdited(null)}>Reset prompt to the settings</Button></div>}
+      </div>
+    </section>}
+  </>;
+}
+
 // ── The page ────────────────────────────────────────────────────────────────────────
 function App() {
   const [tab, setTab] = useState(() => { const t = saved('tab', 'banners'); return TABS.some(x => x.value === t) ? t : 'banners'; });
@@ -1140,6 +1270,7 @@ function App() {
   const [pack, setPack, resetPack] = useParams('pack');
   const [posters, setPosters, resetPosters] = useParams('posters');
   const [typeP, setTypeP, resetType] = useParams('type');
+  const [people, setPeople, resetPeople] = useParams('people');
   const [candidates, setCandidatesState] = useState(() => saved('candidates', MOODBOARD_CANDIDATES));
   const setCandidates = list => { setCandidatesState(list); save('candidates', list); };
   const exports = useExports();
@@ -1150,7 +1281,7 @@ function App() {
   useEffect(() => {
     fetch('/api/health').then(r => r.ok ? r.json() : null).then(h => { setGen(h?.ok ? h : null); if (h?.ok) refreshGenerations(); }).catch(() => setGen(null));
   }, [refreshGenerations]);
-  const reset = { banners: resetBanners, voxl: resetVx, field: resetField, pack: resetPack, posters: resetPosters, type: resetType }[tab];
+  const reset = { banners: resetBanners, voxl: resetVx, field: resetField, pack: resetPack, posters: resetPosters, type: resetType, people: resetPeople }[tab];
   return (
     <div className="lab">
       <header>
@@ -1165,6 +1296,7 @@ function App() {
           {tab === 'pack' && <PackPanel p={pack} set={setPack} />}
           {tab === 'posters' && <PostersPanel p={posters} set={setPosters} candidates={candidates} setCandidates={setCandidates} />}
           {tab === 'type' && <TypePanel p={typeP} set={setTypeP} candidates={candidates} setCandidates={setCandidates} />}
+          {tab === 'people' && <PeoplePanel p={people} set={setPeople} />}
           <div className="buttons"><Button size="micro" variant="ghost" onClick={reset}>Reset this tab</Button></div>
         </aside>
         <main id={`panel-${tab}`} role="tabpanel">
@@ -1173,6 +1305,7 @@ function App() {
           {tab === 'field' && <FieldMain p={field} set={setField} exports={exports} />}
           {tab === 'pack' && <PackMain p={pack} set={setPack} exports={exports} gen={gen} generations={generations} vx={vx} typeP={typeP} />}
           {tab === 'type' && <TypeMain p={typeP} set={setTypeP} exports={exports} />}
+          {tab === 'people' && <PeopleMain p={people} set={setPeople} exports={exports} gen={gen} generations={generations} refreshGenerations={refreshGenerations} />}
           {tab === 'posters' && <PostersMain p={posters} set={setPosters} exports={exports} gen={gen} generations={generations} refreshGenerations={refreshGenerations} typeP={typeP} />}
           <Exports items={exports.items} />
         </main>

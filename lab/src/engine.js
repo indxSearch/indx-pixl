@@ -1994,3 +1994,271 @@ export function drawPack(P, items, k, only) {
 export function canvasOf(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); return c; }
 function rgb(hex) { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
 function norm(v) { const l = Math.hypot(...v); return v.map(x => x / l); }
+
+// ── People: a person at the moment of searching ──────────────────────────────────────
+// After Tana (3 Nov 2026), whose people sit inside the product's own scene. Here a still of
+// someone searching, from Nano Banana or a photo of your own, and over it the two halves of the
+// story in systm cards: the person finds the thing despite the typo, and Observr notices what
+// the searches have in common and asks the owner yes or no. Flat cards, a hairline border, no
+// shadows. The photo can stay a photo, or be set in the brand's grain: dots, ASCII or a duotone.
+
+/** The scenes: what Nano Banana is asked for, and the story the cards tell over it. The numbers
+ *  are an example's, never a claim. */
+export const PEOPLE_SCENES = {
+  hardware: {
+    label: 'Hardware store, phone',
+    scene: 'a person in the bright aisle of a modern hardware store, smiling slightly as they look at the phone in their hand, colourful shelves of tools behind them, softly out of focus, daylight from skylights',
+    query: 'drill bitts 8mm',
+    results: [
+      { title: 'Drill bits, 8 mm, HSS', meta: 'Aisle 14 · 23 in stock', icon: 'tool box', found: 'drill bits' },
+      { title: 'Stone drill bits, 8 mm', meta: 'Aisle 14 · 9 in stock', icon: 'tool box', found: 'drill bits' },
+      { title: 'Drill bit set, 19 pieces', meta: 'Aisle 15', icon: 'tool box', found: 'drill bit' },
+    ],
+    observr: "14 people searched 'masonry bit' this week and chose stone drill bits. Add 'masonry' as a synonym for 'stone'?",
+  },
+  sofa: {
+    label: 'Sofa at home, laptop',
+    scene: 'a person sitting on a light sofa in a bright, airy Scandinavian living room on a sunny morning, a laptop on their knees, relaxed and pleased with what they found, sunlight through big windows, plants, white walls, pale wood',
+    query: 'sofabed gry',
+    results: [
+      { title: 'Linden sofa bed, grey', meta: '3 seats · in stock', icon: 'home', found: 'sofa bed grey' },
+      { title: 'Corner sofa bed, light grey', meta: 'Delivered in 2 weeks', icon: 'home', found: 'sofa bed grey' },
+      { title: 'Sofa bed cover, grey wool', meta: 'Accessories', icon: 'tag', found: 'sofa bed grey' },
+    ],
+    observr: "'Sleeper sofa' found nothing for 23 people this week. Add it as a synonym for 'sofa bed'?",
+  },
+  kitchen: {
+    label: 'Kitchen, tablet',
+    scene: 'a person in a bright kitchen with white tiles and morning sun, a tablet leaning against the wall, one hand reaching to scroll it, fresh colourful vegetables on a wooden board, smiling',
+    query: 'vegitarian lasagne',
+    results: [
+      { title: 'Vegetarian lasagne with spinach', meta: '45 min · 4 servings', icon: 'coffee', found: 'vegetarian lasagne' },
+      { title: 'Lasagne with lentils', meta: '60 min · vegetarian', icon: 'coffee', found: 'lasagne' },
+    ],
+    observr: "People who search 'veggie' choose vegetarian recipes 9 times in 10. Add 'veggie' as a synonym for 'vegetarian'?",
+  },
+  bookshop: {
+    label: 'Bookshop, phone',
+    scene: 'a person in a light, spacious bookshop with big windows, holding a phone and glancing at it with a smile, colourful book spines behind them in soft daylight',
+    query: 'nordic brids',
+    results: [
+      { title: 'Birds of the Nordic countries', meta: 'Field guide · in store', icon: 'book', found: 'nordic birds' },
+      { title: 'A year of Nordic birds', meta: 'Hardback', icon: 'book', found: 'nordic birds' },
+    ],
+    observr: "Searches for 'birding' doubled this week, and people choose field guides. Boost field guides for 'birding'?",
+  },
+  developer: {
+    label: 'Developer at a desk',
+    scene: 'a developer at a desk in a bright, modern office full of daylight, leaning towards a laptop with a focused, content look, a coffee cup beside it, plants and white walls, colleagues softly out of focus behind',
+    query: 'cors eror',
+    results: [
+      { title: 'Fixing CORS errors in the API', meta: 'Guide · 4 min read', icon: 'code', found: 'cors error' },
+      { title: 'Allowed origins', meta: 'Reference · Settings', icon: 'document or file', found: 'cors' },
+    ],
+    observr: "'rate limit' found nothing 9 times today. The answer is in 'Throttling'. Add 'rate limit' as a synonym?",
+  },
+  warehouse: {
+    label: 'Warehouse, tablet',
+    scene: 'a person in a clean, bright warehouse in a work vest, holding a tablet and looking at it, tall shelves of labelled boxes behind them, daylight from high windows',
+    query: 'bolt m8x40 zink',
+    results: [
+      { title: 'Bolt M8 × 40, zinc plated', meta: 'Shelf C-12 · 1 400 pcs', icon: 'bar code', found: 'bolt m8 40 zinc' },
+      { title: 'Bolt M8 × 40, stainless', meta: 'Shelf C-13 · 600 pcs', icon: 'bar code', found: 'bolt m8 40' },
+    ],
+    observr: "On the floor, 'galv' is how people type galvanised. Add 'galv' as a synonym?",
+  },
+};
+
+/** The prompt for a still of the scene: candid, the screen unreadable, calm space left for the cards. */
+export function peoplePrompt(P) {
+  const S = PEOPLE_SCENES[P.scene] ?? PEOPLE_SCENES.sofa;
+  const side = P.place === 'left' ? 'left' : P.place === 'split' ? 'left and right' : 'right';
+  return [
+    `A bright, high-key lifestyle photograph: ${S.scene}.`,
+    P.who?.trim() ? `The person: ${P.who.trim()}.` : 'A friendly, ordinary-looking person, natural and approachable, not a model.',
+    'They are in the middle of searching for something, attention on the device. The screen faces away from the camera or is out of focus: nothing on it is readable.',
+    `Leave calm, uncluttered space on the ${side} of the frame: interface cards will be placed there later.`,
+    'Light and optimistic: abundant soft daylight, airy and clean, bright whites and fresh, slightly saturated colours, crisp and sharp, shallow depth of field, real skin texture. The feel of a modern product launch page. Never dark, gloomy, moody or dim; no evening, no lamplight, no heavy shadows.',
+    'No text, no logos, no brand names, no watermarks, no visible screens with content.',
+  ].join(' ');
+}
+
+export const PEOPLE_LOOKS = { photo: 'Photo', dots: 'Dots', ascii: 'ASCII', duotone: 'Duotone' };
+export const PEOPLE_GRAINS = {
+  black: { label: 'Black and white', ground: '#080809', ink: '#EFEFEF' },
+  terminal: { label: 'Terminal green', ground: '#0D1C1A', ink: '#5DD1A4' },
+  amber: { label: 'Amber', ground: '#221713', ink: '#C84916' },
+  paper: { label: 'Paper', ground: '#FFFFFF', ink: '#080809' },
+  blue: { label: 'Pure blue', ground: '#0000FF', ink: '#FFFFFF' },
+};
+
+/** The photo's luminance on a cols × rows grid, 0 to 1. */
+function lumaGrid(img, W, H, cols, rows) {
+  // Cropped at the frame's own shape first, then squeezed to the grid, whose cells need not be square.
+  const f = canvasOf(Math.max(1, Math.round(W / 4)), Math.max(1, Math.round(H / 4)));
+  coverDraw(f.getContext('2d'), img, f.width, f.height);
+  const c = canvasOf(cols, rows), g = c.getContext('2d', { willReadFrequently: true });
+  g.drawImage(f, 0, 0, cols, rows);
+  const d = g.getImageData(0, 0, cols, rows).data, out = new Float32Array(cols * rows);
+  for (let i = 0; i < out.length; i++) out[i] = (0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]) / 255;
+  // Levels: the photo's own range stretched to the full one, from its darkest 2 % to its lightest
+  // 2 %, so an evening still keeps its person instead of sinking into the ground.
+  const sorted = Float32Array.from(out).sort(), lo = sorted[Math.floor(sorted.length * 0.02)], hi = sorted[Math.floor(sorted.length * 0.98)];
+  const span = Math.max(0.05, hi - lo);
+  for (let i = 0; i < out.length; i++) out[i] = Math.min(1, Math.max(0, (out[i] - lo) / span));
+  return out;
+}
+function coverDraw(g, img, W, H) {
+  const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, s = Math.max(W / iw, H / ih);
+  g.drawImage(img, (W - iw * s) / 2, (H - ih * s) / 2, iw * s, ih * s);
+}
+
+/** The scene at `k`x: the photo in its look, the cards over it, the mark and the signature. */
+export function drawPeople(P, k, img) {
+  const [W0, H0] = TYPE_SIZES[P.size] ?? FIELD_SIZES.board, W = W0 * k, H = H0 * k;
+  const cv = canvasOf(W, H), g = cv.getContext('2d');
+  const grain = PEOPLE_GRAINS[P.grain] ?? PEOPLE_GRAINS.black;
+  const look = img ? (P.look ?? 'photo') : 'none';
+  g.fillStyle = look === 'photo' || look === 'none' ? '#1A1A21' : grain.ground; g.fillRect(0, 0, W, H);
+  const u = Math.min(W, H) / 100;
+  if (look === 'none') {
+    g.fillStyle = '#565661'; g.font = `400 ${u * 2.4}px ${MONO}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('NO PHOTO YET: GENERATE ONE, OR CHOOSE YOUR OWN', W / 2, H / 2);
+  } else if (look === 'photo') {
+    coverDraw(g, img, W, H);
+    if (P.dim) { g.fillStyle = `rgba(8, 8, 9, ${P.dim})`; g.fillRect(0, 0, W, H); }
+    // The glow, after Tana's: a warm orange from the top far corner and a cool blue from the
+    // corner under the mark, faint, so a bright still gets a little of their filmic warmth.
+    const glow = P.glow ?? 0;
+    if (glow > 0) {
+      const brandRight0 = (P.place ?? 'right') === 'left';
+      const corner = (x, y, r, c, a) => { const gr = g.createRadialGradient(x, y, 0, x, y, r); for (let i = 0; i <= 8; i++) { const t = i / 8; gr.addColorStop(t, `rgba(${c}, ${a * (1 - t) * (1 - t)})`); } g.fillStyle = gr; g.fillRect(0, 0, W, H); };
+      corner(brandRight0 ? 0 : W, 0, Math.max(W, H) * 0.7, '227, 154, 95', 0.34 * glow);
+      corner(brandRight0 ? W : 0, H, Math.max(W, H) * 0.6, '111, 143, 207', 0.28 * glow);
+    }
+    // The fade: the photo eased toward light (or a warm near-black, as Tana sets its text) in the
+    // corner that carries the mark, eased by the square of the distance so it has no edge.
+    const fade = P.fade ?? 'light', amount = P.fadeAmount ?? 0.8;
+    if (fade !== 'none' && amount > 0) {
+      const x = (P.place ?? 'right') === 'left' ? W : 0, R = Math.max(W, H) * 0.55, c = fade === 'dark' ? '12, 8, 5' : '255, 255, 255';
+      const gr = g.createRadialGradient(x, H, 0, x, H, R);
+      for (let i = 0; i <= 10; i++) { const t = i / 10; gr.addColorStop(t, `rgba(${c}, ${amount * Math.pow(1 - t, 2)})`); }
+      g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    }
+  } else if (look === 'duotone') {
+    const w = Math.round(W / 2), h = Math.round(H / 2), c = canvasOf(w, h), cg = c.getContext('2d', { willReadFrequently: true });
+    coverDraw(cg, img, w, h);
+    const im = cg.getImageData(0, 0, w, h), d = im.data, a = rgb(grain.ground), b = rgb(grain.ink);
+    for (let i = 0; i < d.length; i += 4) { const l = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255; d[i] = a[0] + (b[0] - a[0]) * l; d[i + 1] = a[1] + (b[1] - a[1]) * l; d[i + 2] = a[2] + (b[2] - a[2]) * l; }
+    cg.putImageData(im, 0, 0);
+    g.imageSmoothingQuality = 'high'; g.drawImage(c, 0, 0, W, H);
+  } else {
+    // Dots and ASCII: the photo's light on a grid, a dot that grows with it or a character from a
+    // ramp, in the grain's ink on its ground.
+    const cols = Math.max(20, Math.round(P.grid ?? 140)), cw = W / cols, ch = look === 'ascii' ? cw * 1.6 : cw, rows = Math.ceil(H / ch);
+    const L = lumaGrid(img, W, H, cols, rows), contrast = P.contrast ?? 1.3;
+    g.fillStyle = grain.ink;
+    const ramp = ' .:-=+*#%@';
+    if (look === 'ascii') { g.font = `500 ${ch * 0.82}px ${MONO}`; g.textAlign = 'center'; g.textBaseline = 'middle'; }
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const l = Math.min(1, Math.max(0, (L[r * cols + c] - 0.5) * contrast + 0.5));
+      if (look === 'dots') { const rad = l * cw * 0.56; if (rad > cw * 0.06) { g.beginPath(); g.arc((c + 0.5) * cw, (r + 0.5) * ch, rad, 0, Math.PI * 2); g.fill(); } }
+      else { const t = ramp[Math.min(ramp.length - 1, Math.floor(l * ramp.length))]; if (t !== ' ') g.fillText(t, (c + 0.5) * cw, (r + 0.5) * ch); }
+    }
+  }
+
+  // The cards, drawn to indx-systm's own measures (its CommandPalette, Button and tokens), scaled
+  // so a card is 400 systm pixels wide: a panel of lv1 with a 1 px lv3 border and the 1 px radius,
+  // a 44 px field row with a hairline under it, an uppercase group label, 32 px items of icon,
+  // label and hint, the first one active on lv2; micro buttons, primary lv7 on lv1. Type at 350,
+  // buttons at 500. Nothing highlighted: the result simply is what they meant.
+  // The query and Observr's line can be written over in the panel; empty, the scene's own.
+  const S0 = PEOPLE_SCENES[P.scene] ?? PEOPLE_SCENES.sofa;
+  const S = { ...S0, query: P.query?.trim() || S0.query, observr: P.observr?.trim() || S0.observr };
+  const L = LADDER[P.cards === 'light' ? 'light' : 'dark'];
+  const m = u * 5;
+  const cardW = Math.min(W - 2 * m, W > H ? W * 0.36 : W * 0.86), x1 = cardW / 400; // one systm pixel
+  const line = Math.max(1, Math.round(x1));
+  const font = (size, weight = 350, f = TYPE) => `${weight} ${size * x1}px ${f}`;
+  const text = (str, x, y, size, colour, align = 'left', weight = 350, f = TYPE) => { g.font = font(size, weight, f); g.fillStyle = colour; g.textAlign = align; g.textBaseline = 'middle'; g.fillText(str, x, y); return g.measureText(str).width; };
+  const fit = (str, size, weight, maxW) => { g.font = font(size, weight); if (g.measureText(str).width <= maxW) return str; let t = str; while (t.length > 1 && g.measureText(t + '…').width > maxW) t = t.slice(0, -1); return t + '…'; };
+  const wrap = (str, size, maxW) => { g.font = font(size); const out = []; let ln = ''; for (const w of str.split(' ')) { const t = ln ? ln + ' ' + w : w; if (g.measureText(t).width > maxW && ln) { out.push(ln); ln = w; } else ln = t; } if (ln) out.push(ln); return out; };
+  // A pixl icon at systm's icon size, 16 px across, centred on (cx, cy).
+  const icon = (name, cx, cy, colour, size = 16) => { if (!ICONS[name]) return; const ic = cells(name), c = size * x1 / 7; g.fillStyle = colour; for (const p of ic.list) g.fillRect(Math.round(cx - 3.5 * c + p.x * c), Math.round(cy - 2.5 * c + p.y * c), Math.ceil(c), Math.ceil(c)); };
+  const panel = (x, y, w, h) => { g.fillStyle = L.lv1; g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); g.fillStyle = L.lv3; g.fillRect(Math.round(x), Math.round(y), Math.round(w), line); g.fillRect(Math.round(x), Math.round(y + h - line), Math.round(w), line); g.fillRect(Math.round(x), Math.round(y), line, Math.round(h)); g.fillRect(Math.round(x + w - line), Math.round(y), line, Math.round(h)); };
+  const results = S.results.slice(0, Math.max(1, P.results ?? 3));
+  const fieldH = 44 * x1, itemH = 32 * x1, listPad = 4 * x1, groupH = 24 * x1;
+  const searchH = fieldH + listPad * 2 + groupH + results.length * itemH;
+  const bodyLines = wrap(S.observr, 13, cardW - 24 * x1);
+  const observrH = fieldH + 12 * x1 + bodyLines.length * 13 * 1.5 * x1 + 12 * x1 + 30 * x1 + 12 * x1;
+  const place = P.place ?? 'right', gap = 12 * x1;
+  const xRight = W - m - cardW, xLeft = m;
+  const sx = place === 'left' || place === 'split' ? xLeft : xRight;
+  const ox = place === 'split' ? xRight : sx;
+  const sy = place === 'split' ? m : Math.max(m, (H - searchH - observrH - gap) / 2);
+  const oy = place === 'split' ? H - m - observrH : sy + searchH + gap;
+
+  // The search: the field as typed, the caret, the count as the hint; then the results.
+  panel(sx, sy, cardW, searchH);
+  const fy = sy + fieldH / 2;
+  icon('search', sx + 12 * x1 + 8 * x1, fy, L.lv5);
+  const qx = sx + 12 * x1 + 16 * x1 + 8 * x1;
+  const qw = text(S.query, qx, fy, 13, L.lv8);
+  g.fillStyle = L.lv7; g.fillRect(Math.round(qx + qw + 1.5 * x1), Math.round(fy - 8 * x1), Math.max(1, Math.round(x1)), Math.round(16 * x1));
+  text(`${results.length} results`, sx + cardW - 12 * x1, fy, 11, L.lv5, 'right');
+  g.fillStyle = L.lv2; g.fillRect(Math.round(sx + line), Math.round(sy + fieldH), Math.round(cardW - 2 * line), line);
+  const ly0 = sy + fieldH + listPad;
+  g.font = font(10); g.letterSpacing = `${0.05 * 10 * x1}px`;
+  text('RESULTS', sx + listPad + 8 * x1, ly0 + 8 * x1 + 6 * x1, 10, L.lv5);
+  g.letterSpacing = '0px';
+  results.forEach((res, i) => {
+    const iy = ly0 + groupH + i * itemH, ix = sx + listPad, iw = cardW - 2 * listPad, cy = iy + itemH / 2;
+    if (i === 0) { g.fillStyle = L.lv2; g.fillRect(Math.round(ix), Math.round(iy), Math.round(iw), Math.round(itemH)); }
+    icon(res.icon, ix + 8 * x1 + 8 * x1, cy, L.lv5);
+    g.font = font(11); const hintW = g.measureText(res.meta).width;
+    text(res.meta, ix + iw - 8 * x1, cy, 11, L.lv5, 'right');
+    const lx = ix + 8 * x1 + 16 * x1 + 8 * x1;
+    text(fit(res.title, 13, 350, ix + iw - 8 * x1 - hintW - 12 * x1 - lx), lx, cy, 13, i === 0 ? L.lv8 : L.lv7);
+  });
+
+  // Observr: a head row like the field, what it noticed, and the owner's answer in micro buttons.
+  panel(ox, oy, cardW, observrH);
+  const hy = oy + fieldH / 2;
+  icon('observr', ox + 12 * x1 + 8 * x1, hy, L.lv5);
+  text('Observr', ox + 12 * x1 + 16 * x1 + 8 * x1, hy, 13, L.lv8, 'left', 500);
+  text('noticed', ox + cardW - 12 * x1, hy, 11, L.lv5, 'right');
+  g.fillStyle = L.lv2; g.fillRect(Math.round(ox + line), Math.round(oy + fieldH), Math.round(cardW - 2 * line), line);
+  let by = oy + fieldH + 12 * x1 + 13 * 0.75 * x1;
+  for (const l of bodyLines) { text(l, ox + 12 * x1, by, 13, L.lv7); by += 13 * 1.5 * x1; }
+  const btnY = oy + observrH - 12 * x1 - 30 * x1;
+  const button = (label, x, kind) => {
+    g.font = font(11, 500); const bw = g.measureText(label).width + 20 * x1, bh = 30 * x1;
+    if (kind === 'primary') { g.fillStyle = L.lv7; g.fillRect(Math.round(x), Math.round(btnY), Math.round(bw), Math.round(bh)); }
+    if (kind === 'secondary') { g.fillStyle = L.lv3; g.fillRect(Math.round(x), Math.round(btnY), Math.round(bw), line); g.fillRect(Math.round(x), Math.round(btnY + bh - line), Math.round(bw), line); g.fillRect(Math.round(x), Math.round(btnY), line, Math.round(bh)); g.fillRect(Math.round(x + bw - line), Math.round(btnY), line, Math.round(bh)); }
+    text(label, x + bw / 2, btnY + bh / 2, 11, kind === 'primary' ? L.lv1 : kind === 'secondary' ? L.lv6 : L.lv5, 'center', 500);
+    return bw;
+  };
+  let bx = ox + 12 * x1;
+  bx += button('Yes', bx, 'primary') + 8 * x1;
+  bx += button('No', bx, 'secondary') + 8 * x1;
+  button('Discuss', bx, 'ghost');
+
+  // The mark and the signature, on the side away from the cards.
+  const brandRight = place === 'left';
+  const markCell = u * 0.9, signX = brandRight ? W - m : m, signPx = u * 2.2;
+  g.font = `350 ${signPx}px ${TYPE}`;
+  const signW = g.measureText(SIGNATURE).width, brandW = 7 * markCell + u * 1.4 + signW;
+  // On a photo, black or white by how light the photo is under the mark: a bright still takes black.
+  let brandInk = grain.ink;
+  if (look === 'photo' && (P.fade ?? 'light') !== 'none' && (P.fadeAmount ?? 0.8) > 0.3) brandInk = P.fade === 'dark' ? '#FFFFFF' : '#080809';
+  else if (look === 'photo' || look === 'none') {
+    const bx0 = Math.max(0, Math.round(brandRight ? signX - brandW : signX)), by0 = Math.max(0, Math.round(H - m - 5 * markCell));
+    const d = g.getImageData(bx0, by0, Math.max(1, Math.round(Math.min(brandW, W - bx0))), Math.max(1, Math.round(Math.min(6 * markCell, H - by0)))).data;
+    let sum = 0; for (let i = 0; i < d.length; i += 4) sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    brandInk = sum / (d.length / 4) > 150 ? '#080809' : '#FFFFFF';
+  }
+  const x0 = brandRight ? signX - brandW : signX;
+  drawMark(g, x0 + 7 * markCell, H - m - 2.5 * markCell, markCell, brandInk);
+  g.fillStyle = brandInk; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(SIGNATURE, x0 + 7 * markCell + u * 1.4, H - m);
+  return cv;
+}
