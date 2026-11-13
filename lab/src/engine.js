@@ -1156,7 +1156,7 @@ export const TYPE_THEMES = {
   terminal: { label: 'Terminal green', ground: '#0D1C1A', ink: '#5DD1A4', hit: '#EFEFEF', near: '#3D6C58', dim: '#3D6C58', mix: ['#EFEFEF', '#3D6C58', '#5DD1A4'] },
   amber: { label: 'Amber', ground: '#221713', ink: '#C84916', hit: '#EFEFEF', near: '#644439', dim: '#644439', mix: ['#EFEFEF', '#644439', '#C84916'] },
   // Experiments (3 Nov 2026), after the reference: loud flat grounds and sets of five to seven
-  // colours, which Mixed boxes, the panels and the table's cells all draw from.
+  // colours, which Mixed boxes and the panels draw from.
   primary: { label: 'Primary on white (experiment)', ground: '#FFFFFF', ink: '#080809', hit: '#0000FF', near: '#C8C8C8', dim: '#8F8F97', mix: ['#0000FF', '#FF2A1A', '#00E5FF', '#080809', '#C8C8C8', '#FFF200', '#4A4A4A'] },
   night: { label: 'Primary on black (experiment)', ground: '#080809', ink: '#FFFFFF', hit: '#FF2A1A', near: '#4A4A4A', dim: '#5A5A62', mix: ['#0000FF', '#FF2A1A', '#00E5FF', '#FFFFFF', '#C8C8C8', '#FFF200', '#4A4A4A'] },
   yellow: { label: 'Acid yellow (experiment)', ground: '#FFF200', ink: '#080809', hit: '#0000FF', near: '#080809', dim: '#8F8F97', mix: ['#0000FF', '#080809', '#FFFFFF', '#FF2A1A', '#00E5FF', '#C8C8C8'] },
@@ -1259,7 +1259,7 @@ export const TYPE_MOTIF_STYLES = { dots: 'Dots', solid: 'Solid', stripes: 'Strip
 
 /** Indexed text at `k`x. Returns the canvas and how many words the query hit. */
 export function drawIndexed(T, k) {
-  if (T.layout === 'panels' || T.layout === 'table') return drawLayout(T, k);
+  if (T.layout === 'panels') return drawLayout(T, k);
   // `box`: draw at this size instead of a named one (a poster's block, a pack tile); `bare`: no head
   // or foot, a small margin (the frame round it is someone else's); `reveal`: the share of the lines
   // drawn, for the sequence building up.
@@ -1576,12 +1576,13 @@ export function drawIndexed(T, k) {
   return { canvas: cv, hits, rows, cols };
 }
 
-// ── Layouts after the reference: panels and a table ──────────────────────────────────
+// ── Layouts after the reference: panels ──────────────────────────────────────────────
 // Symphony in Acid frames its text from the inside: the page cut into rectangles of colour, each
-// holding a sentence or a few in its own size and alignment, some lines on a strip of their own;
-// or a ruled table, one word to a cell. The words keep every move of the grid (hits, near misses,
+// holding a sentence or a few in its own size and alignment, some lines on a strip of their own. The words keep every move of the grid (hits, near misses,
 // redactions, icons), through `setWord`.
-export const TYPE_LAYOUTS = { grid: 'One grid', panels: 'Panels', table: 'Table' };
+// A Table layout (a word to a ruled cell) was tried and removed on 3 Nov 2026: real copy either cut
+// its words or widened every column to the longest, and lost the table.
+export const TYPE_LAYOUTS = { grid: 'One grid', panels: 'Panels' };
 
 /** One word at (x, y) on cells cw × ch: its box, its letters, an icon swapped in now and then.
  *  `bg` is what it sits on, for the letters' colour. Returns whether it was a hit. */
@@ -1709,46 +1710,6 @@ function drawLayout(T, k) {
         });
       });
     });
-  } else {
-    // The table: columns of four to twelve base cells, rows a line tall and now and then two, a word
-    // to a cell, right-aligned (a few left), the rules in the ink; hits fill their cell in the accent,
-    // and `fills` of the others take a colour of the set.
-    const cw = base * (T.tableScale ?? 1.4), ch = cw * 1.32;
-    const colsW = [];
-    for (let x = 0, n = 0; x < A.w - cw * 3; n++) { const c = Math.min(Math.floor((A.w - x) / cw), 4 + Math.floor(rnd(n, 11) * 9)); colsW.push(c); x += c * cw; }
-    const tw = colsW.reduce((a, c) => a + c, 0) * cw, tx = A.x + (A.w - tw) / 2;
-    const rows = [];
-    for (let y = 0, n = 0; y + ch <= A.h; n++) { const h = rnd(n, 12) < 0.14 && y + 2 * ch <= A.h ? 2 * ch : ch; rows.push({ y, h }); y += h; }
-    const words = (frame.fill ? (T.upper ? continued(T.text, T.seed ?? 0).toUpperCase() : continued(T.text, T.seed ?? 0)) : source).replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
-    const line = Math.max(1, Math.round(k));
-    let wi = 0;
-    rows.forEach((row, ri) => {
-      let x = tx;
-      colsW.forEach((c, ci) => {
-        const w0 = words[wi++ % words.length], wcw = c * cw, y = A.y + row.y;
-        if (!frame.fill && wi > words.length) return;
-        const read = readWord(w0, queryGrams);
-        const hit = read.share >= (T.hitAt ?? 0.5);
-        const fillCell = hit ? accent : rnd(ri * 31 + ci, 13) < (T.fills ?? 0.14) ? palette[Math.floor(rnd(ri * 7 + ci, 14) * palette.length)] : th.ground;
-        if (fillCell !== th.ground) { g.fillStyle = fillCell; g.fillRect(Math.round(x), Math.round(y), Math.ceil(wcw), Math.ceil(row.h)); }
-        const w = w0.slice(0, c);
-        const right = rnd(ri * 13 + ci, 15) > 0.15;
-        const wx = right ? x + wcw - (w.length + 0.2) * cw : x + cw * 0.2;
-        g.save(); g.beginPath(); g.rect(x, y, wcw, row.h); g.clip();
-        // A hit's word sits on its own filled cell, so it is not boxed again.
-        C.bg = fillCell;
-        if (hit) { hits++; C.n++; g.font = `700 ${ch * 0.72}px ${TYPE}`; g.fillStyle = onBox(fillCell); g.textAlign = 'left'; g.textBaseline = 'middle'; [...w].forEach((ch2, j) => { g.textAlign = 'center'; g.fillText(ch2, wx + (j + 0.5) * cw, y + row.h - ch / 2 + ch * 0.03); }); }
-        else setWord(g, w, wx, y + row.h - ch, cw, ch, C);
-        g.restore();
-        // The rules.
-        g.fillStyle = th.ink; g.fillRect(Math.round(x), Math.round(y), line, Math.ceil(row.h));
-        x += wcw;
-      });
-      g.fillStyle = th.ink; g.fillRect(Math.round(tx), Math.round(A.y + row.y), Math.round(tw), line);
-      g.fillRect(Math.round(x), Math.round(A.y + row.y), line, Math.ceil(row.h));
-    });
-    const last = rows[rows.length - 1];
-    if (last) { g.fillStyle = th.ink; g.fillRect(Math.round(tx), Math.round(A.y + last.y + last.h), Math.round(tw), line); }
   }
 
   if (T.bare) return { canvas: cv, hits, rows: 0, cols: frame.cols };
@@ -2005,83 +1966,247 @@ function norm(v) { const l = Math.hypot(...v); return v.map(x => x / l); }
 /** The scenes: what Nano Banana is asked for, and the story the cards tell over it. The numbers
  *  are an example's, never a claim. */
 export const PEOPLE_SCENES = {
+  // For social media (3 Nov 2026): closer, brighter, one moment of delight each, and every story a
+  // different side of IndxServer: personalisation, search as you type, a synonym, a split word, a
+  // campaign boost, hybrid search, and a typo only where it is the story (a name heard on the phone).
+  cafe: {
+    feature: 'Personalisation',
+    label: 'Social: café window, phone', social: true,
+    scene: 'a young person at a sunny café window table, holding a phone and breaking into a smile at what they just found, a cappuccino and a croissant on the marble table, morning sun streaming in, warm and fresh',
+    query: 'rain jacket',
+    results: [
+      { title: 'Rain jacket, technical, M', meta: 'Your size · for you', icon: 't-shirt' },
+      { title: 'Rain jacket, yellow, M', meta: 'Your size', icon: 't-shirt' },
+      { title: 'Packable rain jacket', meta: 'New', icon: 't-shirt' },
+    ],
+    observr: 'Shoppers who bought hiking gear choose the technical rain jackets 7 times in 10. Show those first to them?',
+  },
+  tram: {
+    feature: 'Search as you type, a scheduled boost',
+    label: 'Social: tram seat, phone', social: true,
+    scene: 'a person in a bright, modern tram seat by a big window, city in soft focus outside, looking at their phone with a relaxed grin, earphones around the neck, crisp daylight',
+    query: 'wireless ear',
+    results: [
+      { title: 'Wireless earbuds, black', meta: '4.6 · in stock', icon: 'shopping cart' },
+      { title: 'Wireless earbuds, sport', meta: 'Water resistant', icon: 'shopping cart' },
+    ],
+    observr: 'Searches for \'earbuds\' peak on Friday afternoons. Boost the new model every Friday from 12 to 18?',
+  },
+  studio: {
+    feature: 'A synonym from Observr',
+    label: 'Social: shop owner, ceramics studio', social: true,
+    scene: 'the owner of a small ceramics shop in her bright studio, standing at a wooden counter with a laptop among glazed mugs and bowls, smiling as she reads something on the screen, plants and shelves of pottery in soft daylight',
+    query: 'blue cup',
+    results: [
+      { title: 'Mug, cobalt glaze', meta: '6 left', icon: 'coffee' },
+      { title: 'Espresso cup, blue speckle', meta: 'Set of 2', icon: 'coffee' },
+    ],
+    observr: 'Your customers say \'cup\' and your shop says \'mug\'. 31 searches this week. Add \'cup\' as a synonym?',
+  },
+  team: {
+    feature: 'A split word, a synonym',
+    label: 'Social: two colleagues, yes to Observr', social: true,
+    scene: 'two colleagues at a standing desk in a bright, plant-filled office, one pointing at a laptop screen and both laughing, a moment of a small win, sunlight and white walls',
+    query: 'giftcard return',
+    results: [
+      { title: 'Return a gift card', meta: 'Help centre', icon: 'document or file' },
+      { title: 'Gift cards: terms', meta: 'Help centre', icon: 'document or file' },
+    ],
+    observr: '\'Send back\' found nothing 26 times this week. The answer is in \'Returns and refunds\'. Add \'send back\' as a synonym?',
+  },
+  outdoors: {
+    feature: 'A campaign boost',
+    label: 'Social: sports shop, phone', social: true,
+    scene: 'a person in a bright, colourful outdoor sports shop, holding a phone up and grinning, rows of vivid jackets and backpacks behind them, airy and high-ceilinged with daylight',
+    query: 'hiking boots',
+    results: [
+      { title: 'Hiking boots, waterproof', meta: 'Campaign · until 30 Nov', icon: 'tag' },
+      { title: 'Trail shoes, waterproof', meta: 'New season', icon: 'tag' },
+      { title: 'Hiking socks, wool', meta: '3 pairs', icon: 'tag' },
+    ],
+    observr: 'The autumn boost on hiking boots ends Sunday, and searches for them are still rising. Extend it two weeks?',
+  },
+  support: {
+    feature: 'A misheard name, the right client first',
+    label: 'Social: client desk, an important caller', social: true,
+    // High profile (3 Nov 2026): a private bank's or premium firm's client desk, the caller a
+    // priority client, the name heard on the phone and typed the way it sounded.
+    scene: 'a client relations advisor at the client desk of an upscale Nordic private bank, in a crisp shirt and tailored blazer, wearing a slim, discreet headset with a microphone, talking with an important caller while typing on a laptop, poised and attentive with a warm, confident half smile; an elegant, light office with oak, stone and large windows over a harbour, daylight, understated luxury',
+    // One f too few, ø typed as o, the hyphen left out.
+    query: 'kristofersen sjostrom',
+    results: [
+      { title: 'Ingrid Kristoffersen-Sjøstrøm', meta: 'Priority client · since 2011', icon: 'user' },
+      { title: 'Kristoffer Sjøstrand', meta: 'Client · since 2022', icon: 'user' },
+    ],
+    observr: 'Advisors open priority clients first, 9 times in 10. Boost priority clients in client search?',
+    // The name found despite how it was heard is the whole story: no Observr card unless asked for.
+    observrOff: true,
+  },
+  // The other side of the counter (3 Nov 2026): the people who run the search, and what they see.
+  findings: {
+    feature: "Observr's findings",
+    label: "Social: e-commerce manager, Observr's findings", social: true, view: 'findings',
+    scene: 'an e-commerce manager in a bright Nordic office early in the morning, coffee in one hand, reading on a laptop with an interested, pleased look, daylight, plants and pale wood',
+    query: '', results: [], observr: '',
+    findings: [
+      { title: "'Sleeper sofa' found nothing for 23 people this week.", change: "Add 'sleeper sofa' as a synonym for 'sofa bed'." },
+      { title: "Searches for 'garden furniture' are up three times since Monday.", change: "Boost the outdoor range for 'garden' for two weeks." },
+      { title: "4 in 10 who search 'desk' choose a standing desk.", change: "Show standing desks first for 'desk'." },
+    ],
+  },
+  stats: {
+    feature: 'Statistics',
+    label: 'Social: the numbers, statistics', social: true, view: 'stats',
+    scene: 'two colleagues in a bright Nordic office standing at a desk with a laptop, one pointing at the screen and both pleased with what they see, daylight, white walls and plants',
+    query: '', results: [], observr: '',
+    stats: {
+      tiles: [
+        { label: 'Searches', icon: 'search', value: '48 210', note: '+12 % on last week' },
+        { label: 'Found something', icon: 'thumbs up', value: '97.4 %', note: 'up from 91.8 %' },
+        { label: 'Fuzzy finds', icon: 'fuzzy search', value: '1 284', note: 'despite a large typo' },
+      ],
+      days: [5.1, 5.6, 6.2, 5.9, 6.8, 7.4, 6.1, 5.8, 6.4, 7.1, 7.0, 7.9, 8.6, 7.2],
+      top: [['sofa bed', 1840], ['rain jacket', 1312], ['standing desk', 958], ['garden chairs', 744]],
+    },
+  },
+  fuzzy: {
+    feature: 'Fuzzy finds, a success story',
+    label: 'Social: fuzzy finds, a success story', social: true, view: 'fuzzy',
+    scene: 'the small team of an online shop, three people in a bright Nordic studio office gathered around a laptop, laughing and celebrating a good week, one raising a fist, daylight and plants',
+    query: '', results: [], observr: '',
+    fuzzy: {
+      count: '1 284',
+      line: 'searches this week found what people meant, despite a large typo.',
+      pairs: [
+        ['vacum cleener cordles', 'Cordless vacuum cleaner'],
+        ['noice canseling headfones', 'Noise-cancelling headphones'],
+        ['sweter merino men', "Men's merino wool sweater"],
+        ['yoga mat thik', 'Yoga mat, extra thick'],
+      ],
+    },
+  },
+  plants: {
+    feature: 'Search or ask, the assistant answers',
+    label: 'Social: garden centre, phone', social: true,
+    scene: 'a person in a sunlit glasshouse garden centre surrounded by lush green plants, holding a phone and smiling, light pouring through the glass roof, fresh greens and terracotta pots',
+    query: 'which big leafy plant can live in a dark corner?',
+    results: [
+      { title: 'Monstera deliciosa, 80 cm', meta: 'Tolerates shade', icon: 'four leaf clover' },
+      { title: 'ZZ plant', meta: 'Thrives in low light', icon: 'four leaf clover' },
+    ],
+    observr: '\'Swiss cheese plant\' found nothing for 12 people. Add it as a synonym for \'monstera\'?',
+    ask: { offer: 'The assistant answers it from the plants in stock, and names the ones it means.', answer: 'Two of ours are happy in low light. The Monstera deliciosa [1] tolerates shade and grows big, split leaves; the ZZ plant [2] thrives in a dark corner and needs water only every few weeks.', sources: ['Monstera deliciosa, 80 cm', 'ZZ plant'] },
+    observrOff: true,
+  },
+
   hardware: {
+    feature: 'Split words both ways',
     label: 'Hardware store, phone',
     scene: 'a person in the bright aisle of a modern hardware store, smiling slightly as they look at the phone in their hand, colourful shelves of tools behind them, softly out of focus, daylight from skylights',
-    query: 'drill bitts 8mm',
+    query: '8mm drillbit',
     results: [
-      { title: 'Drill bits, 8 mm, HSS', meta: 'Aisle 14 · 23 in stock', icon: 'tool box', found: 'drill bits' },
-      { title: 'Stone drill bits, 8 mm', meta: 'Aisle 14 · 9 in stock', icon: 'tool box', found: 'drill bits' },
-      { title: 'Drill bit set, 19 pieces', meta: 'Aisle 15', icon: 'tool box', found: 'drill bit' },
+      { title: 'Drill bits, 8 mm, HSS', meta: 'Aisle 14 · 23 in stock', icon: 'tool box' },
+      { title: 'Stone drill bits, 8 mm', meta: 'Aisle 14 · 9 in stock', icon: 'tool box' },
+      { title: 'Drill bit set, 19 pieces', meta: 'Aisle 15', icon: 'tool box' },
     ],
-    observr: "14 people searched 'masonry bit' this week and chose stone drill bits. Add 'masonry' as a synonym for 'stone'?",
+    observr: '14 people searched \'masonry bit\' this week and chose stone drill bits. Add \'masonry\' as a synonym for \'stone\'?',
   },
   sofa: {
+    feature: 'Real-time stock',
     label: 'Sofa at home, laptop',
     scene: 'a person sitting on a light sofa in a bright, airy Scandinavian living room on a sunny morning, a laptop on their knees, relaxed and pleased with what they found, sunlight through big windows, plants, white walls, pale wood',
-    query: 'sofabed gry',
+    query: 'sofa bed grey',
     results: [
-      { title: 'Linden sofa bed, grey', meta: '3 seats · in stock', icon: 'home', found: 'sofa bed grey' },
-      { title: 'Corner sofa bed, light grey', meta: 'Delivered in 2 weeks', icon: 'home', found: 'sofa bed grey' },
-      { title: 'Sofa bed cover, grey wool', meta: 'Accessories', icon: 'tag', found: 'sofa bed grey' },
+      { title: 'Linden sofa bed, grey', meta: 'Back in stock today', icon: 'home' },
+      { title: 'Corner sofa bed, light grey', meta: 'Delivered in 2 weeks', icon: 'home' },
+      { title: 'Sofa bed cover, grey wool', meta: 'Accessories', icon: 'tag' },
     ],
-    observr: "'Sleeper sofa' found nothing for 23 people this week. Add it as a synonym for 'sofa bed'?",
+    observr: '\'Sleeper sofa\' found nothing for 23 people this week. Add it as a synonym for \'sofa bed\'?',
   },
   kitchen: {
+    feature: 'Search or ask, a question as a search',
     label: 'Kitchen, tablet',
     scene: 'a person in a bright kitchen with white tiles and morning sun, a tablet leaning against the wall, one hand reaching to scroll it, fresh colourful vegetables on a wooden board, smiling',
-    query: 'vegitarian lasagne',
+    query: 'what can I make with spinach and lentils?',
     results: [
-      { title: 'Vegetarian lasagne with spinach', meta: '45 min · 4 servings', icon: 'coffee', found: 'vegetarian lasagne' },
-      { title: 'Lasagne with lentils', meta: '60 min · vegetarian', icon: 'coffee', found: 'lasagne' },
+      { title: 'Spinach and lentil dal', meta: '30 min · vegetarian', icon: 'coffee' },
+      { title: 'Lentil lasagne with spinach', meta: '60 min · 4 servings', icon: 'coffee' },
     ],
-    observr: "People who search 'veggie' choose vegetarian recipes 9 times in 10. Add 'veggie' as a synonym for 'vegetarian'?",
+    observr: 'People who search \'veggie\' choose vegetarian recipes 9 times in 10. Add \'veggie\' as a synonym for \'vegetarian\'?',
+    ask: { offer: 'The assistant answers it from the recipes, and links the ones it uses.', answer: 'A spinach and lentil dal [1] is on the table in 30 minutes. For something to bake, the lentil lasagne with spinach [2] takes an hour and serves four.', sources: ['Spinach and lentil dal', 'Lentil lasagne with spinach'] },
+    observrOff: true,
   },
   bookshop: {
+    feature: 'Personalisation',
     label: 'Bookshop, phone',
     scene: 'a person in a light, spacious bookshop with big windows, holding a phone and glancing at it with a smile, colourful book spines behind them in soft daylight',
-    query: 'nordic brids',
+    query: 'new crime novels',
     results: [
-      { title: 'Birds of the Nordic countries', meta: 'Field guide · in store', icon: 'book', found: 'nordic birds' },
-      { title: 'A year of Nordic birds', meta: 'Hardback', icon: 'book', found: 'nordic birds' },
+      { title: 'The Harbour Murders', meta: 'From an author you read', icon: 'book' },
+      { title: 'Cold Water', meta: 'New this week', icon: 'book' },
     ],
-    observr: "Searches for 'birding' doubled this week, and people choose field guides. Boost field guides for 'birding'?",
+    observr: 'Searches for \'birding\' doubled this week, and people choose field guides. Boost field guides for \'birding\'?',
   },
   developer: {
+    feature: 'Search or ask, docs by question',
     label: 'Developer at a desk',
     scene: 'a developer at a desk in a bright, modern office full of daylight, leaning towards a laptop with a focused, content look, a coffee cup beside it, plants and white walls, colleagues softly out of focus behind',
-    query: 'cors eror',
+    query: 'how do I rotate an api key?',
     results: [
-      { title: 'Fixing CORS errors in the API', meta: 'Guide · 4 min read', icon: 'code', found: 'cors error' },
-      { title: 'Allowed origins', meta: 'Reference · Settings', icon: 'document or file', found: 'cors' },
+      { title: 'Rotating API keys', meta: 'Guide · 3 min read', icon: 'code' },
+      { title: 'Team-scoped keys', meta: 'Reference · Settings', icon: 'document or file' },
     ],
-    observr: "'rate limit' found nothing 9 times today. The answer is in 'Throttling'. Add 'rate limit' as a synonym?",
+    observr: '\'rate limit\' found nothing 9 times today. The answer is in \'Throttling\'. Add \'rate limit\' as a synonym?',
+    ask: { offer: 'The assistant answers it from the docs, and cites the pages it uses.', answer: 'Create a new key, move your app over to it, then revoke the old one [1]. A team-scoped key can be limited to the datasets that app needs [2].', sources: ['Rotating API keys', 'Team-scoped keys'] },
+    observrOff: true,
   },
   warehouse: {
+    feature: 'Real-time numbers',
     label: 'Warehouse, tablet',
     scene: 'a person in a clean, bright warehouse in a work vest, holding a tablet and looking at it, tall shelves of labelled boxes behind them, daylight from high windows',
-    query: 'bolt m8x40 zink',
+    query: 'bolt m8 40',
     results: [
-      { title: 'Bolt M8 × 40, zinc plated', meta: 'Shelf C-12 · 1 400 pcs', icon: 'bar code', found: 'bolt m8 40 zinc' },
-      { title: 'Bolt M8 × 40, stainless', meta: 'Shelf C-13 · 600 pcs', icon: 'bar code', found: 'bolt m8 40' },
+      { title: 'Bolt M8 × 40, zinc plated', meta: 'C-12 · 1 400 pcs · updated 2 min ago', icon: 'bar code' },
+      { title: 'Bolt M8 × 40, stainless', meta: 'C-13 · 600 pcs', icon: 'bar code' },
     ],
-    observr: "On the floor, 'galv' is how people type galvanised. Add 'galv' as a synonym?",
+    observr: 'On the floor, \'galv\' is how people type galvanised. Add \'galv\' as a synonym?',
   },
 };
 
 /** The prompt for a still of the scene: candid, the screen unreadable, calm space left for the cards. */
 export function peoplePrompt(P) {
   const S = PEOPLE_SCENES[P.scene] ?? PEOPLE_SCENES.sofa;
-  const side = P.place === 'left' ? 'left' : P.place === 'split' ? 'left and right' : 'right';
+  const size = PEOPLE_SIZES[P.size] ?? FIELD_SIZES.board;
+  const side = isTall(size) ? 'lower third' : P.place === 'left' ? 'left' : P.place === 'split' ? 'left and right' : 'right';
   return [
     `A bright, high-key lifestyle photograph: ${S.scene}.`,
-    P.who?.trim() ? `The person: ${P.who.trim()}.` : 'A friendly, ordinary-looking person, natural and approachable, not a model.',
+    // Nordic by default (3 Nov 2026): the first round came out looking American. People of the
+    // Nordics today, not a blond cliché; rooms and streets as they look in Oslo, Copenhagen or Stockholm.
+    (P.region ?? 'nordic') === 'nordic'
+      ? 'Set in Scandinavia today, in Norway, Sweden or Denmark: the room, the street and the light look like Oslo, Copenhagen or Stockholm, with Nordic design, pale wood and clean lines, and nothing American (no American shop fittings, signs, cars or products).'
+      : '',
+    P.who?.trim()
+      ? `The person: ${P.who.trim()}.`
+      : (P.region ?? 'nordic') === 'nordic'
+        ? 'A friendly, ordinary-looking Scandinavian person, as you would meet them in Oslo, Copenhagen or Stockholm today, with varied, natural looks rather than a cliché, little or no makeup, understated Nordic clothes in wool, linen and muted colours. Natural and approachable, not a model, not an American look.'
+        : 'A friendly, ordinary-looking person, natural and approachable, not a model.',
     'They are in the middle of searching for something, attention on the device. The screen faces away from the camera or is out of focus: nothing on it is readable.',
-    `Leave calm, uncluttered space on the ${side} of the frame: interface cards will be placed there later.`,
+    isTall(size)
+      ? 'Frame it for a social media feed: the person large and close in the upper two thirds, their face clearly visible. Let the lower third be a naturally quiet part of the same scene, a table top, floor or wall in soft focus, and the top left a quiet part too, window light or a pale wall. These are parts of the real room, never blank shapes: interface cards and a logo will be placed over them later.'
+      : `Leave calm, uncluttered space on the ${side} of the frame: interface cards will be placed there later.`,
+    S.social ? 'One clear focal point, eye-catching and scroll-stopping, a genuine moment of delight, editorial lifestyle photography shot on a medium format camera.' : '',
     'Light and optimistic: abundant soft daylight, airy and clean, bright whites and fresh, slightly saturated colours, crisp and sharp, shallow depth of field, real skin texture. The feel of a modern product launch page. Never dark, gloomy, moody or dim; no evening, no lamplight, no heavy shadows.',
-    'No text, no logos, no brand names, no watermarks, no visible screens with content.',
-  ].join(' ');
+    'No text, no logos, no brand names, no watermarks, no visible screens with content, no blank rectangles, panels, frames or placeholders.',
+  ].filter(Boolean).join(' ');
 }
+
+// The People tab's sizes: the Type tab's, and the social formats besides.
+export const PEOPLE_SIZES = {
+  ...TYPE_SIZES,
+  story: [1080, 1920, 'Story or reel, 1080 × 1920'],
+  link: [1200, 627, 'LinkedIn link post, 1200 × 627'],
+};
+const isTall = ([w, h]) => w <= h * 1.05;
 
 export const PEOPLE_LOOKS = { photo: 'Photo', dots: 'Dots', ascii: 'ASCII', duotone: 'Duotone' };
 export const PEOPLE_GRAINS = {
@@ -2115,9 +2240,12 @@ function coverDraw(g, img, W, H) {
 
 /** The scene at `k`x: the photo in its look, the cards over it, the mark and the signature. */
 export function drawPeople(P, k, img) {
-  const [W0, H0] = TYPE_SIZES[P.size] ?? FIELD_SIZES.board, W = W0 * k, H = H0 * k;
+  const [W0, H0] = PEOPLE_SIZES[P.size] ?? FIELD_SIZES.board, W = W0 * k, H = H0 * k;
   const cv = canvasOf(W, H), g = cv.getContext('2d');
   const grain = PEOPLE_GRAINS[P.grain] ?? PEOPLE_GRAINS.black;
+  // Square and tall frames (the feed, a story) stack the cards at the foot, full width, and carry
+  // the mark at the top left; wide ones put the cards at a side and the mark at the foot.
+  const tall = isTall([W0, H0]);
   const look = img ? (P.look ?? 'photo') : 'none';
   g.fillStyle = look === 'photo' || look === 'none' ? '#1A1A21' : grain.ground; g.fillRect(0, 0, W, H);
   const u = Math.min(W, H) / 100;
@@ -2140,8 +2268,8 @@ export function drawPeople(P, k, img) {
     // corner that carries the mark, eased by the square of the distance so it has no edge.
     const fade = P.fade ?? 'light', amount = P.fadeAmount ?? 0.8;
     if (fade !== 'none' && amount > 0) {
-      const x = (P.place ?? 'right') === 'left' ? W : 0, R = Math.max(W, H) * 0.55, c = fade === 'dark' ? '12, 8, 5' : '255, 255, 255';
-      const gr = g.createRadialGradient(x, H, 0, x, H, R);
+      const x = !tall && (P.place ?? 'right') === 'left' ? W : 0, y = tall ? 0 : H, R = Math.max(W, H) * (tall ? 0.42 : 0.55), c = fade === 'dark' ? '12, 8, 5' : '255, 255, 255';
+      const gr = g.createRadialGradient(x, y, 0, x, y, R);
       for (let i = 0; i <= 10; i++) { const t = i / 10; gr.addColorStop(t, `rgba(${c}, ${amount * Math.pow(1 - t, 2)})`); }
       g.fillStyle = gr; g.fillRect(0, 0, W, H);
     }
@@ -2167,6 +2295,18 @@ export function drawPeople(P, k, img) {
     }
   }
 
+  // The storyboard's last frame: the photo dimmed, the mark, the signature and what the story shows.
+  if (P.beat === 'end') {
+    const Se = PEOPLE_SCENES[P.scene] ?? PEOPLE_SCENES.sofa;
+    g.fillStyle = 'rgba(8, 8, 9, 0.78)'; g.fillRect(0, 0, W, H);
+    const cell = u * 1.6;
+    drawMark(g, W / 2 + 3.5 * cell, H / 2 - u * 9, cell, '#FFFFFF');
+    g.fillStyle = '#FFFFFF'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = `350 ${u * 4.2}px ${TYPE}`; g.fillText(SIGNATURE, W / 2, H / 2 + u * 4);
+    g.fillStyle = '#8F8F97'; g.font = `350 ${u * 2.4}px ${TYPE}`; g.fillText(Se.feature ?? '', W / 2, H / 2 + u * 9.5);
+    return cv;
+  }
+
   // The cards, drawn to indx-systm's own measures (its CommandPalette, Button and tokens), scaled
   // so a card is 400 systm pixels wide: a panel of lv1 with a 1 px lv3 border and the 1 px radius,
   // a 44 px field row with a hairline under it, an uppercase group label, 32 px items of icon,
@@ -2175,9 +2315,16 @@ export function drawPeople(P, k, img) {
   // The query and Observr's line can be written over in the panel; empty, the scene's own.
   const S0 = PEOPLE_SCENES[P.scene] ?? PEOPLE_SCENES.sofa;
   const S = { ...S0, query: P.query?.trim() || S0.query, observr: P.observr?.trim() || S0.observr };
+  // Not every story needs Observr: the scene says, and the panel's switch overrides it.
+  // A storyboard's beats (3 Nov 2026): the moment of the story a frame shows. 'none' the photo alone,
+  // 'type' the query half typed, 'results' the query and what it found (and the offer, for a
+  // question), 'answer' the assistant's answer streaming in, 'full' everything, Observr included.
+  const beat = P.beat ?? 'full';
+  const showList = beat !== 'type' && beat !== 'none';
+  const withObservr = beat === 'full' && (P.showObservr ?? !S0.observrOff);
   const L = LADDER[P.cards === 'light' ? 'light' : 'dark'];
   const m = u * 5;
-  const cardW = Math.min(W - 2 * m, W > H ? W * 0.36 : W * 0.86), x1 = cardW / 400; // one systm pixel
+  const cardW = tall ? W - 2 * m : Math.min(W - 2 * m, W * 0.36), x1 = (tall ? Math.min(cardW, 560 * (W / 1080)) : cardW) / 400; // one systm pixel
   const line = Math.max(1, Math.round(x1));
   const font = (size, weight = 350, f = TYPE) => `${weight} ${size * x1}px ${f}`;
   const text = (str, x, y, size, colour, align = 'left', weight = 350, f = TYPE) => { g.font = font(size, weight, f); g.fillStyle = colour; g.textAlign = align; g.textBaseline = 'middle'; g.fillText(str, x, y); return g.measureText(str).width; };
@@ -2185,80 +2332,412 @@ export function drawPeople(P, k, img) {
   const wrap = (str, size, maxW) => { g.font = font(size); const out = []; let ln = ''; for (const w of str.split(' ')) { const t = ln ? ln + ' ' + w : w; if (g.measureText(t).width > maxW && ln) { out.push(ln); ln = w; } else ln = t; } if (ln) out.push(ln); return out; };
   // A pixl icon at systm's icon size, 16 px across, centred on (cx, cy).
   const icon = (name, cx, cy, colour, size = 16) => { if (!ICONS[name]) return; const ic = cells(name), c = size * x1 / 7; g.fillStyle = colour; for (const p of ic.list) g.fillRect(Math.round(cx - 3.5 * c + p.x * c), Math.round(cy - 2.5 * c + p.y * c), Math.ceil(c), Math.ceil(c)); };
-  const panel = (x, y, w, h) => { g.fillStyle = L.lv1; g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); g.fillStyle = L.lv3; g.fillRect(Math.round(x), Math.round(y), Math.round(w), line); g.fillRect(Math.round(x), Math.round(y + h - line), Math.round(w), line); g.fillRect(Math.round(x), Math.round(y), line, Math.round(h)); g.fillRect(Math.round(x + w - line), Math.round(y), line, Math.round(h)); };
-  const results = S.results.slice(0, Math.max(1, P.results ?? 3));
-  const fieldH = 44 * x1, itemH = 32 * x1, listPad = 4 * x1, groupH = 24 * x1;
-  const searchH = fieldH + listPad * 2 + groupH + results.length * itemH;
-  const bodyLines = wrap(S.observr, 13, cardW - 24 * x1);
-  const observrH = fieldH + 12 * x1 + bodyLines.length * 13 * 1.5 * x1 + 12 * x1 + 30 * x1 + 12 * x1;
-  const place = P.place ?? 'right', gap = 12 * x1;
-  const xRight = W - m - cardW, xLeft = m;
-  const sx = place === 'left' || place === 'split' ? xLeft : xRight;
-  const ox = place === 'split' ? xRight : sx;
-  const sy = place === 'split' ? m : Math.max(m, (H - searchH - observrH - gap) / 2);
-  const oy = place === 'split' ? H - m - observrH : sy + searchH + gap;
-
-  // The search: the field as typed, the caret, the count as the hint; then the results.
-  panel(sx, sy, cardW, searchH);
-  const fy = sy + fieldH / 2;
-  icon('search', sx + 12 * x1 + 8 * x1, fy, L.lv5);
-  const qx = sx + 12 * x1 + 16 * x1 + 8 * x1;
-  const qw = text(S.query, qx, fy, 13, L.lv8);
-  g.fillStyle = L.lv7; g.fillRect(Math.round(qx + qw + 1.5 * x1), Math.round(fy - 8 * x1), Math.max(1, Math.round(x1)), Math.round(16 * x1));
-  text(`${results.length} results`, sx + cardW - 12 * x1, fy, 11, L.lv5, 'right');
-  g.fillStyle = L.lv2; g.fillRect(Math.round(sx + line), Math.round(sy + fieldH), Math.round(cardW - 2 * line), line);
-  const ly0 = sy + fieldH + listPad;
-  g.font = font(10); g.letterSpacing = `${0.05 * 10 * x1}px`;
-  text('RESULTS', sx + listPad + 8 * x1, ly0 + 8 * x1 + 6 * x1, 10, L.lv5);
-  g.letterSpacing = '0px';
-  results.forEach((res, i) => {
-    const iy = ly0 + groupH + i * itemH, ix = sx + listPad, iw = cardW - 2 * listPad, cy = iy + itemH / 2;
-    if (i === 0) { g.fillStyle = L.lv2; g.fillRect(Math.round(ix), Math.round(iy), Math.round(iw), Math.round(itemH)); }
-    icon(res.icon, ix + 8 * x1 + 8 * x1, cy, L.lv5);
-    g.font = font(11); const hintW = g.measureText(res.meta).width;
-    text(res.meta, ix + iw - 8 * x1, cy, 11, L.lv5, 'right');
-    const lx = ix + 8 * x1 + 16 * x1 + 8 * x1;
-    text(fit(res.title, 13, 350, ix + iw - 8 * x1 - hintW - 12 * x1 - lx), lx, cy, 13, i === 0 ? L.lv8 : L.lv7);
-  });
-
-  // Observr: a head row like the field, what it noticed, and the owner's answer in micro buttons.
-  panel(ox, oy, cardW, observrH);
-  const hy = oy + fieldH / 2;
-  icon('observr', ox + 12 * x1 + 8 * x1, hy, L.lv5);
-  text('Observr', ox + 12 * x1 + 16 * x1 + 8 * x1, hy, 13, L.lv8, 'left', 500);
-  text('noticed', ox + cardW - 12 * x1, hy, 11, L.lv5, 'right');
-  g.fillStyle = L.lv2; g.fillRect(Math.round(ox + line), Math.round(oy + fieldH), Math.round(cardW - 2 * line), line);
-  let by = oy + fieldH + 12 * x1 + 13 * 0.75 * x1;
-  for (const l of bodyLines) { text(l, ox + 12 * x1, by, 13, L.lv7); by += 13 * 1.5 * x1; }
-  const btnY = oy + observrH - 12 * x1 - 30 * x1;
-  const button = (label, x, kind) => {
-    g.font = font(11, 500); const bw = g.measureText(label).width + 20 * x1, bh = 30 * x1;
-    if (kind === 'primary') { g.fillStyle = L.lv7; g.fillRect(Math.round(x), Math.round(btnY), Math.round(bw), Math.round(bh)); }
-    if (kind === 'secondary') { g.fillStyle = L.lv3; g.fillRect(Math.round(x), Math.round(btnY), Math.round(bw), line); g.fillRect(Math.round(x), Math.round(btnY + bh - line), Math.round(bw), line); g.fillRect(Math.round(x), Math.round(btnY), line, Math.round(bh)); g.fillRect(Math.round(x + bw - line), Math.round(btnY), line, Math.round(bh)); }
-    text(label, x + bw / 2, btnY + bh / 2, 11, kind === 'primary' ? L.lv1 : kind === 'secondary' ? L.lv6 : L.lv5, 'center', 500);
+  // How a card sits on the photo (3 Nov 2026, "blend it more"): solid systm lv1; glass, the photo
+  // under it blurred and tinted; a frame only, a thin line and no background; or nothing at all.
+  // The opacity sets the solid's or the glass's tint; the frame has a colour and a width of its own.
+  const surface = P.surface ?? 'glass', opacity = P.cardOpacity ?? (surface === 'glass' ? 0.55 : 1);
+  const frameCol = P.frameColour === 'ink' ? L.lv8 : P.frameColour === 'none' ? null : P.frameColour === 'line' ? L.lv3 : '#FFFFFF';
+  const frameW = Math.max(1, Math.round(line * (P.frameWidth ?? 1)));
+  const rgba = (hex, a) => { const [r, gg, b] = rgb(hex); return `rgba(${r}, ${gg}, ${b}, ${a})`; };
+  const panel = (x, y, w, h) => {
+    const X = Math.round(x), Y = Math.round(y), Wd = Math.round(w), Ht = Math.round(h);
+    if (surface === 'glass') {
+      // The photo under the card, blurred: copied out and drawn back through a blur filter, clipped.
+      const cut = canvasOf(Wd, Ht); cut.getContext('2d').drawImage(cv, X, Y, Wd, Ht, 0, 0, Wd, Ht);
+      g.save(); g.beginPath(); g.rect(X, Y, Wd, Ht); g.clip(); g.filter = `blur(${Math.round(18 * x1)}px)`;
+      g.drawImage(cut, X, Y); g.filter = 'none'; g.restore();
+      g.fillStyle = rgba(L.lv1, opacity); g.fillRect(X, Y, Wd, Ht);
+    } else if (surface === 'solid') { g.fillStyle = rgba(L.lv1, opacity); g.fillRect(X, Y, Wd, Ht); }
+    const edge = surface === 'frame' || surface === 'none' ? frameCol : (P.frameColour && P.frameColour !== 'line' ? frameCol : L.lv3);
+    if (edge && surface !== 'none') { g.fillStyle = edge; g.fillRect(X, Y, Wd, frameW); g.fillRect(X, Y + Ht - frameW, Wd, frameW); g.fillRect(X, Y, frameW, Ht); g.fillRect(X + Wd - frameW, Y, frameW, Ht); }
+  };
+  // Lines and the active row inside a card: the ladder's tones on a surface; on a bare frame, the
+  // frame's own colour faintly, so they belong to it.
+  // Inside a card everything follows its text (3 Nov 2026): on glass, a frame or nothing, the
+  // hairlines, the icon tiles, the chips and the active row are the text's own colour, faint, so
+  // the surface shows through them; only the solid card keeps systm's ladder tones.
+  const ink = L.lv8, see = surface !== 'solid' || opacity < 1;
+  const innerLine = see ? rgba(ink, 0.2) : L.lv2;
+  const activeFill = see ? rgba(ink, 0.07) : L.lv2;
+  const tileFill = see ? rgba(ink, 0.08) : L.lv2;
+  const chipFill = see ? rgba(ink, 0.1) : L.lv0;
+  const iconInk = see ? rgba(ink, 0.85) : L.lv6;
+  let results = S.results.slice(0, Math.max(1, P.results ?? 3));
+  // Two styles of search card: 'site', as indx.co's own search sets it (a 15 px field, rows with a
+  // rank number, a 54 × 81 thumbnail, a 15 px title and filled 11 px chips); 'palette', systm's
+  // CommandPalette (32 px rows of icon, label and hint).
+  const site = (P.uiStyle ?? 'site') === 'site';
+  const fieldH = (site ? 48 : 44) * x1, itemH = (site ? 12 + 54 + 12 : 32) * x1, listPad = (site ? 0 : 4) * x1, groupH = 24 * x1, resultsLabelH = site ? 0 : groupH;
+  // Search or ask: a question gets the offer under the field, as the product shows it ("This reads
+  // like a question", Ask the assistant, Enter), and the assistant's answer in a card of its own,
+  // written from the records and citing them. The scene says whether it is a question; the panel
+  // can turn it off.
+  const asking = !S0.view && !!S0.ask && (P.showAsk ?? true);
+  const hr = (x, y, w) => { g.fillStyle = innerLine; g.fillRect(Math.round(x + line), Math.round(y), Math.round(w - 2 * line), line); };
+  const groupLabel = (label, x, y) => { g.font = font(10); g.letterSpacing = `${0.05 * 10 * x1}px`; text(label, x, y, 10, L.lv5); g.letterSpacing = '0px'; };
+  // A systm Button (micro: 30 px, text-xs; default: 40 px, text-sm, 15 px padding, a 10 px gap),
+  // its icon left, and a Kbd at its right: a filled cap with no outline, 20 px high, 3 px radius,
+  // text-xs medium, on lv3 with lv7 text inside a primary button (the site's .askStrong kbd).
+  const microButton = (label, x, y, kind, opts = {}) => {
+    const big = opts.size === 'default', bh = (big ? 40 : 30) * x1, padX = (big ? 15 : 10) * x1, gapX = (big ? 10 : 7) * x1, fs = big ? 13 : 11, iconS = big ? 16 : 12;
+    g.font = font(fs, 500); const labelW = g.measureText(label).width;
+    g.font = font(11, 500); const kw = opts.kbd ? Math.max(20 * x1, g.measureText(opts.kbd).width + 8 * x1) : 0;
+    const bw = padX * 2 + labelW + (opts.icon ? iconS * x1 + gapX : 0) + (opts.kbd ? kw + gapX : 0);
+    if (opts.measure) return bw;
+    const fg = kind === 'primary' ? L.lv1 : kind === 'secondary' ? L.lv6 : L.lv5;
+    if (kind === 'primary') { g.fillStyle = L.lv7; g.fillRect(Math.round(x), Math.round(y), Math.round(bw), Math.round(bh)); }
+    if (kind === 'secondary') { g.fillStyle = L.lv3; g.fillRect(Math.round(x), Math.round(y), Math.round(bw), line); g.fillRect(Math.round(x), Math.round(y + bh - line), Math.round(bw), line); g.fillRect(Math.round(x), Math.round(y), line, Math.round(bh)); g.fillRect(Math.round(x + bw - line), Math.round(y), line, Math.round(bh)); }
+    let cx = x + padX;
+    if (opts.icon) { icon(opts.icon, cx + iconS * x1 / 2, y + bh / 2, fg, iconS); cx += iconS * x1 + gapX; }
+    cx += text(label, cx, y + bh / 2, fs, fg, 'left', 500);
+    if (opts.kbd) {
+      cx += gapX; const kh = 20 * x1, ky = y + (bh - kh) / 2, r = 3 * x1;
+      g.beginPath(); g.moveTo(cx + r, ky); g.arcTo(cx + kw, ky, cx + kw, ky + kh, r); g.arcTo(cx + kw, ky + kh, cx, ky + kh, r); g.arcTo(cx, ky + kh, cx, ky, r); g.arcTo(cx, ky, cx + kw, ky, r); g.closePath();
+      g.fillStyle = kind === 'primary' ? L.lv3 : L.lv2; g.fill();
+      text(opts.kbd, cx + kw / 2, y + bh / 2, 11, kind === 'primary' ? L.lv7 : L.lv5, 'center', 500);
+    }
     return bw;
   };
-  let bx = ox + 12 * x1;
-  bx += button('Yes', bx, 'primary') + 8 * x1;
-  bx += button('No', bx, 'secondary') + 8 * x1;
-  button('Discuss', bx, 'ghost');
+
+
+  // The search card's measures: the field, the offer when asking, then the results.
+  // The offer as indx-web-v4's SearchAskDemo sets it: 20 px padding, the agent icon at 20 px in lv6,
+  // the title in text-base lv8, a line in text-sm lv5 under it, and under that the button, default
+  // size, primary, with Enter as its key cap.
+  const offerCol = cardW - 20 * x1 * 2 - 20 * x1 - 14 * x1;
+  // The offer goes once the question is asked, as in the product: it shows at the 'results' beat,
+  // and the answer takes its place after.
+  const offering = asking && beat !== 'answer' && beat !== 'full';
+  const offerSub = offering ? wrap(S0.ask.offer ?? 'The assistant answers it from your own content, and cites what it uses.', 13, offerCol) : [];
+  const offerH = offering ? 20 * x1 + 15 * 1.5 * x1 + 4 * x1 + offerSub.length * 13 * 1.5 * x1 + 12 * x1 + 40 * x1 + 20 * x1 : 0;
+  let searchH = showList ? fieldH + offerH + listPad * 2 + resultsLabelH + results.length * itemH : fieldH;
+  // The assistant's answer: the head, the answer with its citations, the sources.
+  // Streaming: at the 'answer' beat a little over half the answer is in, and the sources come after.
+  const answering = asking && (beat === 'answer' || beat === 'full');
+  const streaming = beat === 'answer';
+  const answerWords = asking ? S0.ask.answer.split(' ') : [];
+  const answerText = streaming ? answerWords.slice(0, Math.ceil(answerWords.length * 0.55)).join(' ') : (asking ? S0.ask.answer : '');
+  const answerLines = answering ? wrap(answerText, 13, cardW - 24 * x1) : [];
+  const sources = answering && !streaming ? S0.ask.sources : [];
+  const answerH = answering ? fieldH + 12 * x1 + answerLines.length * 13 * 1.5 * x1 + 10 * x1 + (sources.length ? groupH + sources.length * 28 * x1 + 8 * x1 : 0) : 0;
+  const bodyLines = wrap(S.observr, 13, cardW - 24 * x1);
+  const observrH = withObservr ? fieldH + 12 * x1 + bodyLines.length * 13 * 1.5 * x1 + 12 * x1 + 30 * x1 + 12 * x1 : 0;
+
+  // Placing the stack: in the middle of a side, at the foot of a tall frame, or split, the search at
+  // the top of the left and the rest at the foot of the right.
+  // The owner's side: a card of its own in place of the search (Observr's findings, statistics,
+  // fuzzy finds), drawn to the same systm measures.
+  const view = S0.view ?? 'search';
+  const pad12 = 12 * x1;
+  let viewH = 0, viewData = null;
+  if (view === 'findings') {
+    viewData = S0.findings.map(f => ({ t: wrap(f.title, 13, cardW - 24 * x1), c: wrap(f.change, 11, cardW - 24 * x1) }));
+    viewData.forEach(f => { f.h = pad12 + f.t.length * 13 * 1.5 * x1 + 4 * x1 + f.c.length * 11 * 1.5 * x1 + 10 * x1 + 30 * x1 + pad12; });
+    viewH = fieldH + viewData.reduce((a, f) => a + f.h, 0);
+  } else if (view === 'stats') {
+    viewData = { tileH: 10 * x1 + 11 * 1.5 * x1 + 4 * x1 + 24 * 1.25 * x1 + 4 * x1 + 11 * 1.5 * x1 + 10 * x1 };
+    viewH = fieldH + pad12 + viewData.tileH + pad12 + groupH + 48 * x1 + 8 * x1 + groupH + S0.stats.top.length * 30 * x1 + 8 * x1;
+  } else if (view === 'fuzzy') {
+    viewData = { desc: wrap(S0.fuzzy.line, 13, cardW - 24 * x1) };
+    viewH = fieldH + pad12 + 30 * 1.2 * x1 + 4 * x1 + viewData.desc.length * 13 * 1.5 * x1 + 8 * x1 + groupH + S0.fuzzy.pairs.length * 32 * x1 + 8 * x1;
+  }
+  // Too tall for the frame: one result fewer at a time, down to one, until the stack fits.
+  if (showList && view === 'search') {
+    const others = answerH + observrH + 12 * x1 * ((answerH > 0) + (observrH > 0));
+    while (results.length > 1 && searchH + others > H - 2 * m) { results = results.slice(0, -1); searchH = fieldH + offerH + listPad * 2 + resultsLabelH + results.length * itemH; }
+  }
+  const cards = beat === 'none' ? [] : view !== 'search' ? [['view', viewH]] : [['search', searchH], ['answer', answerH], ['observr', observrH]].filter(c => c[1] > 0);
+  const place = P.place ?? 'right', gap = 12 * x1;
+  const xRight = W - m - cardW, xLeft = m;
+  const total = cards.reduce((a, c) => a + c[1], 0) + gap * (cards.length - 1);
+  const at = {};
+  if (tall) { let y = H - m - total; for (const [k, h] of cards) { at[k] = [m, y]; y += h + gap; } }
+  else if (place === 'split') {
+    if (at.view === undefined && view !== 'search' && beat !== 'none') at.view = [xRight, H - m - viewH];
+    at.search = [xLeft, m];
+    const rest = cards.filter(c => c[0] !== 'search' && c[0] !== 'view'), rt = rest.reduce((a, c) => a + c[1], 0) + gap * Math.max(0, rest.length - 1);
+    let y = H - m - rt; for (const [k, h] of rest) { at[k] = [xRight, y]; y += h + gap; }
+  } else { const x = place === 'left' ? xLeft : xRight; let y = Math.max(m, (H - total) / 2); for (const [k, h] of cards) { at[k] = [x, y]; y += h + gap; } }
+
+  // The search: the field as typed, the caret, the count as the hint; the offer; then the results.
+  if (view === 'search' && at.search) {
+    const [sx, sy] = at.search;
+    panel(sx, sy, cardW, searchH);
+    const fy = sy + fieldH / 2;
+    icon(asking ? 'search or ask' : 'search', sx + 12 * x1 + 8 * x1, fy, iconInk);
+    const qx = sx + 12 * x1 + 16 * x1 + 8 * x1;
+    // A query longer than the field keeps its end in view, as a field scrolls while you type: the
+    // start is cut with an ellipsis.
+    g.font = font(11); const countW = g.measureText(`${results.length} results`).width;
+    const room = sx + cardW - 12 * x1 - countW - 16 * x1 - qx;
+    const qs = site ? 15 : 13;
+    g.font = font(qs); let shown = beat === 'type' ? S.query.slice(0, Math.ceil(S.query.length * 0.55)) : S.query;
+    if (g.measureText(shown).width > room) { while (shown.length > 1 && g.measureText('…' + shown).width > room) shown = shown.slice(1); shown = '…' + shown; }
+    const qw = text(shown, qx, fy, qs, L.lv8);
+    g.fillStyle = L.lv7; g.fillRect(Math.round(qx + qw + 1.5 * x1), Math.round(fy - qs * 0.6 * x1), Math.max(1, Math.round(x1)), Math.round(qs * 1.2 * x1));
+    if (showList) {
+    text(`${results.length} results`, sx + cardW - 12 * x1, fy, 11, L.lv5, 'right');
+    hr(sx, sy + fieldH, cardW);
+    let y = sy + fieldH;
+    if (offering) {
+      const px0 = sx + 20 * x1, tx = px0 + 20 * x1 + 14 * x1;
+      icon('ai agent', px0 + 10 * x1, y + 20 * x1 + 2 * x1 + 10 * x1 * 5 / 7, iconInk, 20);
+      let ty = y + 20 * x1 + 15 * 0.75 * x1;
+      text('This reads like a question', tx, ty, 15, L.lv8);
+      ty += 15 * 0.75 * x1 + 4 * x1 + 13 * 0.75 * x1;
+      for (const l of offerSub) { text(l, tx, ty, 13, L.lv5); ty += 13 * 1.5 * x1; }
+      microButton('Ask the assistant', tx, y + offerH - 20 * x1 - 40 * x1, 'primary', { icon: 'ai agent', kbd: 'Enter ↵', size: 'default' });
+      hr(sx, y + offerH, cardW);
+      y += offerH;
+    }
+    const ly0 = y + listPad;
+    if (site) {
+      // indx.co's rows: the rank in 10 px lv4, a 36 × 54 tile (the site's 54 × 81 at two thirds)
+      // with the result's icon, the title in 15 px, and its facts as filled chips, 11 px, 10 px radius.
+      results.forEach((res, i) => {
+        const iy = ly0 + i * itemH, rx = sx + 12 * x1;
+        if (i) hr(sx, iy, cardW);
+        // No rank number (3 Nov 2026): the tile starts at the card's own padding.
+        const tx0 = rx, tw0 = 36 * x1, th0 = 54 * x1, ty0 = iy + 12 * x1;
+        g.fillStyle = tileFill; g.fillRect(Math.round(tx0), Math.round(ty0), Math.round(tw0), Math.round(th0));
+        icon(res.icon, tx0 + tw0 / 2, ty0 + th0 / 2, iconInk, 21);
+        const lx = tx0 + tw0 + 14 * x1;
+        text(fit(res.title, 15, 350, sx + cardW - 12 * x1 - lx), lx, ty0 + 11 * x1, 15, L.lv8);
+        let cx2 = lx, cy2 = ty0 + 11 * x1 + 24 * x1;
+        for (const chip of String(res.meta).split(' · ')) {
+          g.font = font(11); const cw2 = g.measureText(chip).width + 12 * x1, ch2 = 21 * x1, r2 = 10 * x1;
+          if (cx2 + cw2 > sx + cardW - 12 * x1) break;
+          g.beginPath(); g.moveTo(cx2 + r2, cy2 - ch2 / 2); g.arcTo(cx2 + cw2, cy2 - ch2 / 2, cx2 + cw2, cy2 + ch2 / 2, r2); g.arcTo(cx2 + cw2, cy2 + ch2 / 2, cx2, cy2 + ch2 / 2, r2); g.arcTo(cx2, cy2 + ch2 / 2, cx2, cy2 - ch2 / 2, r2); g.arcTo(cx2, cy2 - ch2 / 2, cx2 + cw2, cy2 - ch2 / 2, r2); g.closePath();
+          g.fillStyle = chipFill; g.fill();
+          text(chip, cx2 + cw2 / 2, cy2, 11, L.lv7, 'center');
+          cx2 += cw2 + 6 * x1;
+        }
+      });
+    } else {
+    groupLabel('RESULTS', sx + listPad + 8 * x1, ly0 + 8 * x1 + 6 * x1);
+    results.forEach((res, i) => {
+      const iy = ly0 + groupH + i * itemH, ix = sx + listPad, iw = cardW - 2 * listPad, cy = iy + itemH / 2;
+      if (i === 0) { g.fillStyle = activeFill; g.fillRect(Math.round(ix), Math.round(iy), Math.round(iw), Math.round(itemH)); }
+      icon(res.icon, ix + 8 * x1 + 8 * x1, cy, see ? rgba(ink, 0.6) : L.lv5);
+      g.font = font(11); const hintW = g.measureText(res.meta).width;
+      text(res.meta, ix + iw - 8 * x1, cy, 11, L.lv5, 'right');
+      const lx = ix + 8 * x1 + 16 * x1 + 8 * x1;
+      text(fit(res.title, 13, 350, ix + iw - 8 * x1 - hintW - 12 * x1 - lx), lx, cy, 13, i === 0 ? L.lv8 : L.lv7);
+    });
+    }
+    }
+  }
+
+  // The assistant: what it answered, the citations in the text as [1], [2], and the records cited.
+  if (answering) {
+    const [ax, ay] = at.answer;
+    panel(ax, ay, cardW, answerH);
+    const hy = ay + fieldH / 2;
+    icon('ai agent', ax + 12 * x1 + 8 * x1, hy, iconInk);
+    text('Assistant', ax + 12 * x1 + 16 * x1 + 8 * x1, hy, 13, L.lv8, 'left', 500);
+    text(`from ${sources.length} ${sources.length === 1 ? 'record' : 'records'}`, ax + cardW - 12 * x1, hy, 11, L.lv5, 'right');
+    hr(ax, ay + fieldH, cardW);
+    let by = ay + fieldH + 12 * x1 + 13 * 0.75 * x1;
+    for (const l of answerLines) {
+      // Word by word, so a citation can be set apart in the hint's grey.
+      let x = ax + 12 * x1;
+      g.font = font(13); const sp = g.measureText(' ').width;
+      for (const w of l.split(' ')) { const cite = /^\[\d+\][.,]?$/.test(w); x += text(w, x, by, 13, cite ? L.lv5 : L.lv7) + sp; }
+      // While it streams, a caret at the end of the last line.
+      if (streaming && l === answerLines[answerLines.length - 1]) { g.fillStyle = L.lv7; g.fillRect(Math.round(x - sp + 1.5 * x1), Math.round(by - 8 * x1), Math.max(1, Math.round(x1)), Math.round(16 * x1)); }
+      by += 13 * 1.5 * x1;
+    }
+    const sy0 = ay + fieldH + 12 * x1 + answerLines.length * 13 * 1.5 * x1 + 10 * x1;
+    if (sources.length) { hr(ax, sy0 - 4 * x1, cardW); groupLabel('SOURCES', ax + listPad + 8 * x1, sy0 + 8 * x1 + 6 * x1); }
+    sources.forEach((src, i) => {
+      const cy = sy0 + groupH + i * 28 * x1 + 14 * x1, ix = ax + listPad + 8 * x1;
+      text(String(i + 1), ix + 4 * x1, cy, 11, L.lv5, 'center', 400, MONO);
+      text(fit(src, 13, 350, cardW - 60 * x1), ix + 18 * x1, cy, 13, L.lv7);
+    });
+  }
+
+  // A head row as on the other cards: an icon, a name, a hint at the right, a hairline under it.
+  const headRow = (x, y, iconName, name, hint) => {
+    icon(iconName, x + 12 * x1 + 8 * x1, y + fieldH / 2, iconInk);
+    text(name, x + 12 * x1 + 16 * x1 + 8 * x1, y + fieldH / 2, 13, L.lv8, 'left', 500);
+    if (hint) text(hint, x + cardW - 12 * x1, y + fieldH / 2, 11, L.lv5, 'right');
+    hr(x, y + fieldH, cardW);
+  };
+  if (view === 'findings' && at.view) {
+    // Observr's findings, as on a dataset's Status page: what it saw, the change that would fix it, the answer.
+    const [vx, vy] = at.view;
+    panel(vx, vy, cardW, viewH);
+    headRow(vx, vy, 'observr', 'Observr', 'this morning');
+    let y = vy + fieldH;
+    viewData.forEach((f, i) => {
+      if (i) hr(vx, y, cardW);
+      let ty = y + pad12 + 13 * 0.75 * x1;
+      for (const l of f.t) { text(l, vx + pad12, ty, 13, L.lv8); ty += 13 * 1.5 * x1; }
+      ty += 4 * x1 - 13 * 0.75 * x1 + 11 * 0.75 * x1;
+      for (const l of f.c) { text(l, vx + pad12, ty, 11, L.lv5); ty += 11 * 1.5 * x1; }
+      const by2 = y + f.h - pad12 - 30 * x1;
+      let bx = vx + pad12;
+      bx += microButton('Yes', bx, by2, 'primary') + 8 * x1;
+      bx += microButton('No', bx, by2, 'secondary') + 8 * x1;
+      microButton('Discuss', bx, by2, 'ghost');
+      y += f.h;
+    });
+  } else if (view === 'stats' && at.view) {
+    // Statistics: three Stat tiles (lv2, 10 px padding, a 14 px icon on the label, the value at 24 px,
+    // a note under it), the searches per day as bars, the top searches with a meter each.
+    const [vx, vy] = at.view, st = S0.stats;
+    panel(vx, vy, cardW, viewH);
+    headRow(vx, vy, 'analytics', 'Statistics', 'last 14 days');
+    let y = vy + fieldH + pad12;
+    const tw = (cardW - 2 * pad12 - 2 * 8 * x1) / 3;
+    st.tiles.forEach((t, i) => {
+      const tx = vx + pad12 + i * (tw + 8 * x1);
+      g.fillStyle = tileFill; g.fillRect(Math.round(tx), Math.round(y), Math.round(tw), Math.round(viewData.tileH));
+      let ty = y + 10 * x1 + 11 * 0.75 * x1;
+      icon(t.icon, tx + 10 * x1 + 7 * x1, ty, L.lv6, 14);
+      text(fit(t.label, 11, 350, tw - 40 * x1), tx + 10 * x1 + 14 * x1 + 6 * x1, ty, 11, L.lv6);
+      ty += 11 * 0.75 * x1 + 4 * x1 + 24 * 0.625 * x1;
+      text(t.value, tx + 10 * x1, ty, 24, L.lv8);
+      ty += 24 * 0.625 * x1 + 4 * x1 + 11 * 0.75 * x1;
+      text(fit(t.note, 11, 350, tw - 20 * x1), tx + 10 * x1, ty, 11, L.lv5);
+    });
+    y += viewData.tileH + pad12;
+    groupLabel('SEARCHES PER DAY', vx + pad12, y + groupH / 2);
+    y += groupH;
+    const maxD = Math.max(...st.days), bw2 = (cardW - 2 * pad12 - (st.days.length - 1) * 3 * x1) / st.days.length;
+    st.days.forEach((d2, i) => { const h2 = 48 * x1 * d2 / maxD; g.fillStyle = i === st.days.length - 1 ? L.lv8 : L.lv6; g.fillRect(Math.round(vx + pad12 + i * (bw2 + 3 * x1)), Math.round(y + 48 * x1 - h2), Math.max(1, Math.round(bw2)), Math.round(h2)); });
+    y += 48 * x1 + 8 * x1;
+    hr(vx, y, cardW);
+    groupLabel('TOP SEARCHES', vx + pad12, y + groupH / 2);
+    y += groupH;
+    const maxT = Math.max(...st.top.map(t => t[1]));
+    st.top.forEach(([term, n]) => {
+      text(term, vx + pad12, y + 11 * x1, 13, L.lv7);
+      text(n.toLocaleString('en').replace(/,/g, ' '), vx + cardW - pad12, y + 11 * x1, 11, L.lv5, 'right');
+      g.fillStyle = tileFill; g.fillRect(Math.round(vx + pad12), Math.round(y + 22 * x1), Math.round(cardW - 2 * pad12), Math.max(1, Math.round(3 * x1)));
+      g.fillStyle = L.lv6; g.fillRect(Math.round(vx + pad12), Math.round(y + 22 * x1), Math.round((cardW - 2 * pad12) * n / maxT), Math.max(1, Math.round(3 * x1)));
+      y += 30 * x1;
+    });
+  } else if (view === 'fuzzy' && at.view) {
+    // Fuzzy finds: the week's count large, what it means, and what was typed beside what was found.
+    const [vx, vy] = at.view, fz = S0.fuzzy;
+    panel(vx, vy, cardW, viewH);
+    headRow(vx, vy, 'fuzzy search', 'Fuzzy finds', 'this week');
+    let y = vy + fieldH + pad12 + 30 * 0.6 * x1;
+    text(fz.count, vx + pad12, y, 30, L.lv8);
+    y += 30 * 0.6 * x1 + 4 * x1 + 13 * 0.75 * x1;
+    for (const l of viewData.desc) { text(l, vx + pad12, y, 13, L.lv5); y += 13 * 1.5 * x1; }
+    y += 8 * x1 - 13 * 0.75 * x1;
+    hr(vx, y, cardW);
+    groupLabel('TYPED', vx + pad12, y + groupH / 2);
+    groupLabel('FOUND', vx + cardW / 2, y + groupH / 2);
+    y += groupH;
+    fz.pairs.forEach(([typed, found], i) => {
+      if (i === 0) { g.fillStyle = activeFill; g.fillRect(Math.round(vx + listPad), Math.round(y), Math.round(cardW - 2 * listPad), Math.round(32 * x1)); }
+      text(fit(typed, 13, 350, cardW / 2 - pad12 - 8 * x1), vx + pad12, y + 16 * x1, 13, L.lv5);
+      text(fit(found, 13, 350, cardW / 2 - pad12), vx + cardW / 2, y + 16 * x1, 13, L.lv8);
+      y += 32 * x1;
+    });
+  }
+
+  if (withObservr && view === 'search') {
+    // Observr: a head row like the field, what it noticed, and the owner's answer in micro buttons.
+    const [ox, oy] = at.observr;
+    panel(ox, oy, cardW, observrH);
+    const hy = oy + fieldH / 2;
+    icon('observr', ox + 12 * x1 + 8 * x1, hy, iconInk);
+    text('Observr', ox + 12 * x1 + 16 * x1 + 8 * x1, hy, 13, L.lv8, 'left', 500);
+    text('noticed', ox + cardW - 12 * x1, hy, 11, L.lv5, 'right');
+    hr(ox, oy + fieldH, cardW);
+    let by = oy + fieldH + 12 * x1 + 13 * 0.75 * x1;
+    for (const l of bodyLines) { text(l, ox + 12 * x1, by, 13, L.lv7); by += 13 * 1.5 * x1; }
+    const btnY = oy + observrH - 12 * x1 - 30 * x1;
+    let bx = ox + 12 * x1;
+    bx += microButton('Yes', bx, btnY, 'primary') + 8 * x1;
+    bx += microButton('No', bx, btnY, 'secondary') + 8 * x1;
+    microButton('Discuss', bx, btnY, 'ghost');
+  }
 
   // The mark and the signature, on the side away from the cards.
-  const brandRight = place === 'left';
-  const markCell = u * 0.9, signX = brandRight ? W - m : m, signPx = u * 2.2;
+  const brandRight = !tall && place === 'left';
+  // The mark a little smaller than the signature's line is tall, and a clear gap between them
+  // (3 Nov 2026: the mark was too big and the words too close).
+  const markCell = u * 0.62, signGap = u * 1.9, signX = brandRight ? W - m : m, signPx = u * 2.2;
+  const brandY = tall ? m + 2.5 * markCell : H - m; // the line the mark and signature sit on
   g.font = `350 ${signPx}px ${TYPE}`;
-  const signW = g.measureText(SIGNATURE).width, brandW = 7 * markCell + u * 1.4 + signW;
+  const signW = g.measureText(SIGNATURE).width, brandW = 7 * markCell + signGap + signW;
   // On a photo, black or white by how light the photo is under the mark: a bright still takes black.
   let brandInk = grain.ink;
   if (look === 'photo' && (P.fade ?? 'light') !== 'none' && (P.fadeAmount ?? 0.8) > 0.3) brandInk = P.fade === 'dark' ? '#FFFFFF' : '#080809';
   else if (look === 'photo' || look === 'none') {
-    const bx0 = Math.max(0, Math.round(brandRight ? signX - brandW : signX)), by0 = Math.max(0, Math.round(H - m - 5 * markCell));
+    const bx0 = Math.max(0, Math.round(brandRight ? signX - brandW : signX)), by0 = Math.max(0, Math.round(brandY - 2.5 * markCell));
     const d = g.getImageData(bx0, by0, Math.max(1, Math.round(Math.min(brandW, W - bx0))), Math.max(1, Math.round(Math.min(6 * markCell, H - by0)))).data;
     let sum = 0; for (let i = 0; i < d.length; i += 4) sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
     brandInk = sum / (d.length / 4) > 150 ? '#080809' : '#FFFFFF';
   }
   const x0 = brandRight ? signX - brandW : signX;
-  drawMark(g, x0 + 7 * markCell, H - m - 2.5 * markCell, markCell, brandInk);
-  g.fillStyle = brandInk; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(SIGNATURE, x0 + 7 * markCell + u * 1.4, H - m);
+  drawMark(g, x0 + 7 * markCell, brandY - 2.5 * markCell, markCell, brandInk);
+  g.fillStyle = brandInk; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillText(SIGNATURE, x0 + 7 * markCell + signGap, brandY);
+  return cv;
+}
+
+// ── Storyboards (3 Nov 2026) ──────────────────────────────────────────────────────────
+// Before any video: each story as a row of frames, the photo with the cards at one beat each, a
+// timecode, what happens on screen, and the motion to ask a video model for later. A search story
+// runs photo, typing, found, Observr, end card; a question adds the offer and the answer streaming
+// in; the owner's side runs photo, the card, end card.
+export function storyBeats(sceneKey, P = {}) {
+  const S = PEOPLE_SCENES[sceneKey] ?? PEOPLE_SCENES.sofa;
+  const query = P.query?.trim() || S.query, first = S.results?.[0]?.title;
+  const withObservr = P.showObservr ?? !S.observrOff;
+  const out = [];
+  const add = (beat, secs, what, motion) => out.push({ beat, secs, what, motion });
+  add('none', 2, 'The person, at the moment of searching. No interface yet.', 'Slow push-in. Eyes on the device, natural light.');
+  if (S.view) {
+    const card = S.view === 'findings' ? "Observr's findings for the morning come up, each with its change and Yes, No, Discuss." : S.view === 'stats' ? 'The statistics come up: searches, found something, fuzzy finds, the week in bars.' : 'The week’s fuzzy finds come up: what was typed, and what it found.';
+    add('full', 5, card, 'They read it and smile; the card holds still.');
+  } else {
+    add('type', 2, `They type “${query}”, letter by letter.`, 'Hands on the device; a close look at the screen.');
+    if (S.ask) {
+      add('results', 2.5, 'It reads like a question: the offer to ask the assistant, the results under it.', 'They pause, then press Enter.');
+      add('answer', 2.5, 'The assistant answers from the records, the words streaming in.', 'They lean in to read.');
+      add('full', 2.5, 'The answer with its sources' + (withObservr ? ', and Observr’s note.' : '.'), 'A nod; the cards hold still.');
+    } else {
+      add('results', 2.5, `Indx finds what they meant: “${first}”.`, 'A small smile as the result appears.');
+      if (withObservr) add('full', 3, `Observr noticed: ${S.observr}`, 'Hold; the card settles in.');
+    }
+  }
+  add('end', 2, `indx search system. ${S.feature ?? ''}`.trim(), 'Fade to the end card.');
+  let t = 0;
+  for (const b of out) { b.from = t; t += b.secs; b.to = t; }
+  return out;
+}
+const clock = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}${s % 1 ? '.' + Math.round((s % 1) * 10) : ''}`;
+export const beatClock = b => `${clock(b.from)}–${clock(b.to)}`;
+
+/** The whole board as one sheet: three frames across, a caption under each, on the dark ground. */
+export function drawStoryboard(P, img, frameW = 560) {
+  const beats = storyBeats(P.scene, P), [W0, H0] = PEOPLE_SIZES[P.size] ?? FIELD_SIZES.board;
+  const fw = frameW, fh = Math.round(fw * H0 / W0), cols = 3, gap = 28, pad = 48, capH = 120;
+  const rows = Math.ceil(beats.length / cols);
+  const W = pad * 2 + cols * fw + (cols - 1) * gap, H = pad * 2 + 70 + rows * (fh + capH) + (rows - 1) * gap;
+  const cv = canvasOf(W, H), g = cv.getContext('2d');
+  g.fillStyle = '#080809'; g.fillRect(0, 0, W, H);
+  const S = PEOPLE_SCENES[P.scene] ?? PEOPLE_SCENES.sofa;
+  g.fillStyle = '#EFEFEF'; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  g.font = `500 26px ${TYPE}`; g.fillText((S.label ?? '').replace(/^Social: (.)/, (_, c) => c.toUpperCase()), pad, pad + 26);
+  g.fillStyle = '#8F8F97'; g.font = `350 18px ${TYPE}`; g.fillText(`${S.feature ?? ''} · ${beats.length} frames · ${clock(beats[beats.length - 1].to)}`, pad, pad + 56);
+  const wrapText = (t, maxW) => { const out = []; let ln = ''; for (const w of t.split(' ')) { const s2 = ln ? ln + ' ' + w : w; if (g.measureText(s2).width > maxW && ln) { out.push(ln); ln = w; } else ln = s2; } if (ln) out.push(ln); return out; };
+  beats.forEach((b, i) => {
+    const x = pad + (i % cols) * (fw + gap), y = pad + 70 + Math.floor(i / cols) * (fh + capH + gap);
+    const fr = drawPeople({ ...P, beat: b.beat }, fw / W0, img);
+    g.drawImage(fr, x, y, fw, fh);
+    g.fillStyle = '#393941'; g.fillRect(x, y + fh, fw, 1);
+    g.fillStyle = '#8F8F97'; g.font = `400 14px ${MONO}`; g.fillText(`${i + 1}  ${beatClock(b)}`, x, y + fh + 26);
+    g.fillStyle = '#EFEFEF'; g.font = `350 17px ${TYPE}`;
+    wrapText(b.what, fw).slice(0, 2).forEach((l, j) => g.fillText(l, x, y + fh + 52 + j * 22));
+    g.fillStyle = '#8F8F97'; g.font = `350 15px ${TYPE}`;
+    g.fillText(wrapText(`Motion: ${b.motion}`, fw)[0], x, y + fh + 104);
+  });
   return cv;
 }

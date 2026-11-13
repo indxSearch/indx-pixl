@@ -119,7 +119,7 @@ const PROVIDERS = {
 };
 const provider = () => Object.values(PROVIDERS).find(p => p.key()) ?? null;
 
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.json': 'application/json', '.webp': 'image/webp' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.json': 'application/json', '.webp': 'image/webp', '.mp4': 'video/mp4' };
 const send = (res, status, body, type = 'application/json') => {
   res.writeHead(status, { 'content-type': type, 'cache-control': 'no-store' });
   // A file's bytes go out as they are; only an API answer is turned into JSON. (A .json file was
@@ -255,6 +255,93 @@ async function savePrompt(req) {
   return [200, entry];
 }
 
+// Discarding a generated image moves it to generations/.discarded/ rather than deleting it, so a
+// wrong click can be undone by moving it back. Only a path of the shape the server writes is taken.
+function discardGeneration(file) {
+  const m = /^generations\/([\w.-]+)\/(output-\d+\.(?:png|jpg|webp)|video\.mp4)$/.exec(file ?? '');
+  if (!m) return [400, { error: 'Not a generated image.' }];
+  const [, id, name] = m, dir = path.join(OUT, id), src = path.join(dir, name), meta = path.join(dir, 'meta.json');
+  if (!fs.existsSync(src) || !fs.existsSync(meta)) return [404, { error: 'No such image.' }];
+  const bin = path.join(OUT, '.discarded');
+  fs.mkdirSync(bin, { recursive: true });
+  fs.renameSync(src, path.join(bin, `${id}-${name}`));
+  const data = JSON.parse(fs.readFileSync(meta, 'utf8'));
+  data.outputs = (data.outputs ?? []).filter(o => o !== file);
+  data.discarded = [...(data.discarded ?? []), file];
+  fs.writeFileSync(meta, JSON.stringify(data, null, 2));
+  return [200, { ok: true }];
+}
+
+// ── Video: Google Veo through the Gemini API (3 Nov 2026) ─────────────────────────────────
+// OpenRouter has no video models, so video takes a key of its own, GEMINI_API_KEY, in the
+// environment or lab/.env.local. A clip starts from one of our stills (image to video), so the
+// person and the room are the photo's; the cards are drawn over it in the page, not by Veo.
+// Veo answers with a long-running operation: the request starts the job and returns at once, the
+// server polls Google in the background and writes the clip next to the stills, and the page asks
+// /api/generations until the job's meta.json says it is done or failed.
+const GEMINI = 'https://generativelanguage.googleapis.com/v1beta';
+let veoModels = null;
+async function listVeoModels() {
+  const key = keyOf('GEMINI_API_KEY');
+  if (!key) return [];
+  if (!veoModels) {
+    const r = await fetch(`${GEMINI}/models?pageSize=1000`, { headers: { 'x-goog-api-key': key } });
+    if (!r.ok) throw new Error(`Listing models failed: ${r.status}`);
+    const ids = ((await r.json()).models ?? [])
+      .filter(m => /veo/i.test(m.name) && (m.supportedGenerationMethods ?? []).includes('predictLongRunning'))
+      .map(m => m.name.replace(/^models\//, ''));
+    // The newest first, the full model before its fast variant.
+    veoModels = ids.sort((a, b) => b.localeCompare(a, undefined, { numeric: true }) || a.includes('fast') - b.includes('fast'));
+  }
+  return veoModels;
+}
+async function startVideo(req) {
+  const key = keyOf('GEMINI_API_KEY');
+  if (!key) return [400, { error: 'No GEMINI_API_KEY: put one in lab/.env.local as GEMINI_API_KEY=..., then restart the server.' }];
+  const { prompt, image, aspectRatio = '16:9', model, settings = {} } = await readBody(req);
+  if (!prompt || !image?.data) return [400, { error: 'A prompt and a still are needed.' }];
+  const chosen = model || (await listVeoModels())[0];
+  if (!chosen) return [502, { error: 'Google lists no Veo model for this key.' }];
+  const id = new Date().toISOString().replace(/[:.]/g, '-') + '-video-' + String(settings.scene ?? 'clip').replace(/[^a-z0-9]+/gi, '-');
+  const dir = path.join(OUT, id);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, `still.${image.mime === 'image/jpeg' ? 'jpg' : 'png'}`), Buffer.from(image.data, 'base64'));
+  const meta = { id, kind: 'video', status: 'working', created: new Date().toISOString(), provider: 'Gemini', model: chosen, aspectRatio, prompt, settings, still: settings.still ?? null, outputs: [], errors: [] };
+  const write = () => fs.writeFileSync(path.join(dir, 'meta.json'), JSON.stringify(meta, null, 2));
+  write();
+  fs.writeFileSync(path.join(dir, 'prompt.txt'), prompt + '\n');
+  (async () => {
+    try {
+      const r = await fetch(`${GEMINI}/models/${chosen}:predictLongRunning`, {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({ instances: [{ prompt, image: { bytesBase64Encoded: image.data, mimeType: image.mime ?? 'image/png' } }], parameters: { aspectRatio, personGeneration: 'allow_adult' } }),
+      });
+      const op = await r.json().catch(() => ({}));
+      if (!r.ok || op.error) throw new Error(op.error?.message ?? `HTTP ${r.status}`);
+      // Poll every 10 s, for up to ten minutes.
+      let done = null;
+      for (let i = 0; i < 60 && !done; i++) {
+        await new Promise(res => setTimeout(res, 10000));
+        const s2 = await (await fetch(`${GEMINI}/${op.name}`, { headers: { 'x-goog-api-key': key } })).json();
+        if (s2.error) throw new Error(s2.error.message);
+        if (s2.done) done = s2;
+      }
+      if (!done) throw new Error('Veo did not finish within ten minutes.');
+      if (done.error) throw new Error(done.error.message);
+      const sample = done.response?.generateVideoResponse?.generatedSamples?.[0];
+      const uri = sample?.video?.uri;
+      if (!uri) throw new Error(done.response?.generateVideoResponse?.raiMediaFilteredReasons?.join('; ') || 'Veo returned no video.');
+      const v = await fetch(uri, { headers: { 'x-goog-api-key': key } });
+      if (!v.ok) throw new Error(`Downloading the video failed: ${v.status}`);
+      fs.writeFileSync(path.join(dir, 'video.mp4'), Buffer.from(await v.arrayBuffer()));
+      meta.outputs = [`generations/${id}/video.mp4`]; meta.status = 'done';
+    } catch (e) { meta.status = 'failed'; meta.errors = [e.message]; }
+    meta.finished = new Date().toISOString();
+    write();
+  })();
+  return [202, meta];
+}
+
 function listGenerations() {
   if (!fs.existsSync(OUT)) return [];
   return fs.readdirSync(OUT).filter(d => fs.existsSync(path.join(OUT, d, 'meta.json')))
@@ -303,9 +390,12 @@ http.createServer(async (req, res) => {
       const p = provider();
       let list = [], error;
       if (p) { try { list = await models(p); } catch (e) { error = e.message; } }
-      return send(res, 200, { ok: true, hasKey: !!p, provider: p?.label, models: list, defaultModel: p?.defaultModel, error });
+      return send(res, 200, { ok: true, hasKey: !!p, provider: p?.label, models: list, defaultModel: p?.defaultModel, error, hasVideoKey: !!keyOf('GEMINI_API_KEY') });
     }
     if (url.pathname === '/api/generations' && req.method === 'GET') return send(res, 200, listGenerations());
+    if (url.pathname === '/api/video/models' && req.method === 'GET') { try { return send(res, 200, await listVeoModels()); } catch (e) { return send(res, 502, { error: e.message }); } }
+    if (url.pathname === '/api/video' && req.method === 'POST') { const [status, body] = await startVideo(req); return send(res, status, body); }
+    if (url.pathname === '/api/generations' && req.method === 'DELETE') { const [status, body] = discardGeneration(url.searchParams.get('file')); return send(res, status, body); }
     if (url.pathname === '/api/prompts' && req.method === 'GET') return send(res, 200, listPrompts());
     if (url.pathname === '/api/prompts' && req.method === 'POST') { const [status, body] = await savePrompt(req); return send(res, status, body); }
     if (url.pathname === '/api/generate' && req.method === 'POST') { const [status, body] = await generate(req); return send(res, status, body); }

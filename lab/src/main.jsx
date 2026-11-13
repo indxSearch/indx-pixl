@@ -12,7 +12,7 @@ window.PIXL_ENGINE = E;
 // ── Parameter sets, one per tab, kept in this browser ───────────────────────────────
 const DEFAULTS = {
   people: {
-    scene: 'sofa', who: '', size: 'board', place: 'right', cards: 'dark', results: 3, colour: '#FF4238',
+    scene: 'sofa', who: '', region: 'nordic', size: 'board', place: 'right', cards: 'dark', results: 3, colour: '#FF4238',
     look: 'photo', fade: 'light', fadeAmount: 0.8, glow: 0.5, grain: 'terminal', grid: 140, contrast: 1.3, dim: 0, query: '', observr: '', photo: '', genCount: 2,
   },
   banners: {
@@ -857,19 +857,15 @@ function TypePanel({ p, set, candidates, setCandidates }) {
       <Choice label="Theme" value={p.theme} options={Object.entries(E.TYPE_THEMES).map(([value, x]) => ({ value, label: x.label }))} onChange={v => set({ theme: v })} />
     </Group>
     <Group title="Layout">
-      <SegmentedControl size="micro" stretch items={Object.entries(E.TYPE_LAYOUTS).map(([value, label]) => ({ value, label }))} value={p.layout ?? 'grid'} onChange={v => set({ layout: v })} aria-label="Layout" />
-      {(p.layout ?? 'grid') === 'grid' && <Switch label="A frame round every word" checked={!!p.frameWords} onChange={v => set({ frameWords: v })} />}
+      <SegmentedControl size="micro" stretch items={Object.entries(E.TYPE_LAYOUTS).map(([value, label]) => ({ value, label }))} value={E.TYPE_LAYOUTS[p.layout] ? p.layout : 'grid'} onChange={v => set({ layout: v })} aria-label="Layout" />
+      {(!E.TYPE_LAYOUTS[p.layout] || p.layout === 'grid') && <Switch label="A frame round every word" checked={!!p.frameWords} onChange={v => set({ frameWords: v })} />}
       {p.layout === 'panels' && <>
         <Range label="Panels" value={p.panels ?? 7} min={1} max={24} step={1} format={v => `${v}`} onChange={v => set({ panels: v })} />
         <Range label="Left as colour only" value={p.emptyPanels ?? 0.2} min={0} max={0.7} step={0.05} format={pct} onChange={v => set({ emptyPanels: v })} />
         <Range label="Lines on strips" value={p.strips ?? 0.4} min={0} max={1} step={0.05} format={pct} onChange={v => set({ strips: v })} />
         <Switch label="A frame round every word" checked={!!p.frameWords} onChange={v => set({ frameWords: v })} />
       </>}
-      {p.layout === 'table' && <>
-        <Range label="Cells filled" value={p.fills ?? 0.14} min={0} max={0.6} step={0.01} format={pct} onChange={v => set({ fills: v })} />
-        <Range label="Type size" value={p.tableScale ?? 1.4} min={1} max={4} step={0.1} format={v => `${v.toFixed(1)}×`} onChange={v => set({ tableScale: v })} />
-      </>}
-      <p className="note">Panels and Table after the reference: the page cut into colours, each holding a few sentences; or one word to a ruled cell. Shuffle cuts again.</p>
+      <p className="note">Panels after the reference: the page cut into colours, each holding a few sentences. Shuffle cuts again.</p>
     </Group>
     <Group title="Framing">
       <Choice label="Framing" value={p.chrome ?? 'none'} options={Object.entries(E.TYPE_CHROMES).map(([value, label]) => ({ value, label }))} onChange={v => set({ chrome: v })} />
@@ -1160,19 +1156,30 @@ function PeoplePanel({ p, set }) {
   const scene = E.PEOPLE_SCENES[p.scene] ?? E.PEOPLE_SCENES.sofa;
   return <>
     <Group title="Scene">
-      <Choice label="Where" value={p.scene} options={Object.entries(E.PEOPLE_SCENES).map(([value, x]) => ({ value, label: x.label }))} onChange={v => set({ scene: v, query: '', observr: '' })} />
+      <Choice label="Where" value={p.scene} options={Object.entries(E.PEOPLE_SCENES).map(([value, x]) => ({ value, label: x.label }))} onChange={v => set({ scene: v, query: '', observr: '', showObservr: undefined })} />
+      <Choice label="People and places" value={p.region ?? 'nordic'} options={opts([['nordic', 'Scandinavian'], ['any', 'No region']])} onChange={v => set({ region: v })} />
       <InputField label="The person (optional)" placeholder="e.g. a woman in her sixties, grey hair" value={p.who} onChange={e => set({ who: e.target.value })} />
-      <Choice label="Size" value={p.size} options={Object.entries(E.TYPE_SIZES).map(([value, v]) => ({ value, label: v[2] }))} onChange={v => set({ size: v })} />
+      <Choice label="Size" value={p.size} options={Object.entries(E.PEOPLE_SIZES).map(([value, v]) => ({ value, label: v[2] }))} onChange={v => set({ size: v })} />
     </Group>
     <Group title="The story">
+      {scene.view && <p className="note">This scene is the owner's side: {scene.view === 'findings' ? "Observr's findings for the morning" : scene.view === 'stats' ? 'the statistics' : 'the fuzzy finds of the week'}, in a card of its own.</p>}
+      {!scene.view && <>
       <InputField label="They type" placeholder={scene.query} value={p.query} onChange={e => set({ query: e.target.value })} />
-      <Textarea label="Observr noticed" rows={4} placeholder={scene.observr} value={p.observr} onChange={e => set({ observr: e.target.value })} />
+      {scene.ask && <Switch label="Search or ask: the offer and the assistant's answer" checked={p.showAsk ?? true} onChange={v => set({ showAsk: v })} />}
+      <Switch label="Observr's card" checked={p.showObservr ?? !scene.observrOff} onChange={v => set({ showObservr: v })} />
+      {(p.showObservr ?? !scene.observrOff) && <Textarea label="Observr noticed" rows={4} placeholder={scene.observr} value={p.observr} onChange={e => set({ observr: e.target.value })} />}
       <Range label="Results shown" value={p.results} min={1} max={3} step={1} format={v => `${v}`} onChange={v => set({ results: v })} />
+      </>}
       <p className="note">Empty fields use the scene's own example. The results and their numbers are an example's, never a claim.</p>
     </Group>
     <Group title="Cards">
       <Choice label="Placed" value={p.place} options={opts([['right', 'Both on the right'], ['left', 'Both on the left'], ['split', 'Search top left, Observr bottom right']])} onChange={v => set({ place: v })} />
-      <Choice label="Cards" value={p.cards} options={opts([['dark', 'Dark'], ['light', 'Light']])} onChange={v => set({ cards: v })} />
+      <Choice label="Search card" value={p.uiStyle ?? 'site'} options={opts([['site', 'As on indx.co'], ['palette', 'Compact, systm palette']])} onChange={v => set({ uiStyle: v })} />
+      <Choice label="Text" value={p.cards} options={opts([['dark', 'Light text, for a dark card'], ['light', 'Dark text, for a light card']])} onChange={v => set({ cards: v })} />
+      <Choice label="Surface" value={p.surface ?? 'glass'} options={opts([['glass', 'Glass: the photo blurred'], ['solid', 'Solid'], ['frame', 'A frame only'], ['none', 'Nothing']])} onChange={v => set({ surface: v, cardOpacity: undefined })} />
+      {((p.surface ?? 'glass') === 'glass' || p.surface === 'solid') && <Range label="Opacity" value={p.cardOpacity ?? ((p.surface ?? 'glass') === 'glass' ? 0.55 : 1)} min={0} max={1} step={0.05} format={pct} onChange={v => set({ cardOpacity: v })} />}
+      {p.surface !== 'none' && <Choice label="Frame" value={p.frameColour ?? ((p.surface ?? 'glass') === 'frame' ? 'white' : 'line')} options={opts([['line', 'A fine line, as systm'], ['white', 'White'], ['ink', 'The text colour'], ['none', 'None']])} onChange={v => set({ frameColour: v })} />}
+      {p.surface !== 'none' && (p.frameColour ?? 'line') !== 'none' && <Range label="Frame width" value={p.frameWidth ?? 1} min={1} max={4} step={0.5} format={v => `${v} px`} onChange={v => set({ frameWidth: v })} />}
     </Group>
     <Group title="The photo">
       <SegmentedControl size="micro" stretch items={Object.entries(E.PEOPLE_LOOKS).map(([value, label]) => ({ value, label }))} value={p.look} onChange={v => set({ look: v })} aria-label="Look" />
@@ -1191,22 +1198,122 @@ function PeoplePanel({ p, set }) {
   </>;
 }
 
+// The gallery: every story with its photos, each photo already set with the story's cards, so a
+// pairing is seen whole. A story can have several photos; one with none offers to generate one.
+const SCREEN_RATIO = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+const PAIRING_HEIGHT = 300; // .pairing-tall / .pairing-wide in lab.css
+const RATIO_SIZE = { '4:5': 'portrait', '2:3': 'portrait', '3:4': 'portrait', '1:1': 'square', '9:16': 'story', '3:2': 'board', '4:3': 'board', '16:9': 'wide', '21:9': 'wide', '5:4': 'board' };
+function Pairing({ p, scene, still, onOpen, onDiscard, discarding }) {
+  const ref = useRef(null);
+  const img = useImage(still.src);
+  const size = RATIO_SIZE[still.ratio] ?? 'board';
+  // The story's own text, whatever the editor's fields hold, in the editor's look (cards, fade, glow).
+  // Drawn at the size it is shown, 300 CSS pixels high, in device pixels, so it is as sharp as the screen.
+  useDraw(() => { if (img) blit(ref.current, E.drawPeople({ ...p, scene, size, query: '', observr: '', showObservr: undefined, showAsk: undefined }, PAIRING_HEIGHT * SCREEN_RATIO / E.PEOPLE_SIZES[size][1], img)); }, [p, img, scene, size]);
+  const label = E.PEOPLE_SCENES[scene]?.label?.replace(/^Social: /, '') ?? scene;
+  return (
+    <figure className="pairing">
+      <Button size="micro" variant="ghost" className="pick" aria-label={`Open in the editor: ${label}`} onClick={() => onOpen(size)} iconLeft={<canvas ref={ref} className={size === 'portrait' || size === 'story' || size === 'square' ? 'pairing-tall' : 'pairing-wide'} />} />
+      <Button size="micro" variant="ghost" loading={discarding} onClick={onDiscard} aria-label={`Discard this photo: ${label}`}>Discard</Button>
+    </figure>
+  );
+}
+function PeopleGallery({ p, set, stills, gen, refreshGenerations, discard, discarding, error, setError }) {
+  const [sending, setSending] = useState(null);
+  const scenes = Object.entries(E.PEOPLE_SCENES).sort((a, b) => (b[1].social ? 1 : 0) - (a[1].social ? 1 : 0));
+  const generateFor = async key => {
+    const sc = E.PEOPLE_SCENES[key], size = sc.social ? 'portrait' : 'board';
+    setSending(key); setError(null);
+    try {
+      const r = await fetch('/api/generate', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ prompt: E.peoplePrompt({ ...p, scene: key, size, who: '' }), images: [], aspectRatio: nearestRatio(E.PEOPLE_SIZES[size]), imageSize: '2K', count: 1,
+          settings: { people: true, scene: key, icon: `people-${key}`, mat: 'people' } }),
+      });
+      const meta = await r.json();
+      if (!r.ok || meta.errors?.length) setError(meta.errors?.join('; ') || meta.error || `HTTP ${r.status}`);
+      await refreshGenerations();
+    } catch (e) { setError(e.message); }
+    setSending(null);
+  };
+  const open = (key, src, size) => set({ scene: key, size, photo: src, query: '', observr: '', showObservr: undefined, showAsk: undefined, peopleView: 'editor' });
+  return <>
+    <section>
+      <h2>Stories and their photos</h2>
+      <p className="note">Each story with the photos made for it, set as they will be posted, in the editor's look (cards, fade, glow). Click one to open it in the editor. The social stories come first.</p>
+      {error && <Alert variant="destructive"><AlertTitle>That did not work</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+    </section>
+    {scenes.map(([key, sc]) => {
+      const own = stills.filter(st => st.scene === key);
+      return (
+        <section key={key} className="story">
+          <div className="story-head">
+            <h2>{sc.label.replace(/^Social: (.)/, (_, c) => c.toUpperCase())}</h2>
+            <span className="note">{sc.feature}{sc.social ? ' · social' : ' · wide'} · {own.length} {own.length === 1 ? 'photo' : 'photos'}</span>
+            {gen?.hasKey && <Button size="micro" variant="secondary" loading={sending === key} disabled={!!sending && sending !== key} onClick={() => generateFor(key)}>Generate a photo</Button>}
+          </div>
+          {own.length === 0
+            ? <p className="note">No photo yet{gen?.hasKey ? ': generate one, it takes about a minute.' : '.'}</p>
+            : <div className="pairings">
+              {own.map(st => <Pairing key={st.src} p={p} scene={key} still={st} onOpen={size => open(key, st.src, size)} onDiscard={() => discard(st.src)} discarding={discarding === st.src} />)}
+            </div>}
+        </section>
+      );
+    })}
+  </>;
+}
+
+// The storyboard: the story in the panel, on the editor's photo, as a row of frames with timecodes,
+// what happens, and the motion to ask a video model for later. Exported as one sheet to share.
+function StoryFrame({ p, img, beat }) {
+  const ref = useRef(null);
+  useDraw(() => blit(ref.current, E.drawPeople({ ...p, beat }, 360 * SCREEN_RATIO / E.PEOPLE_SIZES[p.size][0], img)), [p, img, beat]);
+  return <canvas ref={ref} className="story-frame" />;
+}
+function Storyboard({ p, img, exports }) {
+  const beats = E.storyBeats(p.scene, p), sc = E.PEOPLE_SCENES[p.scene];
+  return <>
+    <section>
+      <h2>{sc.label.replace(/^Social: (.)/, (_, c) => c.toUpperCase())}: storyboard</h2>
+      <p className="note">{sc.feature} · {beats.length} frames · about {Math.round(beats[beats.length - 1].to)} seconds. The story in the panel, on the editor's photo; change the scene or the photo there. Before any video: what happens, beat by beat, and the motion to ask for later.</p>
+      <div className="buttons">
+        <Button size="micro" variant="primary" onClick={() => exports.add(E.drawStoryboard(p, img), `storyboard-${p.scene}.png`)}>Export the board</Button>
+      </div>
+    </section>
+    <div className="storyboard">
+      {beats.map((b, i) => (
+        <figure key={i} className="story-cell">
+          <StoryFrame p={p} img={img} beat={b.beat} />
+          <figcaption>
+            <span className="story-time">{i + 1} · {E.beatClock(b)}</span>
+            <span>{b.what}</span>
+            <span className="note">Motion: {b.motion}</span>
+          </figcaption>
+        </figure>
+      ))}
+    </div>
+  </>;
+}
+
 function PeopleMain({ p, set, exports, gen, generations, refreshGenerations }) {
   const ref = useRef(null), input = useRef(null);
   const [sending, setSending] = useState(false), [error, setError] = useState(null);
   const [edited, setEdited] = useState(null);
+  const [copied, setCopied] = useState('');
   const [, bump] = useState(0);
-  const stills = generations.filter(g => g.settings?.people).flatMap(g => g.outputs.map(o => ({ src: o, scene: g.settings.scene })));
+  const stills = generations.filter(g => g.settings?.people).flatMap(g => g.outputs.map(o => ({ src: o, scene: g.settings.scene, ratio: g.aspectRatio })));
   const src = p.photo === 'upload' ? uploadedPhoto : p.photo || stills[0]?.src || '';
   const img = useImage(src);
-  useDraw(() => blit(ref.current, E.drawPeople(p, 1, img)), [p, img]);
+  // Drawn at the screen's pixel ratio: at 1x a Retina screen stretched the canvas twice over, and
+  // the cards' fine type and hairlines went soft. The frame is the post's own width in CSS pixels.
+  useDraw(() => blit(ref.current, E.drawPeople(p, SCREEN_RATIO, img)), [p, img]);
   const prompt = edited ?? E.peoplePrompt(p);
   const generate = async () => {
     setSending(true); setError(null);
     try {
       const r = await fetch('/api/generate', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ prompt, images: [], aspectRatio: nearestRatio(E.TYPE_SIZES[p.size]), imageSize: '2K', count: p.genCount,
+        body: JSON.stringify({ prompt, images: [], aspectRatio: nearestRatio(E.PEOPLE_SIZES[p.size]), imageSize: '2K', count: p.genCount,
           settings: { people: true, scene: p.scene, who: p.who, icon: `people-${p.scene}`, mat: 'people' } }),
       });
       const meta = await r.json();
@@ -1223,11 +1330,58 @@ function PeopleMain({ p, set, exports, gen, generations, refreshGenerations }) {
     reader.readAsDataURL(f);
   };
   const sceneLabel = k => E.PEOPLE_SCENES[k]?.label ?? k;
+  // A suggestion: its scene and size, the scene's own story, and its newest still if there is one.
+  const suggest = (key, size) => {
+    setEdited(null);
+    const still = stills.find(st => st.scene === key);
+    set({ scene: key, size, query: '', observr: '', showObservr: undefined, ...(still ? { photo: still.src } : {}) });
+  };
+  const [discarding, setDiscarding] = useState(null);
+  const discard = async file => {
+    setDiscarding(file); setError(null);
+    try {
+      const r = await fetch(`/api/generations?file=${encodeURIComponent(file)}`, { method: 'DELETE' });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? `HTTP ${r.status}`);
+      if (p.photo === file) set({ photo: '' });
+      await refreshGenerations();
+    } catch (e) { setError(e.message); }
+    setDiscarding(null);
+  };
+  const viewSwitch = (
+    <div className="buttons">
+      <SegmentedControl size="micro" items={[{ value: 'gallery', label: 'Gallery' }, { value: 'editor', label: 'Editor' }, { value: 'storyboard', label: 'Storyboard' }]} value={p.peopleView ?? 'gallery'} onChange={v => set({ peopleView: v })} aria-label="View" />
+    </div>
+  );
+  if (p.peopleView === 'storyboard') return <>
+    {viewSwitch}
+    <Storyboard p={p} img={img} exports={exports} />
+  </>;
+  if ((p.peopleView ?? 'gallery') === 'gallery') return <>
+    {viewSwitch}
+    <PeopleGallery p={p} set={set} stills={stills} gen={gen} refreshGenerations={refreshGenerations} discard={discard} discarding={discarding} error={error} setError={setError} />
+  </>;
   return <>
+    {viewSwitch}
     <section>
       <h2>A person at the moment of searching</h2>
       <p className="note">They find what they meant despite the typo, and Observr notices what the searches have in common. Generated people are for sketching; publish with real photos.</p>
-      <div className="frame" style={{ maxWidth: E.TYPE_SIZES[p.size][0] }}><canvas ref={ref} /></div>
+      <div className="suggestions">
+        <span className="note">Suggestions for social media, in the portrait post size:</span>
+        <div className="buttons">
+          {Object.entries(E.PEOPLE_SCENES).filter(([, x]) => x.social).map(([key, x]) => (
+            <Button key={key} size="micro" variant={p.scene === key ? 'secondary' : 'ghost'} aria-pressed={p.scene === key}
+              onClick={() => suggest(key, 'portrait')}>{x.label.replace(/^Social: (.)/, (_, c) => c.toUpperCase())}</Button>
+          ))}
+        </div>
+        <span className="note">And for wide banners and slides:</span>
+        <div className="buttons">
+          {Object.entries(E.PEOPLE_SCENES).filter(([, x]) => !x.social).map(([key, x]) => (
+            <Button key={key} size="micro" variant={p.scene === key ? 'secondary' : 'ghost'} aria-pressed={p.scene === key}
+              onClick={() => suggest(key, 'board')}>{x.label}</Button>
+          ))}
+        </div>
+      </div>
+      <div className="frame" style={{ maxWidth: E.PEOPLE_SIZES[p.size][0] }}><canvas ref={ref} /></div>
       <div className="buttons">
         {gen?.hasKey && <Button size="micro" variant="primary" loading={sending} onClick={generate}>Generate {p.genCount > 1 ? `${p.genCount} stills` : 'a still'}</Button>}
         <input ref={input} type="file" accept="image/*" hidden onChange={e => { choose(e.target.files?.[0]); e.target.value = ''; }} />
@@ -1236,27 +1390,35 @@ function PeopleMain({ p, set, exports, gen, generations, refreshGenerations }) {
         {sending && <span className="note">Generating: this takes a while…</span>}
       </div>
       {gen === null && <p className="note">Stills are generated in the lab on your machine (<code>npm start</code> in lab/, with a key). Your own photo works anywhere.</p>}
-      {error && <Alert variant="destructive"><AlertTitle>Generation failed</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+      {error && <Alert variant="destructive"><AlertTitle>That did not work</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
     </section>
     {stills.length > 0 && <section>
       <h2>Stills</h2>
-      <p className="note">Choose one to set the scene on. They are kept with the generations.</p>
+      <p className="note">Choose one to set the scene on. Discard moves a still to lab/generations/.discarded/, so it can be moved back.</p>
       <div className="picks">
         {stills.map(st => (
-          <Button key={st.src} size="micro" variant={st.src === src ? 'secondary' : 'ghost'} className="pick" aria-pressed={st.src === src}
-            aria-label={`Use this still: ${sceneLabel(st.scene)}`} onClick={() => set({ photo: st.src })}
-            iconLeft={<img className="still-img" src={st.src} alt="" />} />
+          <div key={st.src} className="still">
+            <Button size="micro" variant={st.src === src ? 'secondary' : 'ghost'} className="pick" aria-pressed={st.src === src}
+              aria-label={`Use this still: ${sceneLabel(st.scene)}`} onClick={() => set({ photo: st.src })}
+              iconLeft={<img className="still-img" src={st.src} alt="" />} />
+            <Button size="micro" variant="ghost" loading={discarding === st.src} onClick={() => discard(st.src)} aria-label={`Discard this still: ${sceneLabel(st.scene)}`}>Discard</Button>
+          </div>
         ))}
       </div>
     </section>}
-    {gen?.hasKey && <section>
+    <section>
       <h2>Prompt</h2>
+      <p className="note">The suggestion's prompt, from the scene, the person and the size. Copy it to use Nano Banana anywhere, or edit it here before you generate.</p>
       <div className="prompt-edit">
-        <Textarea label={edited == null ? 'Prompt, from the settings' : 'Prompt, edited by hand'} rows={7} value={prompt} onChange={e => setEdited(e.target.value)} />
-        <Range label="Stills per run" value={p.genCount} min={1} max={4} step={1} format={v => `${v}`} onChange={v => set({ genCount: v })} />
-        {edited != null && <div className="buttons"><Button size="micro" variant="ghost" onClick={() => setEdited(null)}>Reset prompt to the settings</Button></div>}
+        <Textarea label={edited == null ? 'Prompt, from the settings' : 'Prompt, edited by hand'} rows={9} value={prompt} onChange={e => setEdited(e.target.value)} />
+        {gen?.hasKey && <Range label="Stills per run" value={p.genCount} min={1} max={4} step={1} format={v => `${v}`} onChange={v => set({ genCount: v })} />}
+        <div className="buttons">
+          <Button size="micro" variant="secondary" onClick={async () => { try { await navigator.clipboard.writeText(prompt); setCopied('Copied.'); } catch { setCopied('The clipboard is blocked here.'); } setTimeout(() => setCopied(''), 2500); }}>Copy prompt</Button>
+          {edited != null && <Button size="micro" variant="ghost" onClick={() => setEdited(null)}>Reset prompt to the settings</Button>}
+          {copied && <span className="note">{copied}</span>}
+        </div>
       </div>
-    </section>}
+    </section>
   </>;
 }
 
