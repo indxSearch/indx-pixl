@@ -22,7 +22,7 @@ const Json_query: React.FC<IconProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-    <path d="M1 0H3V1H6V4H7V5H6V4H3V5H1V3H0V2H1ZM3 1H2V2H1V3H2V4H3ZM5 2H4V3H5Z" fill={color ?? "var(--lv8)"}/>    
+    <path d="M1 0H3V1H2V2H1V3H2V4H3V5H1V3H0V2H1ZM4 1H6V2H7V3H6V4H7V5H6V4H4V3H3V2H4ZM5 2H4V3H6V2Z" fill={color ?? "var(--lv8)"}/>    
     </svg>
   );
 };
