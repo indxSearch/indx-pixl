@@ -32,6 +32,22 @@ export function newSpinner(doc: Doc, at: { x: number; y: number }): Artboard {
   return { id: uid(), name: `spinner-${n}`, x: Math.round(at.x), y: Math.round(at.y), w: 7 + PAD * 2, h: 5 + PAD * 2, icons: [frame], rects: [], grid: { cols: 1, gap: GAP, pad: PAD, auto: true, row: true }, spinner: { delay: DEFAULT_DELAY, pingpong: false } };
 }
 
+/** A spinner name made from any name, unused in `doc`: "search as you type" → search-as-you-type. */
+export function spinnerNameFrom(doc: Doc, base: string): string {
+  const slug = base.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'spinner';
+  let name = slug, n = 2;
+  while (doc.artboards.some((a) => a.name === name)) name = `${slug}-${n++}`;
+  return name;
+}
+/** Pasted drawings as frames: fresh ids, and every pixel in the one colour a spinner has. */
+export const asFrames = (drawings: Pick<Icon, 'name' | 'w' | 'h' | 'rects'>[]): Icon[] =>
+  drawings.map((ic, i) => ({ id: uid(), name: String(i + 1), x: i * 100, y: PAD, w: ic.w, h: ic.h, rects: ic.rects.map((r) => ({ ...r, id: uid(), fill: FRAME_FILL })) }));
+/** A new spinner holding the given frames, laid out in a row. */
+export function spinnerOf(doc: Doc, name: string, frames: Icon[], at: { x: number; y: number }): Artboard {
+  const a: Artboard = { ...newSpinner(doc, at), name, icons: frames };
+  return arrangeArtboardItems({ ...emptyDoc(), artboards: [a] }, a.id).artboards[0];
+}
+
 /** The pixels a frame shows, whatever their fills. Two frames with the same signature write the same file. */
 const signature = (ic: { w: number; h: number; rects: Rect[] }) =>
   `${ic.w}x${ic.h}:` + toGrid(ic.rects, ic.w, ic.h).map((row) => row.map((c) => (c ? 1 : 0)).join('')).join('/');

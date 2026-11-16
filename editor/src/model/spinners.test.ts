@@ -5,7 +5,8 @@ import path from 'node:path';
 import { DOMParser } from 'linkedom';
 import { transformSync } from 'esbuild';
 import { readSpinners } from '../../server/projectApi';
-import { framesOf, planSpinnerSave, spinnersToDoc, ticksOf } from './spinners';
+import { asFrames, framesOf, planSpinnerSave, spinnerNameFrom, spinnerOf, spinnersToDoc, ticksOf } from './spinners';
+import { arrangeArtboardItems as arrange } from './ops';
 import { toGrid } from './pixels';
 import type { Doc } from './types';
 
@@ -142,4 +143,24 @@ test('rename, delete, a new spinner and invalid names', () => {
   assert.match(planSpinnerSave(twins, baseline).problems.join(), /Two spinners are called "dots"/);
   const mixed = edited(doc, 'bar', (a) => { framesOf(a)[0].w = 8; });
   assert.match(planSpinnerSave(mixed, baseline).problems.join(), /frames differ in size/);
+});
+
+test('a duplicated frame takes the slot right after its original', async () => {
+  const { duplicateNodes } = await import('./ops');
+  const { doc } = folder();
+  const dots = doc.artboards.find((a) => a.name === 'dots')!;
+  const [first, second] = framesOf(dots);
+  const copied = arrange(duplicateNodes(doc, [first.id], { [first.id]: 'copy' }), dots.id);
+  assert.deepEqual(framesOf(copied.artboards.find((a) => a.id === dots.id)!).map((f) => f.id), [first.id, 'copy', second.id, framesOf(dots)[2].id]);
+});
+
+test('a pasted icon starts a spinner named after it, in one colour', () => {
+  const { doc } = folder();
+  const name = spinnerNameFrom(doc, 'Search as you type!');
+  assert.equal(name, 'search-as-you-type');
+  assert.equal(spinnerNameFrom(doc, 'dots'), 'dots-2');
+  const a = spinnerOf(doc, name, asFrames([{ name: 'x', w: 7, h: 5, rects: [{ id: 'r', x: 1, y: 1, w: 2, h: 1, fill: 'c:violet' }] }]), { x: 0, y: 50 });
+  assert.equal(framesOf(a).length, 1);
+  assert.equal(framesOf(a)[0].rects[0].fill, 'lv8');
+  assert.equal(a.w, 7 + 4, 'one frame wide');
 });

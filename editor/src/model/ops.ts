@@ -131,7 +131,10 @@ export function duplicateNodes(doc: Doc, ids: string[], idMap: Record<string, st
     for (const ic of a.icons) {
       icons.push(ic);
       if (set.has(ic.id)) {
-        icons.push({ ...structuredClone(ic), id: nid(ic.id), name: ic.name + ' copy', x: offset ? ic.x + ic.w + 3 : ic.x, rects: ic.rects.map((r) => ({ ...r, id: nid(r.id) })) });
+        // beside the original; in auto layout one pixel right of it, which reads as the next slot whatever the gap
+        // (w + 3 lands past the next item when the gap is under 3, as between a spinner's frames)
+        const x = !offset ? ic.x : a.grid?.auto ? ic.x + offset : ic.x + ic.w + 3;
+        icons.push({ ...structuredClone(ic), id: nid(ic.id), name: ic.name + ' copy', x, rects: ic.rects.map((r) => ({ ...r, id: nid(r.id) })) });
       } else ic.rects = dupRects(ic.rects);
     }
     a.icons = icons;

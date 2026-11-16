@@ -13,7 +13,8 @@ import { Preview } from './panels/Preview';
 import { Aliases } from './panels/Aliases';
 import { Panel } from './panels/Panel';
 import { PlayFrame } from './panels/PlayFrame';
-import { newSpinner, spinnerSource } from './model/spinners';
+import { asFrames, newSpinner, spinnerNameFrom, spinnerOf, spinnerSource } from './model/spinners';
+import { drawnRects } from './model/instances';
 import { useShortcuts } from './hooks/useShortcuts';
 import { useAutosave } from './hooks/useAutosave';
 import { allComponents, exportIconSvg, exportedByKind, exportedFiles, importSvg, kindOfIcon, rawFolderOf, skippedComponents, variantManifest } from './model/svg';
@@ -34,7 +35,8 @@ const svgFromHtml = (html: string): string | null => {
 
 const PIXL_CLIPBOARD = 'indx-pixl/editor-nodes/v1';
 type ClipboardNode =
-  | { kind: 'icon'; artboardId: string; icon: Icon }
+  /** `pixels` is what the icon draws, an instance's included: what it becomes as a spinner frame. */
+  | { kind: 'icon'; artboardId: string; icon: Icon; pixels?: Rect[] }
   | { kind: 'text'; artboardId: string; text: TextNode }
   | { kind: 'rect'; artboardId: string; iconId: string | null; rect: Rect };
 interface PixlClipboard { type: typeof PIXL_CLIPBOARD; nodes: ClipboardNode[] }
@@ -229,12 +231,12 @@ function Editor({ onMode }: { onMode: (m: Mode) => void }) {
     return {
       type: PIXL_CLIPBOARD,
       nodes: picked.map((n): ClipboardNode => {
-        if (n.kind === 'icon') return { kind: 'icon', artboardId: n.artboardId, icon: structuredClone(n.obj as Icon) };
+        if (n.kind === 'icon') return { kind: 'icon', artboardId: n.artboardId, icon: structuredClone(n.obj as Icon), pixels: structuredClone(drawnRects(state.doc, n.obj as Icon)) };
         if (n.kind === 'text') return { kind: 'text', artboardId: n.artboardId, text: structuredClone(n.obj as TextNode) };
         return { kind: 'rect', artboardId: n.artboardId, iconId: n.iconId, rect: structuredClone(n.obj as Rect) };
       }),
     };
-  }, [sel]);
+  }, [sel, state.doc]);
   const writeNodeClipboard = useCallback(async (nodes: Node[] = sel) => {
     const payload = clipboardPayload(nodes);
     if (!payload) { status('Nothing to copy'); return false; }
@@ -253,11 +255,48 @@ function Editor({ onMode }: { onMode: (m: Mode) => void }) {
     if (!nodes.length) return status('Nothing to cut');
     if (await writeNodeClipboard(nodes)) remove(nodes);
   }, [sel, writeNodeClipboard, remove, status]);
+  /** Spinner mode: pasted icons (from the icons page, Copy SVG or Figma) become frames where you are. Into the frame
+   *  being edited they add its pixels; after a selected frame, or at the end of a selected spinner, they are new
+   *  frames; with nothing selected they start a new spinner named after the first. */
+  const pasteFrames = useCallback((drawings: Pick<Icon, 'name' | 'w' | 'h' | 'rects'>[]) => {
+    const frames = asFrames(drawings);
+    if (!frames.length) return;
+    const editing = state.ui.focus ? index.get(state.ui.focus) : undefined;
+    if (editing && frames.length === 1) {
+      // a frame being edited holds 1×1 pixels, so the drawing goes in cell by cell
+      const pixels = frames[0].rects.flatMap((r) => Array.from({ length: r.w * r.h }, (_, i) => ({ ...r, id: uid(), x: r.x + (i % r.w), y: r.y + Math.floor(i / r.w), w: 1, h: 1 })));
+      edit((d) => pixels.reduce((acc, r) => ops.addRect(acc, editing.artboardId, editing.id, r), d));
+      ui({ sel: pixels.map((r) => r.id) });
+      return status(`Pasted ${drawings[0].name || 'the drawing'} into frame`);
+    }
+    const at = editing ?? sel[0];
+    if (at) {
+      const a = index.get(at.artboardId)?.obj as Artboard | undefined;
+      const afterId = at.kind === 'icon' ? at.id : at.iconId;
+      const after = a?.icons.find((ic) => ic.id === afterId);
+      // just right of the frame they follow (or of the last one) reads as the next slots once the row is arranged
+      const last = a ? a.icons.reduce<Icon | undefined>((m, ic) => (!m || ic.y > m.y || (ic.y === m.y && ic.x > m.x) ? ic : m), undefined) : undefined;
+      const anchor = after ?? last;
+      const placed = frames.map((f, i) => ({ ...f, x: (anchor?.x ?? 0) + (i + 1) * 0.01, y: anchor?.y ?? f.y }));
+      edit((d) => ops.arrangeArtboardItems(placed.reduce((acc, f) => ops.addIcon(acc, at.artboardId, f), d), at.artboardId));
+      ui({ sel: placed.map((f) => f.id), focus: null, playing: false });
+      return status(`Pasted ${frames.length} frame${frames.length === 1 ? '' : 's'} into ${a?.name ?? 'the spinner'}`);
+    }
+    const bottom = Math.max(0, ...state.doc.artboards.map((a) => a.y + a.h + 8));
+    const ab = spinnerOf(state.doc, spinnerNameFrom(state.doc, drawings[0].name || 'spinner'), frames, { x: 0, y: bottom });
+    edit((d) => ops.addArtboard(d, ab));
+    ui({ sel: [ab.id], focus: null, playing: false });
+    zoomToBox({ x: ab.x, y: ab.y, w: ab.w, h: ab.h }, 400);
+    status(`New spinner ${ab.name}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.doc, state.ui.focus, index, sel, edit, ui, status]);
   /** Paste where the user is now: into the focused icon, else the artboard of the current selection
    *  (an artboard selected after copying counts), else back where the items were copied from. In the
    *  place they came from, items shift by one pixel so the copy is visible; elsewhere they keep their
    *  position within the artboard or icon. */
   const pasteNodes = useCallback((payload: PixlClipboard) => {
+    const icons = payload.nodes.flatMap((n) => (n.kind === 'icon' ? [{ ...n.icon, rects: n.pixels ?? n.icon.rects }] : []));
+    if (spinners && icons.length) return pasteFrames(icons);
     const selected: string[] = [], touched = new Set<string>();
     const focusIcon = state.ui.focus ? index.get(state.ui.focus) : undefined;
     const here = focusIcon?.artboardId ?? sel[0]?.artboardId ?? null;
@@ -289,7 +328,7 @@ function Editor({ onMode }: { onMode: (m: Mode) => void }) {
     const firstArtboard = here ?? payload.nodes[0]?.artboardId;
     ui({ sel: selected, focus: focusIcon ? focusIcon.id : null, expanded: selected.length && firstArtboard ? { ...state.ui.expanded, [firstArtboard]: true } : state.ui.expanded });
     status(`Pasted ${selected.length} item${selected.length === 1 ? '' : 's'}`);
-  }, [edit, ui, state.ui.expanded, state.ui.focus, index, sel, status]);
+  }, [edit, ui, state.ui.expanded, state.ui.focus, index, sel, status, spinners, pasteFrames]);
 
   /** Merge (union) the rects of the given icons, or of the current selection / focused icon. */
   const merge = useCallback((iconIds?: string[]) => {
@@ -324,6 +363,7 @@ function Editor({ onMode }: { onMode: (m: Mode) => void }) {
     try { result = parseSvg(text, state.doc.colors); } catch (e) { return status((e as Error).message); }
     const found = result.icons.filter((i) => i.rects.length);
     if (!found.length) return status('No filled shapes found in the SVG');
+    if (spinners) return pasteFrames(found.map((ic) => ({ name: ic.name ?? '', w: ic.w, h: ic.h, rects: ic.rects as Rect[] })));
     const focusIconId = state.ui.focus;
     const artboardId = focusIconId ? index.get(focusIconId)?.artboardId ?? null : sel[0]?.artboardId ?? null;
     const placed = ops.placePasted(state.doc, found, { artboardId, focusIconId }, uid);
@@ -334,7 +374,7 @@ function Editor({ onMode }: { onMode: (m: Mode) => void }) {
     const how = result.mode === 'clusters' ? ' (no frames found, grouped by spacing: check positions)' : '';
     const unnamed = placed.into !== 'icon' && found.some((i) => !i.name) && result.mode !== 'clusters' ? ' Names missing: enable "Include id attribute" in Figma.' : '';
     status(`Pasted ${found.length} icon${found.length === 1 ? '' : 's'} ${where}${how}.${result.skipped ? ` Skipped ${result.skipped} unsupported shape${result.skipped === 1 ? '' : 's'}.` : ''}${unnamed}`);
-  }, [state.doc, state.ui.focus, state.ui.expanded, index, sel, edit, ui, status]);
+  }, [state.doc, state.ui.focus, state.ui.expanded, index, sel, edit, ui, status, spinners, pasteFrames]);
   const pasteRef = useMemo(() => ({ fn: pasteSvg }), []); // eslint-disable-line react-hooks/exhaustive-deps
   pasteRef.fn = pasteSvg;
   const parseNodeClipboard = (text: string): PixlClipboard | null => {
