@@ -14,10 +14,6 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./pictograms": {
-      "types": "./dist/pictograms/index.d.ts",
-      "default": "./dist/pictograms/index.js"
-    },
     "./colors.css": "./colors.css",
     "./*": "./*"
   },
